@@ -14,7 +14,6 @@
     "@pylonsync/sdk": "^0.3.373",
     "@pylonsync/functions": "^0.3.373",
     "@pylonsync/client": "^0.3.373",
-    "@pylonsync/stripe": "^0.3.373",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "tailwindcss": "^4.3.0",

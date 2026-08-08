@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { createOrg, listOrgs } from "@pylonsync/client";
 import { db } from "@pylonsync/react";
+import { Button } from "@/components/ui/button";
 
 // Org-less safety net. New signups get "My Workspace" auto-created in the signup
 // flow, so this only renders in edge cases: that creation failed, or a user left
@@ -45,13 +46,12 @@ export function ProvisionWorkspace() {
       {error ? (
         <>
           <p className="max-w-sm text-sm text-red-700">{error}</p>
-          <button
+          <Button
             type="button"
             onClick={() => window.location.reload()}
-            className="inline-flex h-9 items-center rounded-lg bg-zinc-900 px-4 text-[13px] font-medium text-white transition-colors hover:bg-zinc-700"
           >
             Try again
-          </button>
+          </Button>
         </>
       ) : (
         <>
@@ -62,13 +62,14 @@ export function ProvisionWorkspace() {
           <p className="text-sm text-zinc-500">Setting up your workspace…</p>
         </>
       )}
-      <button
+      <Button
         type="button"
+        variant="link"
         onClick={signOut}
-        className="mt-1 text-[13px] text-zinc-400 underline underline-offset-2 transition-colors hover:text-zinc-600"
+        className="mt-1"
       >
         Wrong account? Sign out
-      </button>
+      </Button>
     </div>
   );
 }

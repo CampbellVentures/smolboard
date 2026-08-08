@@ -1,0 +1,28 @@
+import React, { use } from "react";
+import { type Metadata, type PageProps } from "@pylonsync/react";
+import { SpeakersTable } from "./speakers-client";
+import type { EventRow, SpeakerProfileRow, SubmissionRow } from "@/lib/types";
+
+export const metadata: Metadata = {
+  title: "Speakers — smolboard",
+  robots: "noindex",
+};
+
+export default function SpeakersPage({ auth, params, response, serverData }: PageProps<{ id: string }>) {
+  if (!auth.tenant_id) {
+    response.redirect("/dashboard");
+    return null;
+  }
+  const event = use(serverData.get<EventRow>("Event", params.id));
+  if (!event || event.orgId !== auth.tenant_id) {
+    response.notFound();
+    return null;
+  }
+  const profiles = use(serverData.list<SpeakerProfileRow>("SpeakerProfile")).filter(
+    (p) => p.eventId === event.id,
+  );
+  const submissions = use(serverData.list<SubmissionRow>("Submission")).filter(
+    (s) => s.eventId === event.id,
+  );
+  return <SpeakersTable event={event} initialProfiles={profiles} initialSubmissions={submissions} />;
+}

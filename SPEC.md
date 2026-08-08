@@ -121,7 +121,8 @@ Also free differentiation Pylon gives us that Sessionboard can't match: everythi
 Found while speccing; worth feeding back into Pylon itself:
 
 1. **MCP server primitive** — `buildManifest({ mcp: { tools: [...] } })` auto-exposing selected functions as MCP tools with token auth. We're hand-rolling JSON-RPC in a route.ts; the framework already has typed function defs + validators, so it has everything needed to generate this. Biggest gap; "agent-native" pitch practically demands it.
-2. **Email attachments + app-level `ctx.email`** — auth emails are built in, but app-triggered transactional email with attachments (our ICS invites) isn't clearly exposed via stack0; if missing, that's the top small-ticket framework add.
+2. **Email attachments + HTML bodies** — confirmed in M1: `ctx.email.send(to, subject, body)` is plain-text only, no HTML, no attachments. Calendar invites therefore ship as add-to-calendar links + hosted `.ics` URL (decided). HTML/attachment support is the top small-ticket framework add.
+2b. **`field.json()` missing in SDK 0.3.373** — docs describe it but the shipped SDK has no json field type; all our `*Json` columns are strings with parse helpers (`lib/types.ts`).
 3. **Multipart uploads in `<Form>`/route.ts** — documented as unsupported; public CFP file-upload questions need client-side JS against `/api/files` instead of degrading gracefully to native forms.
 4. **Anonymous upload policy for `/api/files`** — unclear whether an unauthenticated CFP submitter can upload before their account exists. Our workaround: create the account (magic-code flow) *before* the file step. Needs verification early in M1.
 5. **Rate limiting/captcha primitive for public endpoints** — auth flows have cooldowns built in, but a public `submit_cfp` mutation has nothing; we'll add a naive per-IP throttle in the function.
@@ -179,6 +180,6 @@ Accelevents integration, wiki/CMS embeds, AI-assisted review, Airtable/Cloudflar
 ## Unresolved questions
 
 1. **Watch the walkthrough video** (youtu.be/vUuK4Knl7oc) — the screenshots' field-level details (exact form field types, task/form structures) aren't in the doc text. Spec should be sanity-checked against it before M2, and against the Sunday requirements-freeze video.
-2. Does the stack0 send path support attachments (for `.ics`)? Verify in M1; fallback is add-to-calendar links.
-3. Can an unauthenticated (or just-created) user upload to `/api/files` during CFP submission? Verify in M1; fallback is deferring uploads to the portal.
+2. ~~Attachments~~ Resolved in M1: no attachment/HTML support in `ctx.email` — calendar invites go as add-to-calendar links + hosted `.ics` URL.
+3. ~~Anonymous `/api/files` uploads~~ Resolved by design: CFP submission collects no files; uploads happen in the portal after magic-code sign-in (multipart `/api/files/upload` was removed in 0.3.91 — use the 3-step flow).
 4. Demo/seed data: clone their sandbox event content ("AI Engineer Sandbox Event") so judges see a familiar shape — any objection?

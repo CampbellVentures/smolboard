@@ -9,7 +9,6 @@
         "@pylonsync/functions": "^0.3.373",
         "@pylonsync/react": "^0.3.373",
         "@pylonsync/sdk": "^0.3.373",
-        "@pylonsync/stripe": "^0.3.373",
         "@radix-ui/react-dialog": "^1.1.4",
         "@radix-ui/react-slot": "^1.1.0",
         "@tailwindcss/cli": "^4.3.0",
@@ -94,8 +93,6 @@
     "@pylonsync/react": ["@pylonsync/react@0.3.373", "", { "dependencies": { "@pylonsync/sdk": "0.3.373", "@pylonsync/sync": "0.3.373" }, "peerDependencies": { "react": ">=19.0.0" } }, "sha512-zVL4kWHbLqGazP/5Q47cXscqj9NGvadm9hXwXmwQIQXAANUilaHSigLCcbO5xihdtJWvNxRIpCUjtEWC/0pOIQ=="],
 
     "@pylonsync/sdk": ["@pylonsync/sdk@0.3.373", "", {}, "sha512-0OV3fJ6suSax6lyTUc4oc9mqLfxampFtpL7jbehyLDune7IZYkJfD6WPw/vdn399Y5s5TIescgWmKM7la91z/A=="],
-
-    "@pylonsync/stripe": ["@pylonsync/stripe@0.3.373", "", { "dependencies": { "@pylonsync/functions": "0.3.373", "@pylonsync/sdk": "0.3.373" }, "peerDependencies": { "bun-types": "*" }, "optionalPeers": ["bun-types"] }, "sha512-1dN9QroWPd2Gqv5wxmhfWmojWyGr7+S4KVs/wORKqV/VtnafuSf7br/0CpdYZLp0gXwY6faTH/uOMy3Qtmo5ZA=="],
 
     "@pylonsync/sync": ["@pylonsync/sync@0.3.373", "", {}, "sha512-irDeRI6GpbO+14Td4ONWDLLTZpx8U3b0F4vc9Ku89Fg4zLEaf8m5bcevKPKUWCKsQapo4xwH0SOC3b7YmcQkOQ=="],
 
