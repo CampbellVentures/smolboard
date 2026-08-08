@@ -245,6 +245,7 @@ export function AgendaBuilder({
         >
           <Coffee data-icon="inline-start" /> Add break
         </Button>
+        <PublishToggle event={event} />
         </div>
         <div>
           <RoomsManager event={event} rooms={rooms} sessions={sessions} />
@@ -702,6 +703,50 @@ function TracksView({
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+/* ======================= Publish toggle ======================= */
+
+// Flips Event.schedulePublished — the gate on the public /[slug]/schedule and
+// /[slug]/speakers feeds. Off = both pages show "not published yet".
+function PublishToggle({ event }: { event: EventRow }) {
+  const [busy, setBusy] = useState(false);
+  async function toggle() {
+    setBusy(true);
+    try {
+      await db.update("Event", event.id, { schedulePublished: !event.schedulePublished });
+      toast.success(
+        event.schedulePublished
+          ? "Schedule unpublished."
+          : `Schedule is live at /${event.slug}/schedule`,
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div className="flex items-center gap-1.5">
+      <Button
+        type="button"
+        size="sm"
+        variant={event.schedulePublished ? "outline" : "default"}
+        onClick={toggle}
+        disabled={busy}
+      >
+        {event.schedulePublished ? "Unpublish" : "Publish schedule"}
+      </Button>
+      {event.schedulePublished && (
+        <a
+          href={`/${event.slug}/schedule`}
+          target="_blank"
+          rel="noreferrer"
+          className="text-[12.5px] font-medium text-muted-foreground underline underline-offset-2 hover:text-foreground"
+        >
+          View live
+        </a>
+      )}
     </div>
   );
 }

@@ -1,126 +1,152 @@
 import React from "react";
 import { Link, type Metadata, type PageProps } from "@pylonsync/react";
-import {
-  WRAP,
-  Badge,
-  Divider,
-  Eyebrow,
-  SectionHead,
-  FeatureGrid,
-  PrimaryButton,
-  GhostLink,
-  Shot,
-  Portrait,
-  Terminal,
-} from "@/components/marketing";
-import { siteConfig, productBySlug, type Product } from "@/lib/site.config";
+import { siteConfig } from "@/lib/site.config";
 
-// SEO metadata. Exported `metadata` is rendered into <head> on the server, so
-// this marketing page is fully indexable — view source and the copy is in the
-// HTML. All copy lives in lib/site.config.ts; edit it there.
+// `/` — the smolboard landing. Self-contained copy (the Acme template's
+// product-catalog sections don't apply to a single-product tool); SEO strings
+// come from siteConfig so <head> and the page can't drift.
 export const metadata: Metadata = {
   title: siteConfig.seo.title,
   description: siteConfig.seo.description,
 };
 
-// The products the homepage features inline. Each links to its own
-// /products/[slug] page for the full story. (Defined once in lib/site.config.ts.)
-const projects = productBySlug("projects")!;
-const tasks = productBySlug("tasks")!;
-const docs = productBySlug("docs")!;
-const automations = productBySlug("automations")!;
+const FEATURES: { title: string; body: string }[] = [
+  {
+    title: "CFP forms with conditional logic",
+    body: "A visual builder with show-when rules and category routing. The server re-validates everything — including conditionally required fields.",
+  },
+  {
+    title: "Self-service speaker portal",
+    body: "Speakers are created on submission and sign in with a 6-digit email code. Status, profile, uploads, and onboarding tasks — all live, no refresh.",
+  },
+  {
+    title: "Emails and real calendar invites",
+    body: "Templated accept/reject sends, cron reminders, and .ics invites that RSVP into Gmail and Outlook. Reschedules update the event, not duplicate it.",
+  },
+  {
+    title: "Reviews and scoring",
+    body: "Score-sorted queue, per-criterion stars, committee comments, multi-round advancement, bulk accept with one confirmation.",
+  },
+  {
+    title: "Drag-and-drop agenda",
+    body: "Day-by-room grid with 15-minute slots. Conflicts — room overlaps, double-booked speakers — surface the moment you create them.",
+  },
+  {
+    title: "Live dashboard",
+    body: "Submissions, review progress, and speaker onboarding as live queries. Two reviewers see each other's scores land in real time.",
+  },
+];
 
-// `app/page.tsx` → `/`. A server-rendered marketing landing page. It reads
-// `auth` (resolved from the session cookie during the render) so the call to
-// action is right on the first byte — "Get started" for visitors, "Open
-// dashboard" once you're signed in. No client fetch, no flash. Every string is
-// sourced from `siteConfig` so the whole page rebrands from one file.
 export default function LandingPage({ auth }: PageProps) {
   const signedIn = Boolean(auth.user_id);
   const primaryHref = signedIn ? "/dashboard" : "/signup";
-  const primaryLabel = signedIn ? "Open dashboard" : "Get started";
-
-  const {
-    hero,
-    logoCloud,
-    outcomes,
-    featuredTestimonial,
-    entryPoints,
-    engagement,
-    customers,
-    gettingStarted,
-    pricing,
-    team,
-    finalCta,
-    faq,
-    brand,
-  } = siteConfig;
 
   return (
-    <div className="bg-white text-zinc-900">
-      {/* ============================ HERO ============================ */}
-      <section className={`${WRAP} pt-20 pb-16 sm:pt-28`}>
-        <Badge>{hero.badge}</Badge>
-        <h1 className="mt-6 max-w-2xl text-balance text-[2.75rem] font-semibold leading-[1.05] tracking-[-0.02em] sm:text-[3.5rem]">
-          {hero.headline}
-        </h1>
-        <p className="mt-6 max-w-xl text-[17px] leading-relaxed text-zinc-500">
-          {hero.subcopy}
+    <div className="bg-white">
+      {/* ---------------- Hero ---------------- */}
+      <section className="mx-auto max-w-3xl px-6 pb-20 pt-20 text-center">
+        <p className="mx-auto w-fit rounded-full bg-zinc-100 px-3 py-1 text-[12px] font-medium text-zinc-600">
+          Open-source · built in a weekend to replace a $40k/yr SaaS
         </p>
-        <div className="mt-8 flex flex-wrap items-center gap-4">
-          <PrimaryButton href={primaryHref}>{primaryLabel}</PrimaryButton>
-          <GhostLink href="/#product">Take the tour →</GhostLink>
-        </div>
-
-        <div className="mt-16">
-          <Shot url={`${brand.domain}/dashboard`} label={hero.mockupLabel} />
+        <h1 className="mt-5 text-balance text-4xl font-semibold tracking-tight text-zinc-900 sm:text-5xl">
+          Run your call for speakers without the enterprise contract
+        </h1>
+        <p className="mx-auto mt-5 max-w-xl text-pretty text-[17px] leading-relaxed text-zinc-500">
+          smolboard is speaker & CFP management for conferences: submission forms,
+          reviews, agenda building, speaker onboarding, and an event copilot —
+          one open-source app, live everywhere.
+        </p>
+        <div className="mt-8 flex items-center justify-center gap-3">
+          <Link
+            href={primaryHref}
+            className="inline-flex h-10 items-center rounded-full bg-zinc-900 px-5 text-[14px] font-medium text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition-colors hover:bg-zinc-700"
+          >
+            {signedIn ? "Open dashboard" : "Get started free"}
+          </Link>
+          <a
+            href="/ai-engineer-sandbox/schedule"
+            className="inline-flex h-10 items-center rounded-full px-4 text-[14px] font-medium text-zinc-600 transition-colors hover:text-zinc-900"
+          >
+            See a live schedule →
+          </a>
         </div>
       </section>
 
-       
+      {/* ---------------- Features ---------------- */}
+      <section className="border-t border-zinc-200/70 bg-zinc-50/60">
+        <div className="mx-auto max-w-5xl px-6 py-16">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {FEATURES.map((f) => (
+              <div
+                key={f.title}
+                className="rounded-xl bg-white p-5 shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.04)]"
+              >
+                <h2 className="text-[15px] font-semibold text-zinc-900">{f.title}</h2>
+                <p className="mt-1.5 text-[13.5px] leading-relaxed text-zinc-500">{f.body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ---------------- Agent layer ---------------- */}
+      <section className="mx-auto max-w-5xl px-6 py-16">
+        <div className="grid items-center gap-10 lg:grid-cols-2">
+          <div>
+            <p className="text-[12px] font-semibold uppercase tracking-wider text-zinc-400">
+              Agent-native
+            </p>
+            <h2 className="mt-2 text-balance text-2xl font-semibold tracking-tight text-zinc-900">
+              A copilot in the dashboard. The same tools over MCP.
+            </h2>
+            <p className="mt-3 text-pretty text-[15px] leading-relaxed text-zinc-500">
+              Ask the copilot to review submissions, accept the top ten, or
+              schedule a talk — it uses the same conflict-checked functions as
+              the UI, so you watch its changes land in the tables next to the
+              conversation. Prefer your own agent? Point any MCP client at
+              smolboard and run your CFP from chat.
+            </p>
+          </div>
+          <div className="overflow-x-auto rounded-xl bg-zinc-900 p-5 font-mono text-[12.5px] leading-relaxed text-zinc-300 shadow-[0_16px_40px_-16px_rgba(0,0,0,0.4)]">
+            <p className="text-zinc-500"># any MCP client, e.g. Claude Code</p>
+            <p className="mt-1 whitespace-pre">{`claude mcp add smolboard \\
+  --transport http \\
+  https://smolboard.smallware.run/api/fn/mcp \\
+  --header "Authorization: Bearer pk...."`}</p>
+            <p className="mt-3 text-zinc-500"># then</p>
+            <p className="mt-1 text-emerald-400">
+              &gt; accept the top 5 submissions by score and email the speakers
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ---------------- CTA ---------------- */}
+      <section className="border-t border-zinc-200/70">
+        <div className="mx-auto max-w-3xl px-6 py-16 text-center">
+          <h2 className="text-balance text-2xl font-semibold tracking-tight text-zinc-900">
+            Your next event, off the enterprise treadmill
+          </h2>
+          <p className="mt-2 text-[15px] text-zinc-500">
+            Free and open source. One process to deploy. Speakers never pay, and
+            neither should you.
+          </p>
+          <div className="mt-6 flex items-center justify-center gap-3">
+            <Link
+              href={primaryHref}
+              className="inline-flex h-10 items-center rounded-full bg-zinc-900 px-5 text-[14px] font-medium text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition-colors hover:bg-zinc-700"
+            >
+              {signedIn ? "Open dashboard" : "Create your event"}
+            </Link>
+            <a
+              href="https://github.com/CampbellVentures/smolboard"
+              className="inline-flex h-10 items-center rounded-full px-4 text-[14px] font-medium text-zinc-600 transition-colors hover:text-zinc-900"
+            >
+              Read the source →
+            </a>
+          </div>
+        </div>
+      </section>
     </div>
   );
-}
-
-// A homepage feature section for one product: eyebrow + headline + grid +
-// "Explore →" link to its /products/[slug] page + a product mockup.
-function ProductSection({
-  product,
-  primaryHref,
-  id,
-}: {
-  product: Product;
-  primaryHref: string;
-  id?: string;
-}) {
-  return (
-    <section id={id} className={`${WRAP} py-20`}>
-      <SectionHead
-        eyebrow={product.eyebrow}
-        arrow
-        title={product.headline}
-        body={product.summary}
-      />
-      <FeatureGrid className="mt-14" items={product.features.slice(0, 6)} />
-      <div className="mt-8">
-        <GhostLink href={`/products/${product.slug}`}>
-          Explore {product.title} →
-        </GhostLink>
-      </div>
-      <div className="mt-12">
-        <Shot url={product.mockupUrl} label={product.mockupLabel} />
-      </div>
-    </section>
-  );
-}
-
-// Initials for the testimonial avatars, so the cards look finished without a
-// real photo. Drop in an <img> when you have one.
-function initials(name: string) {
-  return name
-    .split(/\s+/)
-    .map((w) => w[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
 }

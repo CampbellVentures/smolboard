@@ -120,14 +120,15 @@ function MobileNav({ signedIn }: { signedIn: boolean }) {
       </summary>
       <div className="fixed inset-x-0 top-14 z-40 max-h-[calc(100vh-3.5rem)] overflow-y-auto border-b border-zinc-200 bg-white shadow-[0_24px_48px_-24px_rgba(0,0,0,0.25)]">
         <div className="mx-auto max-w-5xl space-y-6 px-6 py-6">
-          <MobileGroup title="Product" items={PRODUCT_MENU} />
-          <MobileGroup title="Resources" items={RESOURCES_MENU} />
           <div className="flex flex-col">
-            <a href="/#pricing" className="rounded-lg px-2 py-2 text-[14px] font-medium text-zinc-700 transition-colors hover:bg-zinc-50">
-              Pricing
+            <a href="/ai-engineer-sandbox/schedule" className="rounded-lg px-2 py-2 text-[14px] font-medium text-zinc-700 transition-colors hover:bg-zinc-50">
+              Live demo
             </a>
-            <a href="/#customers" className="rounded-lg px-2 py-2 text-[14px] font-medium text-zinc-700 transition-colors hover:bg-zinc-50">
-              Customers
+            <a href="/portal" className="rounded-lg px-2 py-2 text-[14px] font-medium text-zinc-700 transition-colors hover:bg-zinc-50">
+              Speaker portal
+            </a>
+            <a href="https://github.com/CampbellVentures/smolboard" className="rounded-lg px-2 py-2 text-[14px] font-medium text-zinc-700 transition-colors hover:bg-zinc-50">
+              GitHub
             </a>
           </div>
           <div className="flex flex-col gap-2 border-t border-zinc-100 pt-5">
@@ -195,20 +196,24 @@ export default function MarketingLayout({ children, auth }: LayoutProps) {
               </span>
             </Link>
             <nav className="hidden items-center gap-6 md:flex">
-              <NavDropdown label="Product" items={PRODUCT_MENU} />
-              <NavDropdown label="Resources" items={RESOURCES_MENU} />
-              <Link
-                href="/#pricing"
+              <a
+                href="/ai-engineer-sandbox/schedule"
                 className="text-[13.5px] text-zinc-600 transition-colors hover:text-zinc-900"
               >
-                Pricing
-              </Link>
+                Live demo
+              </a>
               <Link
-                href="/#customers"
+                href="/portal"
                 className="text-[13.5px] text-zinc-600 transition-colors hover:text-zinc-900"
               >
-                Customers
+                Speaker portal
               </Link>
+              <a
+                href="https://github.com/CampbellVentures/smolboard"
+                className="text-[13.5px] text-zinc-600 transition-colors hover:text-zinc-900"
+              >
+                GitHub
+              </a>
             </nav>
           </div>
           <nav className="flex items-center gap-2">
