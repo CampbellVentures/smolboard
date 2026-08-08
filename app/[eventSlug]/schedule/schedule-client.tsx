@@ -170,7 +170,6 @@ export function PublicSchedule({ eventSlug, eventName }: { eventSlug: string; ev
                             "rounded-xl bg-white p-4 shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.04)] " +
                             (isBreak ? "opacity-70" : "")
                           }
-                          style={t?.color ? { borderLeft: `3px solid ${t.color}` } : undefined}
                         >
                           <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                             <h2 className="text-[15px] font-semibold text-zinc-900">{s.title}</h2>
@@ -191,10 +190,12 @@ export function PublicSchedule({ eventSlug, eventName }: { eventSlug: string; ev
                               </span>
                             )}
                             {t && (
-                              <span
-                                className="rounded-full px-2 py-0.5 text-[11px] font-medium"
-                                style={{ backgroundColor: `${t.color}18`, color: t.color ?? undefined }}
-                              >
+                              <span className="flex items-center gap-1.5 rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] font-medium text-zinc-500">
+                                <span
+                                  aria-hidden="true"
+                                  className="size-1.5 rounded-full"
+                                  style={{ backgroundColor: t.color ?? "#a1a1aa" }}
+                                />
                                 {t.name}
                               </span>
                             )}

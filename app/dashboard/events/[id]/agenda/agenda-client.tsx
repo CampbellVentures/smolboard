@@ -522,18 +522,20 @@ function Grid({
                             ? "border-zinc-200 bg-zinc-50"
                             : "border-zinc-200 bg-white")
                       }
-                      style={{
-                        top,
-                        height,
-                        borderLeftWidth: 3,
-                        borderLeftColor: isBad
-                          ? "#f87171"
-                          : track?.color || (ses.kind === "break" ? "#a1a1aa" : "#18181b"),
-                      }}
+                      style={{ top, height }}
                       title={ses.title}
                     >
-                      <div className="truncate text-[11.5px] font-semibold leading-tight text-zinc-800">
-                        {ses.title}
+                      <div className="flex items-center gap-1.5">
+                        {track && !isBad && (
+                          <span
+                            aria-hidden="true"
+                            className="size-1.5 shrink-0 rounded-full"
+                            style={{ backgroundColor: track.color ?? "#a1a1aa" }}
+                          />
+                        )}
+                        <span className="truncate text-[11.5px] font-semibold leading-tight text-zinc-800">
+                          {ses.title}
+                        </span>
                       </div>
                       {height >= 3 * SLOT_PX && (
                         <div className="truncate text-[10.5px] text-zinc-400">
@@ -658,12 +660,14 @@ function TracksView({
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {lanes.map(({ track, list }) => (
           <div key={track?.id ?? "none"} className="rounded-xl border border-zinc-200 bg-white">
-            <div
-              className="border-b border-zinc-100 px-4 py-2.5 text-[13px] font-semibold text-zinc-800"
-              style={{ borderTop: `3px solid ${track?.color ?? "#d4d4d8"}`, borderTopLeftRadius: 12, borderTopRightRadius: 12 }}
-            >
+            <div className="flex items-center gap-2 border-b border-zinc-100 px-4 py-2.5 text-[13px] font-semibold text-zinc-800">
+              <span
+                aria-hidden="true"
+                className="size-1.5 shrink-0 rounded-full"
+                style={{ backgroundColor: track?.color ?? "#d4d4d8" }}
+              />
               {track?.name ?? "No track"}
-              <span className="ml-2 text-xs font-normal text-zinc-400">{list.length}</span>
+              <span className="text-xs font-normal text-zinc-400">{list.length}</span>
             </div>
             <ul className="divide-y divide-zinc-50">
               {list

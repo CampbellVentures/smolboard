@@ -43,32 +43,44 @@ export default function LandingPage({ auth }: PageProps) {
 
   return (
     <div className="bg-white">
-      {/* ---------------- Hero ---------------- */}
-      <section className="mx-auto max-w-3xl px-6 pb-20 pt-20 text-center">
-        <p className="mx-auto w-fit rounded-full bg-zinc-100 px-3 py-1 text-[12px] font-medium text-zinc-600">
-          Open-source · built in a weekend to replace a $40k/yr SaaS
-        </p>
-        <h1 className="mt-5 text-balance text-4xl font-semibold tracking-tight text-zinc-900 sm:text-5xl">
-          Run your call for speakers without the enterprise contract
-        </h1>
-        <p className="mx-auto mt-5 max-w-xl text-pretty text-[17px] leading-relaxed text-zinc-500">
-          smolboard is speaker & CFP management for conferences: submission forms,
-          reviews, agenda building, speaker onboarding, and an event copilot —
-          one open-source app, live everywhere.
-        </p>
-        <div className="mt-8 flex items-center justify-center gap-3">
-          <Link
-            href={primaryHref}
-            className="inline-flex h-10 items-center rounded-full bg-zinc-900 px-5 text-[14px] font-medium text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition-colors hover:bg-zinc-700"
-          >
-            {signedIn ? "Open dashboard" : "Get started free"}
-          </Link>
-          <a
-            href="/ai-engineer-sandbox/schedule"
-            className="inline-flex h-10 items-center rounded-full px-4 text-[14px] font-medium text-zinc-600 transition-colors hover:text-zinc-900"
-          >
-            See a live schedule →
-          </a>
+      {/* ---------------- Hero: one line, one CTA, the product ---------------- */}
+      <section className="mx-auto max-w-5xl px-6 pt-16">
+        <div className="mx-auto max-w-2xl text-center">
+          <h1 className="text-balance text-4xl font-semibold tracking-tight text-zinc-900 sm:text-[44px] sm:leading-[1.1]">
+            Open-source speaker &amp; CFP management
+          </h1>
+          <div className="mt-7 flex items-center justify-center gap-3">
+            <Link
+              href={primaryHref}
+              className="inline-flex h-10 items-center rounded-full bg-zinc-900 px-5 text-[14px] font-medium text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition-colors hover:bg-zinc-700"
+            >
+              {signedIn ? "Open dashboard" : "Get started free"}
+            </Link>
+            <a
+              href="/ai-engineer-sandbox/schedule"
+              className="inline-flex h-10 items-center rounded-full px-4 text-[14px] font-medium text-zinc-600 transition-colors hover:text-zinc-900"
+            >
+              See a live schedule →
+            </a>
+          </div>
+        </div>
+
+        {/* The event dashboard, full-bleed. Bottom edge fades so the hero
+            hands off to the features band without a hard cut. */}
+        <div className="relative mt-12">
+          <div className="overflow-hidden rounded-xl shadow-[0_0_0_1px_rgba(0,0,0,0.08),0_24px_60px_-24px_rgba(0,0,0,0.25)]">
+            <img
+              src="/hero-dashboard.png"
+              alt="The smolboard event dashboard: a submissions table with speakers, categories, review scores, and statuses, next to the event navigation."
+              width={2720}
+              height={1720}
+              className="block w-full"
+            />
+          </div>
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-white to-transparent"
+          />
         </div>
       </section>
 
