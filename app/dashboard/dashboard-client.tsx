@@ -147,9 +147,13 @@ function MembersList({
 
   return (
     <DashboardPage>
-      <DashboardPanel title="Team" action={members ? <Count n={members.length} /> : null}>
+      <DashboardPanel
+        title="Invite teammates"
+        description="Add organizers and reviewers to this workspace."
+        action={members ? <Count n={members.length} /> : null}
+      >
         {canManage && (
-          <form onSubmit={invite} className="flex items-center gap-2">
+          <form onSubmit={invite} className="flex max-w-xl flex-col gap-2 sm:flex-row sm:items-center">
             <Input
               type="email"
               value={email}
@@ -308,8 +312,8 @@ function SettingsView({
 
   return (
     <DashboardPage>
-      <DashboardPanel title="Workspace">
-        <form onSubmit={rename} className="flex flex-col gap-3">
+      <DashboardPanel title="Workspace" variant="subtle">
+        <form onSubmit={rename} className="flex max-w-xl flex-col gap-3">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="workspace-name">Name</Label>
             <div className="flex items-center gap-2">
@@ -345,7 +349,7 @@ function SettingsView({
         </dl>
       </DashboardPanel>
 
-      <DashboardPanel title="Danger zone">
+      <DashboardPanel title="Danger zone" variant="subtle">
         {canDelete ? (
           <DeleteOrg org={org} onDeleted={clearOrg} />
         ) : (
@@ -406,6 +410,7 @@ function DeleteOrg({
         variant="destructive"
         onClick={remove}
         disabled={!armed || deleting}
+        className="self-start sm:self-end"
       >
         {deleting ? "Deleting…" : "Delete workspace"}
       </Button>

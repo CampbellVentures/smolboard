@@ -4,22 +4,26 @@
 
 import { parseFields, parseRouting, type FormField, type RoutingConfig, type Answers } from "./forms";
 
-// SDK 0.3.373 has no field.json(), so *Json columns are strings holding
-// serialized JSON. Parse defensively at every read site via these helpers.
-export function parseJson<T>(raw: string | undefined | null): T | undefined {
-  if (!raw) return undefined;
-  try {
-    return JSON.parse(raw) as T;
-  } catch {
-    return undefined;
+// field.json() columns (SDK ≥0.3.378) are parsed-on-read — reads hand back the
+// real value. parseJson stays as a tolerant coercion so rows written before
+// the 0.3.378 migration (values stored as JSON strings) still read correctly.
+export function parseJson<T>(raw: unknown): T | undefined {
+  if (raw === undefined || raw === null || raw === "") return undefined;
+  if (typeof raw === "string") {
+    try {
+      return JSON.parse(raw) as T;
+    } catch {
+      return undefined;
+    }
   }
+  return raw as T;
 }
 
-export function fieldsOf(row: { fieldsJson?: string; formJson?: string }): FormField[] {
+export function fieldsOf(row: { fieldsJson?: unknown; formJson?: unknown }): FormField[] {
   return parseFields(parseJson(row.fieldsJson ?? row.formJson));
 }
 
-export function routingOf(row: { routingJson?: string }): RoutingConfig | undefined {
+export function routingOf(row: { routingJson?: unknown }): RoutingConfig | undefined {
   return parseRouting(parseJson(row.routingJson));
 }
 
@@ -46,8 +50,8 @@ export interface SubmissionFormRow {
   slug: string;
   description?: string;
   status: string;
-  fieldsJson?: string;
-  routingJson?: string;
+  fieldsJson?: FormField[];
+  routingJson?: RoutingConfig;
   confirmationMessage?: string;
   createdAt: string;
 }
@@ -60,7 +64,7 @@ export interface SubmissionRow {
   speakerUserId: string;
   title: string;
   abstract?: string;
-  answersJson?: string;
+  answersJson?: Answers;
   category?: string;
   status: string;
   currentRound: number;
@@ -80,7 +84,7 @@ export interface SpeakerProfileRow {
   company?: string;
   jobTitle?: string;
   headshotFileId?: string;
-  linksJson?: string;
+  linksJson?: Record<string, string>;
   createdAt: string;
 }
 
@@ -95,13 +99,19 @@ export interface SpeakerFileRow {
   createdAt: string;
 }
 
+export interface ReviewCriterion {
+  key: string;
+  label: string;
+  max: number;
+}
+
 export interface ReviewRoundRow {
   id: string;
   orgId: string;
   eventId: string;
   roundNumber: number;
   name: string;
-  criteriaJson?: string;
+  criteriaJson?: ReviewCriterion[];
   status: string;
 }
 
@@ -112,7 +122,7 @@ export interface ReviewRow {
   submissionId: string;
   roundId: string;
   reviewerUserId: string;
-  scoresJson?: string;
+  scoresJson?: Record<string, number>;
   comment?: string;
   recommendation?: string;
   createdAt: string;
@@ -148,7 +158,7 @@ export interface SessionRow {
   trackId?: string;
   startTime?: string;
   endTime?: string;
-  speakerUserIdsJson?: string;
+  speakerUserIdsJson?: string[];
   kind: string;
 }
 
@@ -159,7 +169,7 @@ export interface TaskTemplateRow {
   title: string;
   description?: string;
   kind: string;
-  formJson?: string;
+  formJson?: FormField[];
   target?: string;
   dueAt?: string;
   appliesTo: string;
@@ -174,7 +184,7 @@ export interface SpeakerTaskRow {
   speakerUserId: string;
   status: string;
   completedAt?: string;
-  responseJson?: string;
+  responseJson?: Answers;
 }
 
 export interface EmailTemplateRow {
@@ -184,6 +194,8 @@ export interface EmailTemplateRow {
   key: string;
   subject: string;
   body: string;
+  bodyHtml?: string;
+  bodyJson?: string;
   enabled: boolean;
 }
 
@@ -208,3 +220,30 @@ export const SUBMISSION_STATUSES = [
   "withdrawn",
 ] as const;
 export type SubmissionStatus = (typeof SUBMISSION_STATUSES)[number];
+
+export interface CopilotThreadRow {
+  id: string;
+  orgId: string;
+  eventId: string;
+  title: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface CopilotToolCall {
+  name: string;
+  input?: unknown;
+  result?: unknown;
+  isError?: boolean;
+}
+
+export interface CopilotMessageRow {
+  id: string;
+  orgId: string;
+  threadId: string;
+  role: string;
+  text: string;
+  toolCallsJson?: CopilotToolCall[];
+  createdAt: string;
+}

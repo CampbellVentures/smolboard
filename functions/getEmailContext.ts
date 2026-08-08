@@ -6,7 +6,13 @@ export default query<
   { eventId: string; templateKey: string },
   {
     event: { id: string; orgId: string; name: string } | null;
-    template: { subject: string; body: string; enabled: boolean } | null;
+    template: {
+      subject: string;
+      body: string;
+      bodyHtml?: string;
+      bodyJson?: string;
+      enabled: boolean;
+    } | null;
   }
 >({
   internal: true,
@@ -34,6 +40,8 @@ export default query<
         ? {
             subject: (t.subject as string) ?? "",
             body: (t.body as string) ?? "",
+            bodyHtml: (t.bodyHtml as string | undefined) || undefined,
+            bodyJson: (t.bodyJson as string | undefined) || undefined,
             enabled: t.enabled !== false,
           }
         : null,

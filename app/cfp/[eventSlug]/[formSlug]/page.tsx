@@ -44,7 +44,7 @@ export default function CfpFormPage({
         <div className="mt-8 rounded-xl border border-zinc-200 bg-white p-6 sm:p-8">
           <CfpForm
             formId={form.id}
-            fieldsJson={form.fieldsJson ?? ""}
+            fieldsJson={form.fieldsJson}
             confirmationMessage={form.confirmationMessage}
           />
         </div>

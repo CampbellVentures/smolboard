@@ -1,14 +1,28 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { db } from "@pylonsync/react";
-import { sendMagicLink, verifyMagicLink, useAuth } from "@pylonsync/client";
+import { callFn, db } from "@pylonsync/react";
+import { FileUpload, sendMagicLink, verifyMagicLink, useAuth } from "@pylonsync/client";
 import { Button } from "@/components/ui/button";
-import { Mic2, LogOut, Loader2 } from "lucide-react";
-import type { EventRow, SpeakerProfileRow, SubmissionRow } from "@/lib/types";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Select } from "@/components/ui/select";
+import { FormRenderer } from "@/components/form-renderer";
+import { CheckCircle2, ExternalLink, FileUp, LogOut, Loader2, Mic2 } from "lucide-react";
+import { fieldsOf, parseJson } from "@/lib/types";
+import { taskCompletion, taskDueState } from "@/lib/tasks";
+import type { Answers } from "@/lib/forms";
+import type {
+  EventRow,
+  SpeakerFileRow,
+  SpeakerProfileRow,
+  SpeakerTaskRow,
+  SubmissionRow,
+  TaskTemplateRow,
+} from "@/lib/types";
 
 const inputCls =
-  "w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10";
+  "h-8 w-full rounded-lg border border-zinc-200 bg-white px-3 text-[13px] text-zinc-900 outline-none transition-[border-color,box-shadow] placeholder:text-zinc-400 focus:border-zinc-400 focus:ring-2 focus:ring-zinc-900/10";
 
 /* ============================= Login ============================= */
 
@@ -147,12 +161,18 @@ export function PortalHome({
   email,
   initialProfiles,
   initialSubmissions,
+  initialTasks,
+  initialTemplates,
+  initialFiles,
   events,
 }: {
   userId: string;
   email: string;
   initialProfiles: SpeakerProfileRow[];
   initialSubmissions: SubmissionRow[];
+  initialTasks: SpeakerTaskRow[];
+  initialTemplates: TaskTemplateRow[];
+  initialFiles: SpeakerFileRow[];
   events: EventRow[];
 }) {
   const { signOut } = useAuth();
@@ -161,6 +181,9 @@ export function PortalHome({
   // Live: status flips (accepted!) appear without a refresh.
   const subsQ = db.useQuery<SubmissionRow>("Submission");
   const profQ = db.useQuery<SpeakerProfileRow>("SpeakerProfile");
+  const taskQ = db.useQuery<SpeakerTaskRow>("SpeakerTask");
+  const templateQ = db.useQuery<TaskTemplateRow>("TaskTemplate");
+  const fileQ = db.useQuery<SpeakerFileRow>("SpeakerFile");
   const submissions =
     !hydrated || subsQ.loading
       ? initialSubmissions
@@ -169,6 +192,15 @@ export function PortalHome({
     !hydrated || profQ.loading
       ? initialProfiles
       : profQ.data.filter((p) => p.userId === userId);
+  const tasks =
+    !hydrated || taskQ.loading
+      ? initialTasks
+      : taskQ.data.filter((task) => task.speakerUserId === userId);
+  const templates = !hydrated || templateQ.loading ? initialTemplates : templateQ.data;
+  const files =
+    !hydrated || fileQ.loading
+      ? initialFiles
+      : fileQ.data.filter((file) => file.userId === userId);
 
   const eventName = (id: string) => events.find((e) => e.id === id)?.name ?? "Event";
 
@@ -233,10 +265,196 @@ export function PortalHome({
         )}
 
         {profiles.map((p) => (
-          <ProfileEditor key={p.id} profile={p} eventName={eventName(p.eventId)} />
+          <React.Fragment key={p.id}>
+            <TaskChecklist
+              eventName={eventName(p.eventId)}
+              tasks={tasks.filter((task) => task.eventId === p.eventId)}
+              templates={templates.filter((template) => template.eventId === p.eventId)}
+              files={files.filter((file) => file.eventId === p.eventId)}
+            />
+            <ProfileEditor profile={p} eventName={eventName(p.eventId)} />
+            <SpeakerFiles profile={p} files={files.filter((file) => file.eventId === p.eventId)} />
+          </React.Fragment>
         ))}
       </main>
     </div>
+  );
+}
+
+/* ========================= Task checklist ========================= */
+
+function TaskChecklist({
+  eventName,
+  tasks,
+  templates,
+  files,
+}: {
+  eventName: string;
+  tasks: SpeakerTaskRow[];
+  templates: TaskTemplateRow[];
+  files: SpeakerFileRow[];
+}) {
+  if (tasks.length === 0) return null;
+  const completion = taskCompletion(tasks);
+  const templateById = new Map(templates.map((template) => [template.id, template]));
+  return (
+    <section>
+      <div className="flex items-end justify-between gap-4">
+        <div>
+          <h2 className="text-sm font-semibold text-zinc-900">Onboarding · {eventName}</h2>
+          <p className="mt-0.5 text-xs text-zinc-500">Complete these before the event team’s deadlines.</p>
+        </div>
+        <span className="text-xs tabular-nums text-zinc-500">{completion.done}/{completion.total}</span>
+      </div>
+      <Progress value={completion.percent} className="mt-3" aria-label={`${completion.percent}% complete`} />
+      <div className="mt-3 flex flex-col gap-3">
+        {tasks
+          .slice()
+          .sort((a, b) => {
+            const aTemplate = templateById.get(a.taskTemplateId);
+            const bTemplate = templateById.get(b.taskTemplateId);
+            return (aTemplate?.sortOrder ?? 0) - (bTemplate?.sortOrder ?? 0);
+          })
+          .map((task) => {
+            const template = templateById.get(task.taskTemplateId);
+            return template ? <SpeakerTaskItem key={task.id} task={task} template={template} files={files} /> : null;
+          })}
+      </div>
+    </section>
+  );
+}
+
+function SpeakerTaskItem({
+  task,
+  template,
+  files,
+}: {
+  task: SpeakerTaskRow;
+  template: TaskTemplateRow;
+  files: SpeakerFileRow[];
+}) {
+  const [answers, setAnswers] = useState<Answers>(() => parseJson<Answers>(task.responseJson) ?? {});
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const complete = task.status === "done";
+  const due = taskDueState(task, template);
+  const neededFileKind = template.target || "document";
+  const hasUpload = files.some((file) => file.kind === neededFileKind);
+
+  async function setComplete(completed: boolean) {
+    setBusy(true);
+    setError(null);
+    try {
+      await callFn("completeTask", { taskId: task.id, completed, response: answers });
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not update the task.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="rounded-xl border border-zinc-200 bg-white p-5">
+      <div className="flex items-start gap-3">
+        <span className={`mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full ${complete ? "bg-zinc-900 text-white" : "bg-zinc-100 text-zinc-400"}`}>
+          <CheckCircle2 className="size-3.5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-sm font-semibold text-zinc-900">{template.title}</h3>
+            {due === "overdue" ? <Badge variant="destructive">Overdue</Badge> : null}
+            {due === "due_soon" ? <Badge variant="secondary">Due soon</Badge> : null}
+            {complete ? <Badge>Complete</Badge> : null}
+          </div>
+          {template.description ? <p className="mt-1 text-sm leading-5 text-zinc-500">{template.description}</p> : null}
+          {template.dueAt ? <p className="mt-1 text-xs text-zinc-400">Due {new Date(template.dueAt).toLocaleString()}</p> : null}
+
+          {!complete && template.kind === "form" ? (
+            <div className="mt-4">
+              <FormRenderer fields={fieldsOf(template)} answers={answers} onChange={setAnswers} />
+            </div>
+          ) : null}
+          {!complete && template.kind === "link" && template.target ? (
+            <Button asChild type="button" variant="outline" className="mt-4">
+              <a href={template.target} target="_blank" rel="noreferrer">
+                <ExternalLink data-icon="inline-start" /> Open link
+              </a>
+            </Button>
+          ) : null}
+          {!complete && template.kind === "upload" && !hasUpload ? (
+            <p className="mt-4 text-xs text-zinc-500">Upload a {neededFileKind} in the files section below, then return here to complete this task.</p>
+          ) : null}
+          {error ? <p className="mt-3 text-xs text-red-600">{error}</p> : null}
+          <Button
+            type="button"
+            size="sm"
+            variant={complete ? "ghost" : "default"}
+            className="mt-4"
+            disabled={busy || (!complete && template.kind === "upload" && !hasUpload)}
+            onClick={() => setComplete(!complete)}
+          >
+            {busy ? "Saving…" : complete ? "Mark incomplete" : "Mark complete"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SpeakerFiles({ profile, files }: { profile: SpeakerProfileRow; files: SpeakerFileRow[] }) {
+  const [kind, setKind] = useState("slides");
+  const [error, setError] = useState<string | null>(null);
+  async function onUploaded(uploaded: { id: string }, source: File) {
+    try {
+      await db.insert("SpeakerFile", {
+        orgId: profile.orgId,
+        eventId: profile.eventId,
+        userId: profile.userId,
+        kind,
+        fileId: uploaded.id,
+        label: source.name,
+      });
+      if (kind === "headshot") {
+        await db.update("SpeakerProfile", profile.id, { headshotFileId: uploaded.id });
+      }
+      setError(null);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "The file uploaded, but could not be attached to your profile.");
+    }
+  }
+  return (
+    <section>
+      <div className="flex items-baseline justify-between">
+        <h2 className="text-sm font-semibold text-zinc-900">Files</h2>
+        <span className="text-xs text-zinc-400">{files.length} uploaded</span>
+      </div>
+      <div className="mt-3 rounded-xl border border-zinc-200 bg-white p-5">
+        <div className="mb-4 max-w-xs">
+          <Select aria-label="File type" value={kind} onChange={(event) => setKind(event.target.value)}>
+            <option value="slides">Slides</option>
+            <option value="headshot">Headshot</option>
+            <option value="document">Document</option>
+          </Select>
+        </div>
+        <FileUpload
+          label={<span className="flex items-center gap-2"><FileUp className="size-4" /> Drop a file here</span>}
+          helperText="PDF, slides, images, or documents up to 25 MB"
+          maxSizeBytes={25 * 1024 * 1024}
+          onUploaded={(uploaded, source) => void onUploaded(uploaded, source)}
+        />
+        {error ? <p className="mt-3 text-xs text-red-600">{error}</p> : null}
+        {files.length > 0 ? (
+          <ul className="mt-4 divide-y divide-zinc-100 rounded-lg border border-zinc-200">
+            {files.map((file) => (
+              <li key={file.id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+                <span className="truncate">{file.label || file.fileId}</span>
+                <Badge variant="outline" className="capitalize">{file.kind}</Badge>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </div>
+    </section>
   );
 }
 

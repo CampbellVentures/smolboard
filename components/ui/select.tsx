@@ -22,8 +22,8 @@ function Select({
       <select
         data-slot="select"
         className={cn(
-          "flex h-10 w-full appearance-none rounded-md border border-input bg-background py-1 pl-3 pr-8 text-sm text-foreground shadow-sm transition-colors",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+          "flex h-8 w-full appearance-none rounded-lg border border-input bg-background py-1 pl-3 pr-8 text-[13px] text-foreground transition-[border-color,box-shadow]",
+          "focus-visible:outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25",
           "disabled:cursor-not-allowed disabled:opacity-50",
           className,
         )}

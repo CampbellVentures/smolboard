@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Link, useRoom, useRouter, type RoomPeer } from "@pylonsync/react";
+import { Link, usePathname, useRoom, useRouter, type RoomPeer } from "@pylonsync/react";
 import { useAuth, OrganizationSwitcher } from "@pylonsync/client";
 import {
   LayoutDashboard,
@@ -16,20 +16,33 @@ import {
   Settings as SettingsIcon,
   LogOut,
   ExternalLink,
-  ArrowLeft,
   Sparkles,
   PanelRightClose,
-  PanelLeftClose,
-  PanelLeftOpen,
   ChevronsUpDown,
+  Menu,
+  MessageSquareText,
+  Send,
   type LucideIcon,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
+import { lastEventStorageKey } from "@/lib/dashboard-routing";
+import { CopilotChat } from "@/components/copilot-chat";
 
 // Three-pane organizer shell (SPEC.md → "Organizer UI shell"):
 //   [nav sidebar] [copilot pane] [content]
 // Nav is grouped: primary product items first, admin items under an eyebrow
 // label, and the account card pinned to the sidebar's base (menu opens
-// upward). The copilot pane is a collapsed rail until the agent ships (M3.5).
+// upward). The copilot preview opens from the top bar until M3.5 connects it.
 
 export type WorkspaceNavKey = "events" | "members" | "settings";
 export type EventNavKey =
@@ -107,7 +120,7 @@ function PresenceIndicator({
 
   return (
     <div
-      className="flex h-10 items-center gap-2.5"
+      className="flex h-10 items-center"
       aria-label={`${status} in ${scopeName}`}
       title={title}
       data-presence-room={roomId}
@@ -117,13 +130,13 @@ function PresenceIndicator({
         {visiblePeople.map((person, index) => (
           <span
             key={person.id}
-            className={`relative flex size-8 items-center justify-center rounded-full text-[10px] font-semibold ring-2 ring-white ${presenceTone(person.id)}`}
+            className={`relative flex size-8 items-center justify-center rounded-full text-[10px] font-semibold ring-2 ring-background ${presenceTone(person.id)}`}
             style={{ zIndex: visiblePeople.length - index }}
           >
             {initials(person.name)}
             {index === 0 ? (
               <span
-                className={`absolute bottom-0 right-0 size-2.5 rounded-full ring-2 ring-white ${
+                className={`absolute bottom-0 right-0 size-2.5 rounded-full ring-2 ring-background ${
                   error ? "bg-amber-400" : isConnected ? "bg-emerald-500" : "bg-zinc-300"
                 }`}
               />
@@ -131,14 +144,12 @@ function PresenceIndicator({
           </span>
         ))}
         {hiddenCount > 0 ? (
-          <span className="relative z-0 flex size-8 items-center justify-center rounded-full bg-zinc-100 text-[10px] font-semibold tabular-nums text-zinc-600 ring-2 ring-white">
+          <span className="relative z-0 flex size-8 items-center justify-center rounded-full bg-muted text-[10px] font-semibold tabular-nums text-muted-foreground ring-2 ring-background">
             +{hiddenCount}
           </span>
         ) : null}
       </div>
-      <span className="hidden text-xs font-medium tabular-nums text-zinc-500 lg:inline">
-        {status}
-      </span>
+      <span className="sr-only">{status}</span>
     </div>
   );
 }
@@ -155,7 +166,7 @@ const WORKSPACE_NAV: NavEntry<WorkspaceNavKey>[] = [
   {
     key: "events",
     label: "All events",
-    href: "/dashboard",
+    href: "/dashboard/events",
     Icon: CalendarDays,
     group: "Events",
   },
@@ -166,49 +177,74 @@ const WORKSPACE_NAV: NavEntry<WorkspaceNavKey>[] = [
 function eventNav(eventId: string): NavEntry<EventNavKey>[] {
   const base = `/dashboard/events/${eventId}`;
   return [
-    { key: "overview", label: "Dashboard", href: base, Icon: LayoutDashboard },
-    { key: "forms", label: "Forms", href: `${base}/forms`, Icon: FileText, group: "Program" },
-    { key: "abstracts", label: "Abstracts", href: `${base}/abstracts`, Icon: Inbox, group: "Program" },
-    { key: "agenda", label: "Agenda", href: `${base}/agenda`, Icon: CalendarClock, group: "Program" },
+    { key: "forms", label: "Forms", href: `${base}/forms`, Icon: FileText, group: "Collect" },
+    { key: "abstracts", label: "Submissions", href: `${base}/abstracts`, Icon: Inbox, group: "Manage" },
+    { key: "agenda", label: "Agenda", href: `${base}/agenda`, Icon: CalendarClock, group: "Manage" },
     { key: "speakers", label: "Speakers", href: `${base}/speakers`, Icon: Mic2, group: "Speakers" },
     { key: "tasks", label: "Tasks", href: `${base}/tasks`, Icon: ListChecks, group: "Speakers" },
     { key: "emails", label: "Emails", href: `${base}/emails`, Icon: Mail, group: "Speakers" },
+    { key: "overview", label: "Overview", href: `${base}/overview`, Icon: LayoutDashboard, group: "Event" },
     { key: "event-settings", label: "Settings", href: `${base}/settings`, Icon: SettingsIcon, group: "Event" },
   ];
 }
 
-// The active row reads as a raised white card — layered translucent shadows
-// instead of a hard border, so it sits naturally on the zinc-50 column.
+function EventContextLink({
+  event,
+  onNavigate,
+}: {
+  event: { id: string; name: string };
+  onNavigate?: () => void;
+}) {
+  return (
+    <Link
+      href="/dashboard/events"
+      onClick={onNavigate}
+      className="flex h-12 w-full items-center gap-2.5 rounded-lg bg-background/70 px-2.5 transition-[background-color,scale] duration-150 ease-out hover:bg-background active:scale-[0.98] motion-reduce:transform-none"
+    >
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border bg-muted/60 text-foreground shadow-sm">
+        <CalendarDays className="size-4" aria-hidden="true" />
+      </span>
+      <span className="min-w-0 flex-1 text-left">
+        <span className="block truncate text-[13px] font-semibold">{event.name}</span>
+        <span className="block text-[10px] text-muted-foreground">Event</span>
+      </span>
+      <ChevronsUpDown className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+    </Link>
+  );
+}
+
+// Navigation stays intentionally quiet; primary-colored surfaces are reserved
+// for actions, while location is conveyed by a soft selected row.
 function NavItem<K extends string>({
   item,
   isActive,
-  collapsed,
+  onNavigate,
 }: {
   item: NavEntry<K>;
   isActive: boolean;
-  collapsed: boolean;
+  onNavigate?: () => void;
 }) {
   return (
     <Link
       href={item.href}
+      onClick={onNavigate}
       aria-current={isActive ? "page" : undefined}
-      title={collapsed ? item.label : undefined}
-      className={
-        "group relative flex h-10 items-center rounded-xl text-[13px] font-medium transition-[background-color,color,box-shadow,scale] duration-150 ease-out active:scale-[0.96] " +
-        (collapsed ? "justify-center px-0 " : "gap-3 px-3 ") +
-        (isActive
-          ? "bg-zinc-900 text-white shadow-[0_0_0_1px_rgba(0,0,0,0.08),0_1px_2px_rgba(0,0,0,0.16),0_4px_12px_-6px_rgba(0,0,0,0.35)]"
-          : "text-zinc-600 hover:bg-white hover:text-zinc-950 hover:shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.05)]")
-      }
+      className={cn(
+        "group relative flex h-8 items-center gap-2.5 rounded-lg px-2.5 text-[13px] font-medium transition-[background-color,color,scale] duration-150 ease-out active:scale-[0.96] motion-reduce:transform-none",
+        isActive
+          ? "bg-accent text-accent-foreground"
+          : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
+      )}
     >
       <item.Icon
-        className={
-          "size-[17px] shrink-0 transition-colors duration-150 " +
-          (isActive ? "text-white" : "text-zinc-400 group-hover:text-zinc-700")
-        }
+        aria-hidden="true"
+        className={cn(
+          "size-4 shrink-0 transition-colors duration-150",
+          isActive ? "text-foreground" : "text-muted-foreground group-hover:text-foreground",
+        )}
         strokeWidth={2}
       />
-      {!collapsed && <span className="truncate">{item.label}</span>}
+      <span className="truncate">{item.label}</span>
     </Link>
   );
 }
@@ -216,49 +252,41 @@ function NavItem<K extends string>({
 function GroupedNav<K extends string>({
   items,
   active,
-  collapsed,
   pinnedGroup,
+  onNavigate,
 }: {
   items: NavEntry<K>[];
   active: string;
-  collapsed: boolean;
   pinnedGroup?: string;
+  onNavigate?: () => void;
 }) {
   const ungrouped = items.filter((n) => !n.group);
   const groups = [...new Set(items.map((n) => n.group).filter(Boolean))] as string[];
   return (
-    <nav
-      className={
-        "flex flex-1 flex-col overflow-y-auto pt-2 " + (collapsed ? "px-2.5" : "px-3")
-      }
-    >
-      <div className="space-y-1">
+    <nav className="flex flex-1 flex-col overflow-y-auto px-3 pt-2">
+      <div className="flex flex-col gap-1">
         {ungrouped.map((n) => (
           <NavItem
             key={n.key}
             item={n}
             isActive={active === n.key}
-            collapsed={collapsed}
+            onNavigate={onNavigate}
           />
         ))}
       </div>
       {groups.map((g) => (
         <div
           key={g}
-          className={
+          className={cn(
             g === pinnedGroup
-              ? "mt-auto border-t border-zinc-200/80 pb-3 pt-4"
-              : collapsed
-                ? "mt-3 border-t border-zinc-200/80 pt-3"
-                : "mt-5"
-          }
-        >
-          {!collapsed && (
-            <div className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
-              {g}
-            </div>
+              ? "mt-auto border-t border-border/70 pb-3 pt-3"
+              : "mt-4",
           )}
-          <div className="space-y-1">
+        >
+          <div className="mb-1 px-2.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            {g}
+          </div>
+          <div className="flex flex-col gap-1">
             {items
               .filter((n) => n.group === g)
               .map((n) => (
@@ -266,13 +294,31 @@ function GroupedNav<K extends string>({
                   key={n.key}
                   item={n}
                   isActive={active === n.key}
-                  collapsed={collapsed}
+                  onNavigate={onNavigate}
                 />
               ))}
           </div>
         </div>
       ))}
     </nav>
+  );
+}
+
+function CopilotShortcut({ onOpen }: { onOpen: () => void }) {
+  return (
+    <div className="px-3 pb-3">
+      <div className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+        Copilot
+      </div>
+      <button
+        type="button"
+        onClick={onOpen}
+        className="flex h-10 w-full items-center gap-3 rounded-lg px-3 text-[13px] font-medium text-muted-foreground transition-[background-color,color,scale] duration-150 ease-out hover:bg-accent/60 hover:text-foreground active:scale-[0.96] motion-reduce:transform-none"
+      >
+        <MessageSquareText className="size-[17px] shrink-0" aria-hidden="true" />
+        <span>New conversation</span>
+      </button>
+    </div>
   );
 }
 
@@ -302,132 +348,153 @@ export function AppShell({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const presenceRoomId = event
     ? `smolboard:event:${event.id}`
     : `smolboard:workspace:${workspaceId}`;
   const presenceScopeName = event?.name ?? orgName ?? "this workspace";
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [copilotOpen, setCopilotOpen] = useState(false);
   useEffect(() => {
-    setSidebarCollapsed(localStorage.getItem("sb.sidebar.collapsed") === "1");
+    setCopilotOpen(localStorage.getItem("sb.copilot.open") === "1");
   }, []);
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [pathname]);
+  useEffect(() => {
+    if (event) {
+      localStorage.setItem(lastEventStorageKey(workspaceId), event.id);
+    }
+  }, [event, workspaceId]);
 
-  function toggleSidebar() {
-    setSidebarCollapsed((collapsed) => {
-      const next = !collapsed;
-      localStorage.setItem("sb.sidebar.collapsed", next ? "1" : "0");
-      return next;
-    });
+  function setCopilot(next: boolean) {
+    setCopilotOpen(next);
+    localStorage.setItem("sb.copilot.open", next ? "1" : "0");
   }
 
   return (
-    <div className="flex min-h-screen bg-white text-zinc-900">
+    <div className="flex min-h-screen bg-background text-foreground">
       {/* ---------- Pane 1: nav sidebar ---------- */}
-      <aside
-        className={
-          "hidden shrink-0 flex-col border-r border-zinc-200/80 bg-zinc-50/90 transition-[width] duration-200 ease-out md:flex " +
-          (sidebarCollapsed ? "w-[68px]" : "w-60")
-        }
-      >
-        <div
-          className={
-            "flex h-14 shrink-0 items-center gap-1.5 " +
-            (sidebarCollapsed ? "justify-center px-1.5" : "justify-between px-3")
-          }
-        >
-          {!sidebarCollapsed && (
-            <Link
-              href="/"
-              className="flex h-10 min-w-0 items-center gap-2.5 rounded-xl px-2 transition-[background-color,scale] duration-150 ease-out hover:bg-white active:scale-[0.96]"
-            >
-              <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-zinc-900 text-[13px] font-bold text-white shadow-[0_1px_2px_rgba(0,0,0,0.18)]">
-                s
-              </span>
-              <span className="truncate text-[15px] font-semibold tracking-tight">smolboard</span>
-            </Link>
+      <aside className="hidden w-60 shrink-0 flex-col border-r border-border/70 bg-muted/35 md:flex">
+        <div className="px-3 pb-2 pt-3">
+          {event ? (
+            <EventContextLink event={event} />
+          ) : (
+            <OrganizationSwitcher
+              hidePersonal
+              initialActiveName={orgName}
+              onSwitched={() => router.push("/dashboard")}
+              className="w-full [&>button]:h-12 [&>button]:w-full [&>button]:justify-start [&>button]:rounded-lg [&>button]:border-0 [&>button]:bg-background/70 [&>button]:px-2.5 [&>button]:shadow-none [&>button]:transition-[background-color,scale] [&>button]:duration-150 [&>button]:ease-out [&>button]:hover:bg-background [&>button]:active:scale-[0.96] [&>button>span:first-child]:size-8 [&>button>span:first-child]:rounded-lg [&>button>span:nth-child(2)]:min-w-0 [&>button>span:nth-child(2)]:flex-1 [&>button>span:nth-child(2)]:text-left"
+            />
           )}
-          <button
-            type="button"
-            onClick={toggleSidebar}
-            aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-            title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-            className="flex size-10 shrink-0 items-center justify-center rounded-xl text-zinc-400 transition-[background-color,color,scale] duration-150 ease-out hover:bg-white hover:text-zinc-800 active:scale-[0.96]"
-          >
-            {sidebarCollapsed ? (
-              <PanelLeftOpen className="size-[17px]" strokeWidth={2} />
-            ) : (
-              <PanelLeftClose className="size-[17px]" strokeWidth={2} />
-            )}
-          </button>
-        </div>
-
-        <div className={sidebarCollapsed ? "px-3 pb-2" : "px-3 pb-2"}>
-          <OrganizationSwitcher
-            hidePersonal
-            initialActiveName={orgName}
-            onSwitched={() => router.push("/dashboard")}
-            className={
-              "w-full [&>button]:h-10 [&>button]:w-full [&>button]:rounded-xl [&>button]:border-0 [&>button]:bg-white [&>button]:shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.05)] [&>button]:transition-[background-color,box-shadow,scale] [&>button]:duration-150 [&>button]:ease-out [&>button]:hover:bg-white [&>button]:hover:shadow-[0_0_0_1px_rgba(0,0,0,0.09),0_2px_5px_rgba(0,0,0,0.07)] [&>button]:active:scale-[0.96] [&>button>span:first-child]:size-7 [&>button>span:first-child]:rounded-lg " +
-              (sidebarCollapsed
-                ? "[&>button]:justify-center [&>button]:px-0 [&>button>span:nth-child(2)]:hidden [&>button>svg]:hidden"
-                : "[&>button]:justify-start [&>button]:px-2.5 [&>button>span:nth-child(2)]:min-w-0 [&>button>span:nth-child(2)]:flex-1 [&>button>span:nth-child(2)]:text-left")
-            }
-          />
         </div>
 
         {event ? (
           <>
-            <div className={"px-3 pt-2 " + (sidebarCollapsed ? "pb-0" : "pb-1")}>
-              {sidebarCollapsed ? (
-                <Link
-                  href="/dashboard"
-                  title={`Back to all events · ${event.name}`}
-                  className="flex size-10 items-center justify-center rounded-xl bg-white text-zinc-500 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.05)] transition-[color,scale] duration-150 ease-out hover:text-zinc-900 active:scale-[0.96]"
-                >
-                  <ArrowLeft className="size-[17px]" />
-                </Link>
-              ) : (
-                <div className="rounded-2xl bg-white p-2 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.05)]">
-                  <div className="px-2 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
-                    Current event
-                  </div>
-                  <div className="truncate px-2 text-[13px] font-semibold text-zinc-900">
-                    {event.name}
-                  </div>
-                  <Link
-                    href="/dashboard"
-                    className="mt-1 flex h-8 items-center gap-2 rounded-lg px-2 text-[12px] font-medium text-zinc-500 transition-[background-color,color,scale] duration-150 ease-out hover:bg-zinc-50 hover:text-zinc-900 active:scale-[0.96]"
-                  >
-                    <ArrowLeft className="size-3.5" /> All events
-                  </Link>
-                </div>
-              )}
-            </div>
-            <GroupedNav items={eventNav(event.id)} active={active} collapsed={sidebarCollapsed} />
+            <GroupedNav items={eventNav(event.id)} active={active} />
+            <CopilotShortcut onOpen={() => setCopilot(true)} />
           </>
         ) : (
           <GroupedNav
             items={WORKSPACE_NAV}
             active={active}
-            collapsed={sidebarCollapsed}
             pinnedGroup="Workspace"
           />
         )}
 
         {/* Account card pinned to the sidebar's base; menu opens upward. */}
-        <div className="border-t border-zinc-200/80 p-3">
-          <UserMenu email={userEmail} direction="up" collapsed={sidebarCollapsed} />
+        <div className="border-t border-border/70 p-3">
+          <UserMenu email={userEmail} direction="up" />
         </div>
       </aside>
 
       {/* ---------- Pane 2: copilot ---------- */}
-      <CopilotPane />
+      <CopilotPane
+        open={copilotOpen}
+        event={event}
+        onClose={() => setCopilot(false)}
+      />
 
       {/* ---------- Pane 3: content ---------- */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 shrink-0 items-center justify-between border-b border-zinc-200/70 px-6">
-          <h1 className="truncate text-[15px] font-semibold">{title}</h1>
-          <div className="flex items-center gap-3">
+        <header className="flex h-14 shrink-0 items-center justify-between border-b border-border/60 px-3 sm:px-4 lg:px-6">
+          <div className="flex min-w-0 items-center gap-1.5">
+            <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
+              <SheetTrigger asChild>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  className="md:hidden"
+                  aria-label="Open navigation"
+                >
+                  <Menu data-icon="inline-start" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent
+                side="left"
+                className="w-[min(88vw,18rem)] gap-0 overscroll-contain p-0 [&>button]:size-10 [&>button]:rounded-lg"
+              >
+                <SheetHeader className="sr-only">
+                  <SheetTitle>Dashboard navigation</SheetTitle>
+                  <SheetDescription>Navigate the workspace and current event.</SheetDescription>
+                </SheetHeader>
+                <div className="flex h-full flex-col bg-muted/35">
+                  <div className="px-3 pb-2 pt-3">
+                    {event ? (
+                      <EventContextLink
+                        event={event}
+                        onNavigate={() => setMobileNavOpen(false)}
+                      />
+                    ) : (
+                      <OrganizationSwitcher
+                        hidePersonal
+                        initialActiveName={orgName}
+                        onSwitched={() => {
+                          setMobileNavOpen(false);
+                          router.push("/dashboard");
+                        }}
+                        className="w-full [&>button]:h-10 [&>button]:w-full [&>button]:justify-start [&>button]:rounded-lg [&>button]:border-0 [&>button]:bg-background/70 [&>button]:px-2.5 [&>button]:shadow-none"
+                      />
+                    )}
+                  </div>
+                  <GroupedNav
+                    items={event ? eventNav(event.id) : WORKSPACE_NAV}
+                    active={active}
+                    pinnedGroup={event ? undefined : "Workspace"}
+                    onNavigate={() => setMobileNavOpen(false)}
+                  />
+                  {event ? (
+                    <CopilotShortcut
+                      onOpen={() => {
+                        setMobileNavOpen(false);
+                        setCopilot(true);
+                      }}
+                    />
+                  ) : null}
+                  <div className="border-t border-border/70 p-3">
+                    <UserMenu email={userEmail} direction="up" />
+                  </div>
+                </div>
+              </SheetContent>
+            </Sheet>
+            <h1 className="truncate text-[15px] font-semibold tracking-tight">{title}</h1>
+          </div>
+          <div className="flex items-center gap-1.5 sm:gap-2">
             {actions}
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="hidden md:inline-flex"
+              onClick={() => setCopilot(!copilotOpen)}
+              aria-label="Ask smolboard"
+              aria-expanded={copilotOpen}
+            >
+              <Sparkles data-icon="inline-start" />
+              <span className="hidden xl:inline">Ask smolboard</span>
+              <span className="xl:hidden">Ask</span>
+            </Button>
             <PresenceIndicator
               roomId={presenceRoomId}
               userId={userId}
@@ -441,69 +508,133 @@ export function AppShell({
             </div>
           </div>
         </header>
-        <main className="min-w-0 flex-1 overflow-x-auto p-6">{children}</main>
+        <main className="min-w-0 flex-1 overflow-x-auto p-4 md:p-5 xl:p-6">
+          {children}
+        </main>
       </div>
     </div>
   );
 }
 
-// Collapsed rail ↔ expanded panel; preference sticks per browser. The panel is
-// a teaser until lib/agent-tools.ts + the copilot land (SPEC M3.5).
-function CopilotPane() {
-  const [open, setOpen] = useState(false);
-  const [hydrated, setHydrated] = useState(false);
-  useEffect(() => {
-    setHydrated(true);
-    setOpen(localStorage.getItem("sb.copilot.open") === "1");
-  }, []);
-  function toggle() {
-    setOpen((v) => {
-      localStorage.setItem("sb.copilot.open", v ? "0" : "1");
-      return !v;
-    });
-  }
-  const expanded = hydrated && open;
-  if (!expanded) {
-    return (
-      <div className="hidden w-11 shrink-0 flex-col items-center border-r border-zinc-200/70 bg-white pt-3 md:flex">
-        <button
-          type="button"
-          aria-label="Open copilot"
-          title="Copilot"
-          onClick={toggle}
-          className="flex size-8 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700"
-        >
-          <Sparkles className="size-[18px]" strokeWidth={2} />
-        </button>
-      </div>
-    );
-  }
+// Visual shell for M3.5. It already has the final thread/composer geometry so
+// the streaming implementation can replace the preview without moving chrome.
+function CopilotPane({
+  open,
+  event,
+  onClose,
+}: {
+  open: boolean;
+  event?: { id: string; name: string };
+  onClose: () => void;
+}) {
+  const [draft, setDraft] = useState("");
+  if (!open) return null;
+  const eventName = event?.name;
+  const prompts = ["Summarize this workspace", "What needs attention?", "Help me plan an event"];
+
   return (
-    <div className="hidden w-80 shrink-0 flex-col border-r border-zinc-200/70 bg-white md:flex">
-      <div className="flex h-14 items-center justify-between border-b border-zinc-200/70 px-4">
-        <div className="flex items-center gap-2 text-[13.5px] font-semibold text-zinc-900">
-          <Sparkles className="size-4 text-zinc-400" /> Copilot
+    <aside className="hidden w-80 shrink-0 flex-col border-l border-border/60 bg-background shadow-[0_16px_48px_-16px_rgba(0,0,0,0.22)] md:fixed md:inset-y-0 md:right-0 md:z-40 md:flex xl:static xl:z-auto xl:border-l-0 xl:border-r xl:shadow-none">
+      <div className="flex h-14 items-center justify-between border-b border-border/60 px-4">
+        <div className="flex min-w-0 items-center gap-2 text-[13.5px] font-semibold">
+          <Sparkles className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+          <span className="truncate">Copilot</span>
+          {!event && (
+            <span className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+              Preview
+            </span>
+          )}
         </div>
         <button
           type="button"
           aria-label="Collapse copilot"
-          onClick={toggle}
-          className="flex size-7 items-center justify-center rounded-md text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700"
+          onClick={onClose}
+          className="flex size-10 items-center justify-center rounded-lg text-muted-foreground transition-[background-color,color,scale] duration-150 ease-out hover:bg-muted hover:text-foreground active:scale-[0.96] motion-reduce:transform-none"
         >
-          <PanelRightClose className="size-4" />
+          <PanelRightClose className="size-4" aria-hidden="true" />
         </button>
       </div>
-      <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center">
-        <span className="flex size-10 items-center justify-center rounded-xl bg-zinc-50 text-zinc-300">
-          <Sparkles className="size-5" />
-        </span>
-        <p className="text-[13px] font-medium text-zinc-600">Your event copilot</p>
-        <p className="text-xs leading-relaxed text-zinc-400">
-          Score submissions, schedule sessions, and nudge speakers from chat.
-          Coming online this week.
-        </p>
+      {event ? (
+        // Inside an event: the real agent (functions/copilotChat.ts over the
+        // shared tool belt). Workspace level keeps the teaser below — the
+        // copilot's tools are all event-scoped.
+        <CopilotChat eventId={event.id} eventName={event.name} />
+      ) : (
+        <WorkspaceCopilotTeaser draft={draft} setDraft={setDraft} prompts={prompts} eventName={eventName} />
+      )}
+    </aside>
+  );
+}
+
+function WorkspaceCopilotTeaser({
+  draft,
+  setDraft,
+  prompts,
+  eventName,
+}: {
+  draft: string;
+  setDraft: (v: string) => void;
+  prompts: string[];
+  eventName?: string;
+}) {
+  return (
+    <>
+
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-5">
+        <div className="flex items-start gap-3">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+            <Sparkles className="size-4" aria-hidden="true" />
+          </span>
+          <div className="min-w-0 pt-1">
+            <p className="text-pretty text-sm leading-6 text-foreground">
+              I can help run {eventName ?? "your workspace"} from here—review submissions,
+              schedule sessions, and follow up with speakers.
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Open an event to put me to work — my tools are event-scoped.
+            </p>
+          </div>
+        </div>
+        <div className="mt-auto flex flex-col gap-2 pt-8">
+          <div className="px-1 text-[11px] font-medium text-muted-foreground">
+            Try asking
+          </div>
+          {prompts.map((prompt) => (
+            <button
+              key={prompt}
+              type="button"
+              onClick={() => setDraft(prompt)}
+              className="min-h-10 rounded-xl bg-muted/50 px-3 py-2 text-left text-xs text-foreground transition-[background-color,scale] duration-150 ease-out hover:bg-muted active:scale-[0.98] motion-reduce:transform-none"
+            >
+              {prompt}
+            </button>
+          ))}
+        </div>
       </div>
-    </div>
+      <div className="border-t border-border/60 p-3">
+        <div className="rounded-2xl bg-muted/45 p-2 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_1px_2px_-1px_rgba(0,0,0,0.06),0_2px_4px_rgba(0,0,0,0.04)] transition-[box-shadow] duration-150 focus-within:shadow-[0_0_0_2px_var(--ring)]">
+          <Textarea
+            value={draft}
+            onChange={(event_) => setDraft(event_.target.value)}
+            aria-label="Message copilot"
+            placeholder="Ask about your event…"
+            className="min-h-14 resize-none border-0 bg-transparent px-2 py-1.5 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+          />
+          <div className="mt-1 flex items-center justify-between gap-2 px-1">
+            <span className="text-[10px] text-muted-foreground">smolboard tools</span>
+            <Button
+              type="button"
+              size="icon"
+              className="size-8 rounded-full"
+              disabled
+              aria-label="Send message"
+              title="Open an event to chat with the copilot"
+            >
+              <Send data-icon="inline-start" />
+            </Button>
+          </div>
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -513,11 +644,9 @@ function CopilotPane() {
 function UserMenu({
   email,
   direction,
-  collapsed = false,
 }: {
   email: string;
   direction: "up" | "down";
-  collapsed?: boolean;
 }) {
   const { signOut } = useAuth();
   const initial = (email.trim()[0] || "?").toUpperCase();
@@ -532,48 +661,46 @@ function UserMenu({
         className={
           "cursor-pointer select-none list-none marker:hidden [&::-webkit-details-marker]:hidden " +
           (up
-            ? "flex h-10 w-full items-center rounded-xl transition-[background-color,box-shadow,scale] duration-150 ease-out hover:bg-white hover:shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.05)] active:scale-[0.96] " +
-              (collapsed ? "justify-center px-0" : "gap-2.5 px-2")
-            : "flex size-9 items-center justify-center")
+            ? "flex h-10 w-full items-center gap-2.5 rounded-lg px-2 transition-[background-color,scale] duration-150 ease-out hover:bg-background/80 active:scale-[0.96] motion-reduce:transform-none"
+            : "flex size-10 items-center justify-center rounded-lg transition-[background-color] hover:bg-muted")
         }
-        title={collapsed ? email || "Account" : undefined}
       >
-        <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-[11px] font-semibold text-white">
+        <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-semibold text-primary-foreground">
           {initial}
         </span>
-        {up && !collapsed ? (
+        {up ? (
           <>
-            <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-zinc-700">
+            <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-foreground">
               {email || "Signed in"}
             </span>
-            <ChevronsUpDown className="size-3.5 shrink-0 text-zinc-400" strokeWidth={2} />
+            <ChevronsUpDown className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={2} aria-hidden="true" />
           </>
         ) : null}
       </summary>
       <div
         className={
-          "absolute z-40 w-56 overflow-hidden rounded-xl bg-white p-1 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_16px_48px_-16px_rgba(0,0,0,0.25)] " +
+          "absolute z-40 w-56 overflow-hidden rounded-xl bg-popover p-1 text-popover-foreground shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_16px_48px_-16px_rgba(0,0,0,0.25)] " +
           (up ? "bottom-full left-0 mb-2" : "right-0 top-full mt-2")
         }
       >
-        <div className="border-b border-zinc-100 px-2.5 py-2">
-          <div className="truncate text-[13px] font-medium text-zinc-900">
+        <div className="border-b border-border/60 px-2.5 py-2">
+          <div className="truncate text-[13px] font-medium">
             {email || "Signed in"}
           </div>
         </div>
         <a
           href="/"
-          className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-[13px] text-zinc-700 transition-colors hover:bg-zinc-50"
+          className="flex min-h-10 items-center gap-2 rounded-lg px-2.5 py-2 text-[13px] text-foreground transition-[background-color] hover:bg-muted"
         >
-          <ExternalLink className="size-4 text-zinc-400" strokeWidth={2} />
+          <ExternalLink className="size-4 text-muted-foreground" strokeWidth={2} aria-hidden="true" />
           View site
         </a>
         <button
           type="button"
           onClick={onSignOut}
-          className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[13px] text-zinc-700 transition-colors hover:bg-zinc-50"
+          className="flex min-h-10 w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[13px] text-foreground transition-[background-color] hover:bg-muted"
         >
-          <LogOut className="size-4 text-zinc-400" strokeWidth={2} />
+          <LogOut className="size-4 text-muted-foreground" strokeWidth={2} aria-hidden="true" />
           Sign out
         </button>
       </div>

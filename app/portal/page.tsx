@@ -1,7 +1,14 @@
 import React, { use } from "react";
 import { type Metadata, type PageProps } from "@pylonsync/react";
 import { PortalLogin, PortalHome } from "./portal-client";
-import type { EventRow, SpeakerProfileRow, SubmissionRow } from "@/lib/types";
+import type {
+  EventRow,
+  SpeakerFileRow,
+  SpeakerProfileRow,
+  SpeakerTaskRow,
+  SubmissionRow,
+  TaskTemplateRow,
+} from "@/lib/types";
 
 export const metadata: Metadata = {
   title: "Speaker portal — smolboard",
@@ -28,6 +35,13 @@ export default function PortalPage({ auth, serverData }: PageProps) {
   );
   // Non-draft events are publicly readable; used for names/dates.
   const events = use(serverData.list<EventRow>("Event"));
+  const tasks = use(serverData.list<SpeakerTaskRow>("SpeakerTask")).filter(
+    (task) => task.speakerUserId === auth.user_id,
+  );
+  const templates = use(serverData.list<TaskTemplateRow>("TaskTemplate"));
+  const files = use(serverData.list<SpeakerFileRow>("SpeakerFile")).filter(
+    (file) => file.userId === auth.user_id,
+  );
 
   return (
     <PortalHome
@@ -35,6 +49,9 @@ export default function PortalPage({ auth, serverData }: PageProps) {
       email={me?.email ?? ""}
       initialProfiles={profiles}
       initialSubmissions={submissions}
+      initialTasks={tasks}
+      initialTemplates={templates}
+      initialFiles={files}
       events={events}
     />
   );

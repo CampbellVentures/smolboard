@@ -80,7 +80,7 @@ export function EventSettings({ event }: { event: EventRow }) {
 
   return (
     <DashboardPage>
-      <DashboardPanel title="Event details">
+      <DashboardPanel title="Event details" variant="subtle">
         <form onSubmit={save} className="flex flex-col gap-4">
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
@@ -129,15 +129,15 @@ export function EventSettings({ event }: { event: EventRow }) {
           </div>
           {saved && <p className="text-xs text-green-600">Saved.</p>}
           {error && <p className="text-xs text-red-600">{error}</p>}
-          <Button type="submit" size="sm" disabled={saving}>
+          <Button type="submit" size="sm" disabled={saving} className="self-start sm:self-end">
             {saving ? "Saving…" : "Save changes"}
           </Button>
         </form>
       </DashboardPanel>
 
-      <DashboardPanel title="Danger zone">
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-zinc-600">
+      <DashboardPanel title="Danger zone" variant="subtle">
+        <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-pretty text-sm text-muted-foreground">
             Deleting removes forms, submissions, and speaker data for this event.
           </p>
           <Button

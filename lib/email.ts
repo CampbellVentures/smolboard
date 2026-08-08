@@ -10,6 +10,23 @@ export function renderTemplate(template: string, vars: MergeVars): string {
   return template.replace(/\{\{\s*([a-z0-9_]+)\s*\}\}/gi, (_m, tag: string) => vars[tag] ?? "");
 }
 
+// HTML exports need the same merge tags, but values must not be allowed to
+// introduce markup or break attributes such as href="{{portal_link}}".
+export function renderHtmlTemplate(template: string, vars: MergeVars): string {
+  return template.replace(/\{\{\s*([a-z0-9_]+)\s*\}\}/gi, (_m, tag: string) =>
+    escapeHtml(vars[tag] ?? ""),
+  );
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 // Minimal markdown → HTML for email bodies: paragraphs, **bold**, _italic_,
 // [text](url) links, and single line breaks. Deliberately tiny — event emails
 // are short notes, not documents.
@@ -20,8 +37,11 @@ export function markdownToHtml(md: string): string {
     .replace(/>/g, "&gt;");
   const inline = esc
     .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
-    .replace(/_([^_]+)_/g, "<em>$1</em>")
-    .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2">$1</a>');
+    .replace(/(^|[\s(])_([^_\n]+)_(?=$|[\s).,!?:;])/gm, "$1<em>$2</em>")
+    .replace(
+      /\[([^\]]+)\]\(((?:https?:\/\/[^)\s]+)|(?:\{\{[a-z0-9_]+\}\}))\)/gi,
+      '<a href="$2">$1</a>',
+    );
   return inline
     .split(/\n{2,}/)
     .map((p) => `<p>${p.replace(/\n/g, "<br/>")}</p>`)

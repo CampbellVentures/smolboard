@@ -1,8 +1,10 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { db, callFn } from "@pylonsync/react";
+import { db, callFn, Link } from "@pylonsync/react";
 import {
+  DashboardEmptyState,
+  DashboardPage,
   DashboardStatusBadge,
   DashboardToolbar,
   DashboardWidePage,
@@ -29,7 +31,7 @@ import type {
   SubmissionFormRow,
   SubmissionRow,
 } from "@/lib/types";
-import { X, ChevronRight, Star, Plus } from "lucide-react";
+import { X, ChevronRight, Star, Plus, Inbox } from "lucide-react";
 
 // Abstracts: dense table + right detail drawer (row click keeps table
 // context), bulk actions over setSubmissionStatus, per-round scoring. All
@@ -182,6 +184,29 @@ export function AbstractsView({
   }
 
   const open = openId ? submissions.find((s) => s.id === openId) : undefined;
+
+  if (submissions.length === 0) {
+    return (
+      <DashboardPage className="max-w-5xl">
+        <DashboardToolbar>
+          <span className="text-xs tabular-nums text-muted-foreground">0 submissions</span>
+          <Button asChild size="sm" variant="outline">
+            <Link href={`/dashboard/events/${event.id}/forms`}>Submission forms</Link>
+          </Button>
+        </DashboardToolbar>
+        <DashboardEmptyState
+          icon={Inbox}
+          title="No submissions yet"
+          description="Publish a submission form and share its CFP link to start collecting talks."
+          size="compact"
+        >
+          <Button asChild size="sm">
+            <Link href={`/dashboard/events/${event.id}/forms`}>Open submission forms</Link>
+          </Button>
+        </DashboardEmptyState>
+      </DashboardPage>
+    );
+  }
 
   return (
     <DashboardWidePage className="flex-row gap-6">
@@ -583,12 +608,12 @@ function ScorePanel({
           eventId: event.id,
           roundNumber: 1,
           name: "Round 1",
-          criteriaJson: JSON.stringify(DEFAULT_CRITERIA),
+          criteriaJson: DEFAULT_CRITERIA,
           status: "open",
         });
       }
       const payload = {
-        scoresJson: JSON.stringify(scores),
+        scoresJson: scores,
         comment: comment.trim() || undefined,
         recommendation: recommendation || undefined,
         updatedAt: new Date().toISOString(),
@@ -728,7 +753,7 @@ export function AddRoundButton({ event, rounds }: { event: EventRow; rounds: Rev
       eventId: event.id,
       roundNumber: next,
       name: `Round ${next}`,
-      criteriaJson: JSON.stringify(DEFAULT_CRITERIA),
+      criteriaJson: DEFAULT_CRITERIA,
       status: "open",
     });
   }

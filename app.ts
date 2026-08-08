@@ -6,6 +6,7 @@ import {
   buildManifest,
   discoverAppRoutes,
   font,
+  cron,
 } from "@pylonsync/sdk";
 
 // ---------------------------------------------------------------------------
@@ -121,9 +122,9 @@ const SubmissionForm = entity(
     status: field.string().default("draft"),
     // Ordered FormField[] — see lib/forms.ts for the shape (type, key, label,
     // required, options, showIf).
-    fieldsJson: field.string().optional(),
+    fieldsJson: field.json().optional(),
     // RoutingRule[] — first matching rule assigns the submission's category.
-    routingJson: field.string().optional(),
+    routingJson: field.json().optional(),
     confirmationMessage: field.string().optional(),
     createdAt: field.datetime().defaultNow(),
   },
@@ -146,7 +147,7 @@ const Submission = entity(
     abstract: field.string().optional(),
     // Answers keyed by field key, validated against the form's fieldsJson at
     // submit time (lib/forms.ts validateAnswers).
-    answersJson: field.string().optional(),
+    answersJson: field.json().optional(),
     // Stamped by routing rules at submit; organizers can override.
     category: field.string().optional(),
     // "submitted" | "in_review" | "accepted" | "rejected" | "waitlisted" |
@@ -179,7 +180,7 @@ const SpeakerProfile = entity(
     jobTitle: field.string().optional(),
     headshotFileId: field.string().optional(),
     // { website?, twitter?, linkedin?, github? }
-    linksJson: field.string().optional(),
+    linksJson: field.json().optional(),
     createdAt: field.datetime().defaultNow(),
   },
   {
@@ -218,7 +219,7 @@ const ReviewRound = entity(
     roundNumber: field.int(),
     name: field.string(),
     // ReviewCriterion[]: { key, label, max } (e.g. Relevance 1–5).
-    criteriaJson: field.string().optional(),
+    criteriaJson: field.json().optional(),
     // "open" | "closed"
     status: field.string().default("open"),
   },
@@ -238,7 +239,7 @@ const Review = entity(
     roundId: field.id("ReviewRound").readonly(),
     reviewerUserId: field.id("User").readonly(),
     // { [criterionKey]: number }
-    scoresJson: field.string().optional(),
+    scoresJson: field.json().optional(),
     comment: field.string().optional(),
     // "accept" | "reject" | "neutral"
     recommendation: field.string().optional(),
@@ -296,7 +297,7 @@ const Session = entity(
     startTime: field.datetime().optional(),
     endTime: field.datetime().optional(),
     // string[] of User ids — sessions can have co-speakers.
-    speakerUserIdsJson: field.string().optional(),
+    speakerUserIdsJson: field.json().optional(),
     // "talk" | "keynote" | "break" | "workshop"
     kind: field.string().default("talk"),
   },
@@ -313,7 +314,7 @@ const TaskTemplate = entity(
     // "confirm" | "upload" | "form" | "link"
     kind: field.string().default("confirm"),
     // For kind=form: same FormField[] shape as SubmissionForm.fieldsJson.
-    formJson: field.string().optional(),
+    formJson: field.json().optional(),
     // For kind=upload: SpeakerFile.kind to require. For kind=link: the URL.
     target: field.string().optional(),
     dueAt: field.datetime().optional(),
@@ -335,7 +336,7 @@ const SpeakerTask = entity(
     status: field.string().default("pending"),
     completedAt: field.datetime().optional(),
     // For kind=form tasks: the speaker's answers.
-    responseJson: field.string().optional(),
+    responseJson: field.json().optional(),
   },
   {
     indexes: [
@@ -358,8 +359,13 @@ const EmailTemplate = entity(
     // "schedule_invite" | custom keys.
     key: field.string(),
     subject: field.string(),
-    // Markdown with {{merge_tags}} — see lib/email.ts.
+    // Plain-text export used by today's email transport and as a fallback for
+    // templates created before the visual editor was introduced.
     body: field.string(),
+    // React Email Editor exports. JSON is the editable source; HTML is ready
+    // for the runtime's HTML transport once that API is available.
+    bodyHtml: field.string().optional(),
+    bodyJson: field.json().optional(),
     enabled: field.boolean().default(true),
   },
   {
@@ -381,6 +387,64 @@ const EmailLog = entity(
     sentAt: field.datetime().defaultNow(),
   },
   { indexes: [{ name: "by_event", fields: ["eventId"], unique: false }] },
+);
+
+// Copilot chat history — threads survive tab switches and devices because
+// messages are rows, not client state. Writes go through the copilot
+// functions only.
+const CopilotThread = entity(
+  "CopilotThread",
+  {
+    orgId: field.id("Org").readonly(),
+    eventId: field.id("Event").readonly(),
+    title: field.string(),
+    createdBy: field.id("User").readonly(),
+    createdAt: field.datetime().defaultNow(),
+    updatedAt: field.datetime().optional(),
+  },
+  { indexes: [{ name: "by_event", fields: ["eventId"], unique: false }] },
+);
+
+const CopilotMessage = entity(
+  "CopilotMessage",
+  {
+    orgId: field.id("Org").readonly(),
+    threadId: field.id("CopilotThread").readonly(),
+    // "user" | "assistant"
+    role: field.string(),
+    text: field.string(),
+    // [{name, input, result, isError?}] for assistant turns that used tools.
+    toolCallsJson: field.json().optional(),
+    createdAt: field.datetime().defaultNow(),
+  },
+  { indexes: [{ name: "by_thread", fields: ["threadId"], unique: false }] },
+);
+
+// Secret-token calendar downloads. The token is never replicated or returned
+// by entity APIs; getCalendarInvite is the only public read surface and looks
+// up exactly one unguessable token.
+const CalendarInvite = entity(
+  "CalendarInvite",
+  {
+    orgId: field.id("Org").readonly(),
+    eventId: field.id("Event").readonly(),
+    sessionId: field.id("Session").readonly(),
+    speakerUserId: field.id("User").readonly(),
+    token: field.string().unique().serverOnly(),
+    sequence: field.int().default(0),
+    lastSentAt: field.datetime().optional(),
+    createdAt: field.datetime().defaultNow(),
+  },
+  {
+    indexes: [
+      {
+        name: "by_session_speaker",
+        fields: ["sessionId", "speakerUserId"],
+        unique: true,
+      },
+    ],
+    sync: false,
+  },
 );
 
 // ---------------------------------------------------------------------------
@@ -527,7 +591,8 @@ const sessionPolicy = policy({
 const taskTemplatePolicy = policy({
   name: "task_template_access",
   entity: "TaskTemplate",
-  allowRead: "auth.tenantId == data.orgId",
+  allowRead:
+    "auth.tenantId == data.orgId || exists(SpeakerTask where taskTemplateId == data.id and speakerUserId == auth.userId)",
   allowInsert: "auth.tenantId == data.orgId",
   allowUpdate: "auth.tenantId == data.orgId",
   allowDelete: "auth.tenantId == data.orgId",
@@ -560,6 +625,31 @@ const emailLogPolicy = policy({
   allowUpdate: "false",
   allowDelete: "false",
 });
+const copilotThreadPolicy = policy({
+  name: "copilot_thread_access",
+  entity: "CopilotThread",
+  allowRead: "auth.tenantId == data.orgId",
+  allowInsert: "false",
+  allowUpdate: "false",
+  allowDelete: "auth.tenantId == data.orgId",
+});
+const copilotMessagePolicy = policy({
+  name: "copilot_message_access",
+  entity: "CopilotMessage",
+  allowRead: "auth.tenantId == data.orgId",
+  allowInsert: "false",
+  allowUpdate: "false",
+  allowDelete: "false",
+});
+
+const calendarInvitePolicy = policy({
+  name: "calendar_invite_server_only",
+  entity: "CalendarInvite",
+  allowRead: "false",
+  allowInsert: "false",
+  allowUpdate: "false",
+  allowDelete: "false",
+});
 
 const manifest = buildManifest({
   name: "smolboard",
@@ -583,6 +673,9 @@ const manifest = buildManifest({
     SpeakerTask,
     EmailTemplate,
     EmailLog,
+    CalendarInvite,
+    CopilotThread,
+    CopilotMessage,
   ],
   queries: [],
   actions: [],
@@ -605,10 +698,24 @@ const manifest = buildManifest({
     speakerTaskPolicy,
     emailTemplatePolicy,
     emailLogPolicy,
+    calendarInvitePolicy,
+    copilotThreadPolicy,
+    copilotMessagePolicy,
+  ],
+  crons: [
+    cron("0 15 * * *", "sendTaskReminders", {
+      description: "Email speakers with due or overdue onboarding tasks",
+    }),
   ],
   // Email/password (organizers) + magic codes (speakers) are both built-in;
-  // magic /api/auth/magic/* routes need no extra config.
-  auth: auth(),
+  // magic /api/auth/magic/* routes need no extra config. trustedOrigins is
+  // REQUIRED in production — without it the CORS gate refuses to boot.
+  auth: auth({
+    trustedOrigins: [
+      "https://smolboard.smallware.run",
+      "http://localhost:4321",
+    ],
+  }),
   fonts: [
     font({
       family: "Inter",

@@ -1,5 +1,6 @@
 import React from "react";
 import { siteConfig } from "@/lib/site.config";
+import { Toaster } from "@/components/ui/sonner";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -41,6 +42,7 @@ export default function RootLayout({ children }: LayoutProps) {
       </head>
       <body className="flex min-h-screen flex-col bg-background text-foreground antialiased">
         {children}
+        <Toaster richColors closeButton />
       </body>
     </html>
   );

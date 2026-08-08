@@ -7,6 +7,7 @@ import {
   DashboardEmptyState,
   DashboardPage,
   DashboardPanel,
+  DashboardStatStrip,
   DashboardWidePage,
 } from "../components/dashboard";
 
@@ -19,7 +20,7 @@ test("standard dashboard pages share one bounded canvas", () => {
     </DashboardPage>,
   );
 
-  expect(screen.getByTestId("page").className).toContain("max-w-4xl");
+  expect(screen.getByTestId("page").className).toContain("max-w-3xl");
   expect(screen.getByText("Team")).toBeDefined();
   expect(screen.getByText("Members")).toBeDefined();
 });
@@ -41,4 +42,35 @@ test("dashboard empty states compose the shared empty primitive", () => {
 
   expect(screen.getByText("No events yet")).toBeDefined();
   expect(document.querySelector('[data-slot="empty"]')).not.toBeNull();
+});
+
+test("dashboard panels default to a flat surface and expose contained variants", () => {
+  const { rerender } = render(<DashboardPanel title="Activity">Updates</DashboardPanel>);
+
+  expect(document.querySelector('[data-slot="card"]')?.getAttribute("data-variant")).toBe(
+    "flat",
+  );
+
+  rerender(
+    <DashboardPanel title="Editor" variant="elevated">
+      Content
+    </DashboardPanel>,
+  );
+  expect(document.querySelector('[data-slot="card"]')?.getAttribute("data-variant")).toBe(
+    "elevated",
+  );
+});
+
+test("dashboard stat strip groups live metrics into one calm surface", () => {
+  render(
+    <DashboardStatStrip
+      items={[
+        { icon: CalendarPlus, label: "Events", value: 4 },
+        { icon: CalendarPlus, label: "Open forms", value: 2 },
+      ]}
+    />,
+  );
+
+  expect(document.querySelector('[data-slot="dashboard-stat-strip"]')).not.toBeNull();
+  expect(screen.getByText("4").className).toContain("tabular-nums");
 });

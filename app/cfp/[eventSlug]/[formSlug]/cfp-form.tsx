@@ -11,6 +11,7 @@ import {
   type Answers,
   type ValidationError,
 } from "@/lib/forms";
+import { parseJson } from "@/lib/types";
 import { CheckCircle2 } from "lucide-react";
 
 // The public CFP form. Fixed speaker/talk fields (they feed User +
@@ -19,7 +20,7 @@ import { CheckCircle2 } from "lucide-react";
 // re-validates everything in submitCfp.
 
 const inputCls =
-  "w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10";
+  "h-8 w-full rounded-lg border border-zinc-200 bg-white px-3 text-[13px] text-zinc-900 outline-none transition-[border-color,box-shadow] placeholder:text-zinc-400 focus:border-zinc-400 focus:ring-2 focus:ring-zinc-900/10";
 
 export function CfpForm({
   formId,
@@ -27,12 +28,12 @@ export function CfpForm({
   confirmationMessage,
 }: {
   formId: string;
-  fieldsJson: string;
+  fieldsJson: unknown;
   confirmationMessage?: string;
 }) {
   const fields = useMemo(() => {
     try {
-      return parseFields(fieldsJson ? JSON.parse(fieldsJson) : []);
+      return parseFields(parseJson(fieldsJson) ?? []);
     } catch {
       return [];
     }

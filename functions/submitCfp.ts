@@ -34,7 +34,7 @@ export default mutation<
     email: v.string(),
     title: v.string(),
     abstract: v.optional(v.string()),
-    answers: v.optional(v.any()),
+    answers: v.optional(v.json()),
   },
   async handler(ctx, args) {
     const name = args.name.trim();
@@ -108,7 +108,7 @@ export default mutation<
       speakerUserId,
       title,
       abstract: args.abstract?.trim() || undefined,
-      answersJson: JSON.stringify(answers),
+      answersJson: answers,
       category,
       status: "submitted",
       currentRound: 1,
@@ -136,8 +136,11 @@ export default mutation<
   },
 });
 
+// json columns are parsed-on-read since 0.3.378; the string branch covers
+// rows written before the migration.
 function safeParse(raw: unknown): unknown {
-  if (typeof raw !== "string" || !raw) return undefined;
+  if (raw === undefined || raw === null || raw === "") return undefined;
+  if (typeof raw !== "string") return raw;
   try {
     return JSON.parse(raw);
   } catch {

@@ -1,29 +1,24 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { db, Link, useRouter } from "@pylonsync/react";
+import { db, useRouter } from "@pylonsync/react";
 import {
   DashboardEmptyState,
   DashboardPage,
   DashboardPanel,
-  DashboardStatusBadge,
   DashboardToolbar,
 } from "@/components/dashboard";
+import { EventCard } from "@/components/event-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CalendarPlus, MapPin, Inbox } from "lucide-react";
+import { CalendarPlus } from "lucide-react";
 import { slugify } from "@/lib/forms";
 import { fmtDate } from "./dashboard-client";
 import type { EventRow } from "@/lib/types";
 
 // Events list: server-seeded, then live. Creating an event is a direct
 // db.insert — the tenant policy scopes it to the active org.
-
-function CfpBadge({ status }: { status: string }) {
-  const label = status === "open" ? "CFP open" : status === "closed" ? "CFP closed" : "Draft";
-  return <DashboardStatusBadge status={status}>{label}</DashboardStatusBadge>;
-}
 
 export function EventsList({
   tenantId,
@@ -74,14 +69,13 @@ export function EventsList({
   return (
     <DashboardPage>
       {creating ? (
-        <DashboardPanel title="New event">
+        <DashboardPanel title="New event" variant="subtle">
           <form onSubmit={create} className="flex flex-col gap-3">
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="event-name">Name</Label>
                 <Input
                   id="event-name"
-                  autoFocus
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="AI Engineer World's Fair 2026…"
@@ -103,10 +97,10 @@ export function EventsList({
                 />
               </div>
             </div>
-            <p className="text-xs text-zinc-400">
+            <p className="text-pretty text-xs text-muted-foreground">
               The handle sets your public URLs: /cfp/&lt;handle&gt; and /&lt;handle&gt;/schedule.
             </p>
-            {error && <p className="text-xs text-red-600">{error}</p>}
+            {error && <p className="text-xs text-destructive">{error}</p>}
             <div className="flex items-center gap-2">
               <Button type="submit" size="sm" disabled={busy || !name.trim()}>
                 {busy ? "Creating…" : "Create event"}
@@ -124,7 +118,7 @@ export function EventsList({
         </DashboardPanel>
       ) : (
         <DashboardToolbar>
-          <p className="text-sm text-zinc-500">
+          <p className="text-pretty text-sm text-muted-foreground">
             {events.length === 0
               ? "Run your call for speakers, reviews, and agenda from one place."
               : `${events.length} event${events.length === 1 ? "" : "s"} in this workspace.`}
@@ -142,35 +136,14 @@ export function EventsList({
           description="Create your first event to open a call for speakers."
         />
       ) : (
-        <ul className="divide-y divide-zinc-100 rounded-xl border border-zinc-200 bg-white">
+        <ul className="grid gap-4">
           {events.map((ev) => (
             <li key={ev.id}>
-              <Link
-                href={`/dashboard/events/${ev.id}`}
-                className="flex items-center gap-4 px-5 py-4 transition-colors hover:bg-zinc-50"
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2.5">
-                    <span className="truncate text-sm font-semibold text-zinc-900">
-                      {ev.name}
-                    </span>
-                    <CfpBadge status={ev.cfpStatus} />
-                  </div>
-                  <div className="mt-0.5 flex items-center gap-3 text-xs text-zinc-400">
-                    {ev.startDate && <span>{fmtDate(ev.startDate)}</span>}
-                    {ev.location && (
-                      <span className="flex items-center gap-1">
-                        <MapPin className="size-3" /> {ev.location}
-                      </span>
-                    )}
-                    <span>/cfp/{ev.slug}</span>
-                  </div>
-                </div>
-                <span className="flex items-center gap-1.5 text-xs text-zinc-400">
-                  <Inbox className="size-3.5" />
-                  {submissionCounts[ev.id] ?? 0} submissions
-                </span>
-              </Link>
+              <EventCard
+                event={ev}
+                submissionCount={submissionCounts[ev.id] ?? 0}
+                dateLabel={ev.startDate ? fmtDate(ev.startDate) : undefined}
+              />
             </li>
           ))}
         </ul>

@@ -19,12 +19,13 @@ interface LayoutProps {
 const WORKSPACE_TITLES: { key: WorkspaceNavKey; href: string; title: string }[] = [
   { key: "settings", href: "/dashboard/settings", title: "Settings" },
   { key: "members", href: "/dashboard/members", title: "Team" },
-  { key: "events", href: "/dashboard", title: "Events" },
+  { key: "events", href: "/dashboard/events", title: "Events" },
 ];
 
 const EVENT_TITLES: { key: EventNavKey; seg: string; title: string }[] = [
+  { key: "overview", seg: "overview", title: "Overview" },
   { key: "forms", seg: "forms", title: "Submission forms" },
-  { key: "abstracts", seg: "abstracts", title: "Abstracts" },
+  { key: "abstracts", seg: "abstracts", title: "Submissions" },
   { key: "agenda", seg: "agenda", title: "Agenda" },
   { key: "speakers", seg: "speakers", title: "Speakers" },
   { key: "tasks", seg: "tasks", title: "Speaker tasks" },
@@ -68,10 +69,13 @@ export default function DashboardLayout({
     const event = use(serverData.get<EventRow>("Event", eventId));
     if (event && event.orgId === auth.tenant_id) {
       const section = EVENT_TITLES.find((t) => t.seg === seg);
+      const title = seg === "forms" && path.split("/").length > 5
+        ? "Edit form"
+        : section?.title ?? "Submissions";
       return (
         <AppShell
           active={section?.key ?? "overview"}
-          title={section?.title ?? event.name}
+          title={title}
           userEmail={me?.email ?? ""}
           userId={auth.user_id}
           userName={userName}

@@ -62,7 +62,7 @@ function TableRow({
     <tr
       data-slot="table-row"
       className={cn(
-        "border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted",
+        "border-b border-border/60 transition-colors hover:bg-muted/40 data-[state=selected]:bg-muted",
         className,
       )}
       {...props}
@@ -78,7 +78,7 @@ function TableHead({
     <th
       data-slot="table-head"
       className={cn(
-        "h-10 px-3 text-left align-middle text-xs font-medium text-muted-foreground",
+        "h-9 px-3 text-left align-middle text-[11px] font-medium uppercase tracking-wide text-muted-foreground/80",
         className,
       )}
       {...props}
@@ -93,7 +93,7 @@ function TableCell({
   return (
     <td
       data-slot="table-cell"
-      className={cn("p-3 align-middle", className)}
+      className={cn("px-3 py-2.5 align-middle", className)}
       {...props}
     />
   );

@@ -21,6 +21,7 @@ import {
   type ShowIfOp,
   type ShowIfRule,
 } from "@/lib/forms";
+import { parseJson } from "@/lib/types";
 import {
   ArrowDown,
   ArrowUp,
@@ -71,8 +72,8 @@ export function FormBuilder({
     slug: string;
     description?: string;
     status: string;
-    fieldsJson?: string;
-    routingJson?: string;
+    fieldsJson?: unknown;
+    routingJson?: unknown;
     confirmationMessage?: string;
   };
 }) {
@@ -82,7 +83,7 @@ export function FormBuilder({
   const [status, setStatus] = useState(form.status);
   const [fields, setFields] = useState<FormField[]>(() => {
     try {
-      return parseFields(form.fieldsJson ? JSON.parse(form.fieldsJson) : []);
+      return parseFields(parseJson(form.fieldsJson) ?? []);
     } catch {
       return [];
     }
@@ -90,7 +91,7 @@ export function FormBuilder({
   const [routing, setRouting] = useState<RoutingConfig>(() => {
     try {
       return (
-        parseRouting(form.routingJson ? JSON.parse(form.routingJson) : undefined) ?? { rules: [] }
+        parseRouting(parseJson(form.routingJson)) ?? { rules: [] }
       );
     } catch {
       return { rules: [] };
@@ -154,8 +155,8 @@ export function FormBuilder({
         description: description.trim() || undefined,
         confirmationMessage: confirmation.trim() || undefined,
         status,
-        fieldsJson: JSON.stringify(fields),
-        routingJson: JSON.stringify(routing),
+        fieldsJson: fields,
+        routingJson: routing,
       });
       setSavedAt(Date.now());
     } finally {
@@ -167,7 +168,7 @@ export function FormBuilder({
     <DashboardWidePage className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
       {/* ---------------- Left: settings + field list ---------------- */}
       <div className="flex flex-col gap-5">
-        <DashboardPanel title="Form details">
+        <DashboardPanel title="Form details" variant="subtle">
           <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
             <Input
               value={name}
@@ -210,6 +211,7 @@ export function FormBuilder({
         <DashboardPanel
           title="Fields"
           description="Name, email, title, and abstract are always collected. Add your custom questions here."
+          variant="subtle"
         >
           <ul className="mt-3 space-y-2">
             {fields.map((f, i) => (
@@ -244,7 +246,7 @@ export function FormBuilder({
 
         <RoutingEditor fields={fields} routing={routing} onChange={setRouting} />
 
-        <DashboardPanel title="Confirmation message">
+        <DashboardPanel title="Confirmation message" variant="subtle">
           <Textarea
             value={confirmation}
             onChange={(e) => setConfirmation(e.target.value)}
@@ -260,6 +262,7 @@ export function FormBuilder({
       <div className="xl:sticky xl:top-6 xl:self-start">
         <DashboardPanel
           title="Live preview"
+          variant="elevated"
           action={
             <Button
               type="button"
@@ -536,6 +539,7 @@ function RoutingEditor({
     <DashboardPanel
       title="Category routing"
       description="The first matching rule tags the submission for review filtering."
+      variant="subtle"
       action={
         <Button
           type="button"

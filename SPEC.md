@@ -79,11 +79,11 @@ New entities, all org-scoped via `eventId → Event.orgId` (denormalize `orgId` 
 
 ### 3. Emails + calendar invites
 
-- Pylon has a built-in email provider layer (`PYLON_EMAIL_PROVIDER=stack0|resend|sendgrid|webhook`) that already powers magic codes and invites — **we use stack0** for everything (auth + app sends). App-triggered sends go through `lib/email.ts` merge-tag helper. Merge tags: `{{speaker_name}}, {{event_name}}, {{talk_title}}, {{portal_link}}, {{task_list}}, {{session_time}}, {{room}}`. Verify early (M1) that the stack0 send path supports **attachments** (needed for ICS invites); if not, fall back to embedding a hosted `.ics` download link + Google/Outlook "add to calendar" URLs in the invite email — invites still land on the speaker's calendar, just via link instead of native attachment.
+- Pylon has a built-in email provider layer (`PYLON_EMAIL_PROVIDER=stack0|resend|sendgrid|webhook`) that already powers magic codes and invites — **we use stack0** for everything (auth + app sends). App-triggered sends go through `lib/email.ts` merge-tag helper. Merge tags: `{{speaker_name}}, {{event_name}}, {{talk_title}}, {{portal_link}}, {{task_list}}, {{session_time}}, {{room}}`. Since 0.3.378, `ctx.email.send` supports html bodies + base64 attachments with verbatim contentType — calendar invites attach real `text/calendar; method=REQUEST` parts, with hosted `.ics` + add-to-calendar links kept in the body as fallback.
 - Template editor at `/dashboard/events/[id]/emails`: per-key subject/body, preview with sample data, enable toggle, "send test to me".
 - Triggered sends: submission received; accept/reject (on status change, with confirm dialog + batch send); task reminder.
 - **Reminders**: cron (daily, `cron("0 15 * * *", "sendTaskReminders")`, internal) — emails speakers with pending tasks due within N days or overdue. Log every send to EmailLog.
-- **Calendar invites**: `lib/ics.ts` generates RFC 5545 `.ics` (METHOD:REQUEST, ORGANIZER, ATTENDEE=speaker, UID stable per session+speaker, SEQUENCE bump on reschedule) attached to the `schedule_invite` email via Resend attachments. Gmail/Outlook/Apple render these as real invites. Unit-test the ICS builder (escaping, folding, timezones via event tz). "Send/re-send invites" button on the agenda page; auto-offer resend when a scheduled session moves.
+- **Calendar invites**: `lib/ics.ts` generates RFC 5545 `.ics` (METHOD:REQUEST, ATTENDEE=speaker, UID stable per session+speaker, SEQUENCE bump on reschedule) attached to the `schedule_invite` email via `ctx.email.send` attachments (0.3.378+). Gmail/Outlook/Apple render these as real invites. Unit-test the ICS builder (escaping, folding, timezones via event tz). "Send/re-send invites" button on the agenda page; auto-offer resend when a scheduled session moves.
 
 ### 4. Review + scoring
 
@@ -121,8 +121,8 @@ Also free differentiation Pylon gives us that Sessionboard can't match: everythi
 Found while speccing; worth feeding back into Pylon itself:
 
 1. **MCP server primitive** — `buildManifest({ mcp: { tools: [...] } })` auto-exposing selected functions as MCP tools with token auth. We're hand-rolling JSON-RPC in a route.ts; the framework already has typed function defs + validators, so it has everything needed to generate this. Biggest gap; "agent-native" pitch practically demands it.
-2. **Email attachments + HTML bodies** — confirmed in M1: `ctx.email.send(to, subject, body)` is plain-text only, no HTML, no attachments. Calendar invites therefore ship as add-to-calendar links + hosted `.ics` URL (decided). HTML/attachment support is the top small-ticket framework add.
-2b. **`field.json()` missing in SDK 0.3.373** — docs describe it but the shipped SDK has no json field type; all our `*Json` columns are strings with parse helpers (`lib/types.ts`).
+2. ~~Email attachments + HTML bodies~~ FIXED (options overload with verbatim attachment contentType); smolboard migrated — invites attach real `text/calendar; method=REQUEST` parts. Stack0 contract verified from source (needs ≥0.3.379: the .378 stack0 arm sent snake_case `content_type`, silently stripped by stack0's zod parser). Stack0 caps: 10 attachments / 10MB base64 each per send — keep invite batches under 10. A real send through sendScheduleInvites when a key lands remains a good smoke test, but is not a demo blocker.
+2b. ~~`field.json()` missing~~ FIXED in 0.3.378 (parsed-on-read everywhere, `v.json()` validator); smolboard migrated — `lib/types.ts` keeps a tolerant `parseJson` only for rows written before the migration.
 3. **Multipart uploads in `<Form>`/route.ts** — documented as unsupported; public CFP file-upload questions need client-side JS against `/api/files` instead of degrading gracefully to native forms.
 4. **Anonymous upload policy for `/api/files`** — unclear whether an unauthenticated CFP submitter can upload before their account exists. Our workaround: create the account (magic-code flow) *before* the file step. Needs verification early in M1.
 5. **Rate limiting/captcha primitive for public endpoints** — auth flows have cooldowns built in, but a public `submit_cfp` mutation has nothing; we'll add a naive per-IP throttle in the function.
@@ -163,7 +163,7 @@ app/
 - **M1 (Fri–Sat): core loop.** Strip billing; entities + policies; form builder + public CFP + submitCfp; speaker account creation + portal shell. *A speaker can submit and see their portal.*
 - **M2 (Sat–Sun): review + agenda.** Abstracts table, scoring, rounds, accept/reject; agenda grid + DnD + conflicts + views; rooms/tracks. *Organizer can score, accept, and schedule.*
 - **M3 (Sun–Mon): comms + dashboard.** stack0 email wiring, templates editor, triggered sends, cron reminders, ICS invites; live dashboard + tasks system.
-- **M3.5 (Mon–Tue, cut-from-bottom): differentiators.** `lib/agent-tools.ts` + event copilot pane → MCP server → auto-schedule → AI triage (in that order). Note: the three-pane shell itself is M1 — only the copilot *inside* the pane is M3.5.
+- **M3.5 (Mon–Tue, cut-from-bottom): differentiators.** DONE for #1 + #2: `lib/agent-tools.ts` (shared 8-tool belt), event copilot (`functions/copilotChat.ts`, ctx.llm.stream agent loop, room-broadcast streaming, persisted threads, live pane UI — needs ANTHROPIC_API_KEY at runtime), and the MCP server (`/api/fn/mcp`, JSON-RPC over the action surface, framework API-key auth: `claude mcp add smolboard --transport http <url>/api/fn/mcp --header "Authorization: Bearer pk...."`). Remaining, optional: auto-schedule suggestions → AI triage.
 - **M4 (Tue): polish + deploy.** Public schedule/speakers pages, API queries, landing page, seed demo data (an "AIE Sandbox" event mirroring their sandbox CFP), `pylon deploy`, walk the judges' video flow end-to-end on the deployed site, README.
 - **Buffer (Wed):** Sunday's requirement-freeze video may add clarifications; keep Wed for fixes only.
 
@@ -180,6 +180,6 @@ Accelevents integration, wiki/CMS embeds, AI-assisted review, Airtable/Cloudflar
 ## Unresolved questions
 
 1. **Watch the walkthrough video** (youtu.be/vUuK4Knl7oc) — the screenshots' field-level details (exact form field types, task/form structures) aren't in the doc text. Spec should be sanity-checked against it before M2, and against the Sunday requirements-freeze video.
-2. ~~Attachments~~ Resolved in M1: no attachment/HTML support in `ctx.email` — calendar invites go as add-to-calendar links + hosted `.ics` URL.
+2. ~~Attachments~~ Fixed in SDK 0.3.378 — native `text/calendar` attachments shipped; links kept as body fallback.
 3. ~~Anonymous `/api/files` uploads~~ Resolved by design: CFP submission collects no files; uploads happen in the portal after magic-code sign-in (multipart `/api/files/upload` was removed in 0.3.91 — use the 3-step flow).
 4. Demo/seed data: clone their sandbox event content ("AI Engineer Sandbox Event") so judges see a familiar shape — any objection?

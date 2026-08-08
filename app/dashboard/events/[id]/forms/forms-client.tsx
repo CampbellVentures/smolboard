@@ -11,7 +11,7 @@ import {
 } from "@/components/dashboard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { FilePlus2, ExternalLink } from "lucide-react";
+import { ChevronRight, FilePlus2, ExternalLink } from "lucide-react";
 import { slugify } from "@/lib/forms";
 import type { EventRow, SubmissionFormRow } from "@/lib/types";
 
@@ -76,7 +76,7 @@ export function FormsList({ event, initial }: { event: EventRow; initial: Submis
         name: n,
         slug: slugify(n),
         status: "draft",
-        fieldsJson: JSON.stringify(STARTER_FIELDS),
+        fieldsJson: STARTER_FIELDS,
       });
       router.push(`/dashboard/events/${event.id}/forms/${id}`);
     } catch {
@@ -88,39 +88,32 @@ export function FormsList({ event, initial }: { event: EventRow; initial: Submis
   return (
     <DashboardPage>
       {creating ? (
-        <DashboardPanel title="New form">
-          <form onSubmit={create} className="flex items-center gap-2">
+        <DashboardPanel title="New form" variant="subtle">
+          <form onSubmit={create} className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <Input
-              autoFocus
               value={name}
               onChange={(e) => setName(e.target.value)}
               aria-label="Form name"
               autoComplete="off"
             />
-            <Button type="submit" size="sm" disabled={busy || !name.trim()}>
-              {busy ? "…" : "Create"}
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              onClick={() => setCreating(false)}
-            >
-              Cancel
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button type="submit" size="sm" disabled={busy || !name.trim()}>
+                {busy ? "Creating…" : "Create form"}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => setCreating(false)}
+              >
+                Cancel
+              </Button>
+            </div>
           </form>
           {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
-          <p className="mt-2 text-xs text-zinc-400">
-            Starts with a sensible CFP template — add your own fields, conditions,
-            and routing in the builder.
-          </p>
         </DashboardPanel>
       ) : (
-        <DashboardToolbar>
-          <p className="text-sm text-zinc-500">
-            Each form gets a public URL under /cfp/{event.slug}. Open a form (and the
-            event&apos;s CFP) to accept submissions.
-          </p>
+        <DashboardToolbar className="justify-end">
           <Button type="button" size="sm" onClick={() => setCreating(true)}>
             <FilePlus2 data-icon="inline-start" /> New form
           </Button>
@@ -134,9 +127,12 @@ export function FormsList({ event, initial }: { event: EventRow; initial: Submis
           description="Create a submission form to open your CFP."
         />
       ) : (
-        <ul className="divide-y divide-zinc-100 rounded-xl border border-zinc-200 bg-white">
+        <ul className="overflow-hidden rounded-xl border bg-card">
           {forms.map((f) => (
-            <li key={f.id} className="flex items-center gap-4 px-5 py-4">
+            <li
+              key={f.id}
+              className="flex min-h-14 items-center gap-3 border-b px-4 py-2.5 transition-[background-color] duration-150 ease-out last:border-b-0 hover:bg-muted/50"
+            >
               <Link
                 href={`/dashboard/events/${event.id}/forms/${f.id}`}
                 className="min-w-0 flex-1"
@@ -154,11 +150,12 @@ export function FormsList({ event, initial }: { event: EventRow; initial: Submis
                   href={`/cfp/${event.slug}/${f.slug}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center gap-1 text-[13px] font-medium text-zinc-400 hover:text-zinc-700"
+                  className="flex h-10 shrink-0 items-center gap-1 rounded-lg px-2 text-[13px] font-medium text-muted-foreground hover:bg-background hover:text-foreground"
                 >
-                  <ExternalLink className="size-3.5" /> View
+                  <ExternalLink className="size-3.5" aria-hidden="true" /> View
                 </a>
               )}
+              <ChevronRight className="size-4 shrink-0 text-muted-foreground/60" aria-hidden="true" />
             </li>
           ))}
         </ul>

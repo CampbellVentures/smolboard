@@ -1,8 +1,14 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { db } from "@pylonsync/react";
-import { DashboardPage, DashboardStatusBadge, DashboardToolbar } from "@/components/dashboard";
+import { db, Link } from "@pylonsync/react";
+import {
+  DashboardEmptyState,
+  DashboardPage,
+  DashboardStatusBadge,
+  DashboardToolbar,
+} from "@/components/dashboard";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -12,7 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { CheckCircle2, Circle } from "lucide-react";
+import { CheckCircle2, Circle, Users } from "lucide-react";
 import type { EventRow, SpeakerProfileRow, SubmissionRow } from "@/lib/types";
 
 // Speaker roster for the event: profile completeness at a glance (the
@@ -72,6 +78,22 @@ export function SpeakersTable({
     );
   }
   rows = rows.slice().sort((a, b) => a.name.localeCompare(b.name));
+
+  if (profiles.length === 0) {
+    return (
+      <DashboardPage>
+        <DashboardEmptyState
+          icon={Users}
+          title="No speakers yet"
+          description="Speakers appear here after they submit through an open form."
+        >
+          <Button asChild>
+            <Link href={`/dashboard/events/${event.id}/forms`}>Open submission forms</Link>
+          </Button>
+        </DashboardEmptyState>
+      </DashboardPage>
+    );
+  }
 
   return (
     <DashboardPage>
@@ -140,7 +162,7 @@ export function SpeakersTable({
             {rows.length === 0 && (
               <TableRow>
                 <TableCell colSpan={3} className="h-32 text-center text-muted-foreground">
-                  Speakers appear here once they submit.
+                  No speakers match those filters.
                 </TableCell>
               </TableRow>
             )}

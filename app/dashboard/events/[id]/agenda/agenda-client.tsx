@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { db } from "@pylonsync/react";
+import { callFn, db, Link } from "@pylonsync/react";
+import { toast } from "sonner";
 import {
   DashboardEmptyState,
   DashboardPage,
@@ -45,6 +46,7 @@ import type {
 import {
   AlertTriangle,
   CalendarX2,
+  CalendarPlus,
   Coffee,
   GripVertical,
   Plus,
@@ -155,7 +157,7 @@ export function AgendaBuilder({
         trackId: undefined,
         startTime: start,
         endTime: end,
-        speakerUserIdsJson: JSON.stringify([sub.speakerUserId]),
+        speakerUserIdsJson: [sub.speakerUserId],
         kind: "talk",
       });
     } else if (payload.sessionId) {
@@ -179,7 +181,7 @@ export function AgendaBuilder({
       eventId: event.id,
       title: "Break",
       kind: "break",
-      speakerUserIdsJson: JSON.stringify([]),
+      speakerUserIdsJson: [],
     });
   }
 
@@ -192,7 +194,11 @@ export function AgendaBuilder({
           icon={CalendarX2}
           title="Set your event dates first"
           description="The agenda grid uses the event’s start and end dates. Add them in Event settings."
-        />
+        >
+          <Button asChild>
+            <Link href={`/dashboard/events/${event.id}/settings`}>Set event dates</Link>
+          </Button>
+        </DashboardEmptyState>
       </DashboardPage>
     );
   }
@@ -834,6 +840,7 @@ function SessionPopover({
   onClose: () => void;
 }) {
   const [title, setTitle] = useState(session.title);
+  const [inviteBusy, setInviteBusy] = useState(false);
   const duration =
     session.startTime && session.endTime
       ? Math.round((Date.parse(session.endTime) - Date.parse(session.startTime)) / 60000)
@@ -841,6 +848,20 @@ function SessionPopover({
 
   async function patch(p: Partial<Record<string, unknown>>) {
     await db.update("Session", session.id, p);
+  }
+
+  async function sendInvites() {
+    setInviteBusy(true);
+    try {
+      const result = await callFn<{ queued: number }>("sendScheduleInvites", {
+        sessionId: session.id,
+      });
+      toast.success(`Queued ${result.queued} calendar invite${result.queued === 1 ? "" : "s"}`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not send calendar invites.");
+    } finally {
+      setInviteBusy(false);
+    }
   }
 
   return (
@@ -913,7 +934,7 @@ function SessionPopover({
           </div>
         </div>
 
-        <div className="mt-5 flex items-center justify-between border-t border-zinc-100 pt-3">
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-2 border-t border-zinc-100 pt-3">
           <Button
             type="button"
             size="sm"
@@ -925,19 +946,26 @@ function SessionPopover({
           >
             Unschedule
           </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="destructive"
-            onClick={() => {
-              if (confirm(`Delete session "${session.title}"?`)) {
-                void db.delete("Session", session.id);
-                onClose();
-              }
-            }}
-          >
-            <Trash2 data-icon="inline-start" /> Delete
-          </Button>
+          <div className="flex gap-2">
+            {session.startTime && session.endTime && (parseJson<string[]>(session.speakerUserIdsJson) ?? []).length > 0 ? (
+              <Button type="button" size="sm" variant="outline" disabled={inviteBusy} onClick={sendInvites}>
+                <CalendarPlus data-icon="inline-start" /> {inviteBusy ? "Queuing…" : "Send invites"}
+              </Button>
+            ) : null}
+            <Button
+              type="button"
+              size="sm"
+              variant="destructive"
+              onClick={() => {
+                if (confirm(`Delete session "${session.title}"?`)) {
+                  void db.delete("Session", session.id);
+                  onClose();
+                }
+              }}
+            >
+              <Trash2 data-icon="inline-start" /> Delete
+            </Button>
+          </div>
         </div>
       </div>
     </div>
