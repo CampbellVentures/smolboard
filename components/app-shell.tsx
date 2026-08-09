@@ -12,6 +12,7 @@ import {
   Users,
   Mic2,
   ListChecks,
+  FileStack,
   Mail,
   Settings as SettingsIcon,
   LogOut,
@@ -53,6 +54,7 @@ export type EventNavKey =
   | "agenda"
   | "speakers"
   | "tasks"
+  | "content"
   | "emails"
   | "event-settings";
 
@@ -188,6 +190,7 @@ function eventNav(eventId: string): NavEntry<EventNavKey>[] {
     { key: "agenda", label: "Agenda", href: `${base}/agenda`, Icon: CalendarClock, group: "Manage" },
     { key: "speakers", label: "Speakers", href: `${base}/speakers`, Icon: Mic2, group: "Speakers" },
     { key: "tasks", label: "Tasks", href: `${base}/tasks`, Icon: ListChecks, group: "Speakers" },
+    { key: "content", label: "Content", href: `${base}/content`, Icon: FileStack, group: "Speakers" },
     { key: "emails", label: "Emails", href: `${base}/emails`, Icon: Mail, group: "Speakers" },
     { key: "event-settings", label: "Settings", href: `${base}/settings`, Icon: SettingsIcon, group: "Event" },
   ];

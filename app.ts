@@ -304,6 +304,12 @@ const DeliverableSlot = entity(
     sessionId: field.id("Session").readonly().optional(),
     kind: field.string(),
     title: field.string(),
+    // Organizer verdict on the current version: "pending" | "approved" |
+    // "changes_requested". Written only by reviewDeliverable; a new version
+    // upload resets it to pending. All client writes are policy-denied.
+    status: field.string().default("pending"),
+    reviewNote: field.string().optional(),
+    reviewedAt: field.datetime().optional(),
     createdAt: field.datetime().defaultNow(),
   },
   {

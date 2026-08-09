@@ -793,8 +793,26 @@ function DeliverableUploader({
     }
   }
 
+  const reviewStatus = versions.length > 0 ? (slot?.status ?? "pending") : null;
+
   return (
     <div className="mt-4 space-y-3 rounded-lg border border-zinc-200 bg-zinc-50 p-3">
+      {reviewStatus ? (
+        <div className="flex items-center gap-2">
+          {reviewStatus === "approved" ? (
+            <Badge>Approved</Badge>
+          ) : reviewStatus === "changes_requested" ? (
+            <Badge variant="destructive">Changes requested</Badge>
+          ) : (
+            <Badge variant="secondary">Pending review</Badge>
+          )}
+        </div>
+      ) : null}
+      {reviewStatus === "changes_requested" && slot?.reviewNote ? (
+        <p className="rounded-md bg-amber-50 px-2.5 py-1.5 text-xs text-amber-800">
+          Organizer: “{slot.reviewNote}”
+        </p>
+      ) : null}
       <label className="block text-xs font-medium text-zinc-700">
         {versions.length > 0 ? `Upload a new ${fileKind} version` : `Upload ${fileKind}`}
         <input

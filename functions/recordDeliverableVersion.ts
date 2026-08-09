@@ -52,6 +52,12 @@ export default mutation({
       size: args.size,
       versionNumber,
     });
+    // A fresh upload supersedes any earlier verdict — back to the review queue.
+    await ctx.db.unsafe.update("DeliverableSlot", args.slotId, {
+      status: "pending",
+      reviewNote: null,
+      reviewedAt: null,
+    });
     return { id, versionNumber };
   },
 });

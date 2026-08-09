@@ -30,6 +30,7 @@ const EVENT_TITLES: { key: EventNavKey; seg: string; title: string }[] = [
   { key: "agenda", seg: "agenda", title: "Agenda" },
   { key: "speakers", seg: "speakers", title: "Speakers" },
   { key: "tasks", seg: "tasks", title: "Speaker tasks" },
+  { key: "content", seg: "content", title: "Content" },
   { key: "emails", seg: "emails", title: "Emails" },
   { key: "event-settings", seg: "settings", title: "Event settings" },
 ];

@@ -163,6 +163,10 @@ export interface DeliverableSlotRow {
   sessionId?: string;
   kind: string;
   title: string;
+  // "pending" | "approved" | "changes_requested"
+  status?: string;
+  reviewNote?: string;
+  reviewedAt?: string;
   createdAt: string;
 }
 
