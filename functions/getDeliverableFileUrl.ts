@@ -16,10 +16,10 @@ export default query<{ versionId: string }, { url: string; filename: string; sig
     }
 
     const fileId = version.fileId as string;
-    const files = (ctx as { files?: { signedUrl?: (id: string, opts?: { ttlSecs?: number }) => Promise<string> } }).files;
-    if (files?.signedUrl) {
+    // Runtime guard only for a stale local dev binary; prod runs ≥0.4.1.
+    if (ctx.files?.signedUrl) {
       return {
-        url: await files.signedUrl(fileId, { ttlSecs: 300 }),
+        url: await ctx.files.signedUrl(fileId, { ttlSecs: 300 }),
         filename: version.filename as string,
         signed: true,
       };
