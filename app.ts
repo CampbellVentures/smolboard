@@ -726,6 +726,8 @@ const manifest = buildManifest({
   auth: auth({
     trustedOrigins: [
       "https://smolboard.smallware.run",
+      "https://smolboard.app",
+      "https://www.smolboard.app",
       "http://localhost:4321",
     ],
   }),
