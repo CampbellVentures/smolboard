@@ -197,6 +197,14 @@ export function PortalHome({
   const [scheduleLoading, setScheduleLoading] = useState(true);
   useEffect(() => {
     setHydrated(true);
+    for (const profile of initialProfiles) {
+      if (profile.claimStatus !== "claimed") {
+        void callFn("claimSpeakerProfile", {
+          profileId: profile.id,
+          expectedProvisionalUserId: userId,
+        });
+      }
+    }
     let active = true;
     callFn("getMySchedule", {})
       .then((result) => {
@@ -682,8 +690,8 @@ function SpeakerFiles({ profile, files }: { profile: SpeakerProfileRow; files: S
 
 /* ========================= Profile editor ========================= */
 
-// Speakers own their SpeakerProfile row (policy: auth.userId == data.userId),
-// so edits are direct db.updates — live for the organizer's dashboard too.
+// Speaker edits pass through a mutation that requires the runtime-persisted
+// magic-code verification stamp and exact invited email identity.
 function ProfileEditor({
   profile,
   eventName,
@@ -696,6 +704,7 @@ function ProfileEditor({
   const [bio, setBio] = useState(profile.bio ?? "");
   const [company, setCompany] = useState(profile.company ?? "");
   const [jobTitle, setJobTitle] = useState(profile.jobTitle ?? "");
+  const [headshotUrl, setHeadshotUrl] = useState(profile.headshotUrl ?? "");
   const initialLinks = parseJson<Record<string, string>>(profile.linksJson) ?? {};
   const [website, setWebsite] = useState(initialLinks.website ?? "");
   const [linkedin, setLinkedin] = useState(initialLinks.linkedin ?? "");
@@ -703,28 +712,34 @@ function ProfileEditor({
   const [twitter, setTwitter] = useState(initialLinks.twitter ?? "");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) return;
     setSaving(true);
     try {
-      await db.update("SpeakerProfile", profile.id, {
+      await callFn("updateMySpeakerProfile", {
+        profileId: profile.id,
         name: name.trim(),
         tagline: tagline.trim() || undefined,
         bio: bio.trim() || undefined,
         company: company.trim() || undefined,
         jobTitle: jobTitle.trim() || undefined,
+        headshotUrl: headshotUrl.trim() || undefined,
         linksJson: compactLinks({ website, linkedin, github, twitter }),
       });
       setSaved(true);
+      setSaveError(null);
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Could not save your profile.");
     } finally {
       setSaving(false);
     }
   }
 
   const hasLink = [website, linkedin, github, twitter].some((value) => value.trim());
-  const completeness = [name, tagline, bio, company].filter((value) => value.trim()).length +
+  const completeness = [name, tagline, bio, company, headshotUrl].filter((value) => value.trim()).length +
     (hasLink ? 1 : 0);
 
   return (
@@ -733,9 +748,12 @@ function ProfileEditor({
         <h2 className="text-sm font-semibold text-zinc-900">
           Speaker profile · {eventName}
         </h2>
-        <span className="text-xs text-zinc-400">{completeness}/5 complete</span>
+        <span className="text-xs text-zinc-400">{completeness}/6 complete</span>
       </div>
       <form onSubmit={save} className="mt-3 space-y-4 rounded-xl border border-zinc-200 bg-white p-5">
+        {headshotUrl ? (
+          <img src={headshotUrl} alt={`${name} headshot`} className="size-24 rounded-xl object-cover" />
+        ) : null}
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block">
             <span className="mb-1.5 block text-[13px] font-medium text-zinc-700">Name</span>
@@ -771,6 +789,17 @@ function ProfileEditor({
             className={inputCls + " resize-y"}
           />
         </label>
+        <Field>
+          <FieldLabel htmlFor={`headshot-url-${profile.id}`}>Public headshot URL</FieldLabel>
+          <Input
+            id={`headshot-url-${profile.id}`}
+            type="url"
+            value={headshotUrl}
+            placeholder="https://cdn.example.com/headshot.jpg"
+            onChange={(event) => { setHeadshotUrl(event.target.value); setSaved(false); }}
+          />
+          <p className="text-xs text-zinc-500">Use a public HTTPS image URL so you and the event team see the same photo.</p>
+        </Field>
         <div>
           <h3 className="text-[13px] font-medium text-zinc-700">Links</h3>
           <div className="mt-2 grid gap-3 sm:grid-cols-2">
@@ -822,6 +851,7 @@ function ProfileEditor({
           </Button>
           {saved && <span className="text-xs text-emerald-600">Saved.</span>}
         </div>
+        {saveError ? <p className="text-xs text-red-600">{saveError}</p> : null}
       </form>
     </section>
   );

@@ -15,6 +15,7 @@ test("email merge tags tolerate whitespace and never leak unknown placeholders",
 
 test("every required automated email has a usable default", () => {
   expect(DEFAULT_TEMPLATES.map((template) => template.key)).toEqual([
+    "portal_invite",
     "submission_received",
     "accepted",
     "rejected",

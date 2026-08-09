@@ -22,6 +22,7 @@ const User = entity(
   "User",
   {
     email: field.string(),
+    emailVerified: field.datetime().optional(),
     displayName: field.string().optional(),
     passwordHash: field.string().serverOnly().optional(),
     avatarColor: field.string().optional(),
@@ -189,6 +190,15 @@ const SpeakerProfile = entity(
     company: field.string().optional(),
     jobTitle: field.string().optional(),
     headshotFileId: field.string().optional(),
+    headshotUrl: field.string().optional(),
+    status: field.string().default("invited"),
+    claimStatus: field.string().default("unclaimed"),
+    logistics: field.string().optional(),
+    tagsJson: field.json().optional(),
+    customJson: field.json().optional(),
+    invitedAt: field.datetime().optional(),
+    claimedAt: field.datetime().optional(),
+    updatedAt: field.datetime().optional(),
     // { website?, twitter?, linkedin?, github? }
     linksJson: field.json().optional(),
     createdAt: field.datetime().defaultNow(),
@@ -606,17 +616,16 @@ const submissionPolicy = policy({
   allowDelete: 'auth.tenantId == data.orgId && auth.hasAnyRole("owner", "admin")',
 });
 
-// Speakers own their profile and may edit it directly from the portal — the
-// org/event/user anchor fields are .readonly() so a client update can't move
-// the row across tenants.
+// Speakers and organizers read only their permitted rows. All profile writes
+// use validated server functions so lifecycle and ownership fields cannot be
+// changed through direct entity updates.
 const speakerProfilePolicy = policy({
   name: "speaker_profile_access",
   entity: "SpeakerProfile",
   allowRead:
     'auth.userId == data.userId || (auth.tenantId == data.orgId && auth.hasAnyRole("owner", "admin"))',
   allowInsert: "false",
-  allowUpdate:
-    'auth.userId == data.userId || (auth.tenantId == data.orgId && auth.hasAnyRole("owner", "admin"))',
+  allowUpdate: "false",
   allowDelete: 'auth.tenantId == data.orgId && auth.hasAnyRole("owner", "admin")',
 });
 

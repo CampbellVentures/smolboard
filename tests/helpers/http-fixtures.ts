@@ -56,6 +56,18 @@ export function anonymousClient(baseUrl: string): HttpClient {
   return client(baseUrl);
 }
 
+export async function magicSignIn(baseUrl: string, email: string): Promise<TestIdentity> {
+  const sent = await okJson<{ dev_code?: string }>(anonymousClient(baseUrl), "/api/auth/magic/send", "POST", {
+    email,
+  });
+  if (!sent.dev_code) throw new Error("Disposable dev auth did not expose a one-time code.");
+  const auth = await okJson<AuthResponse>(anonymousClient(baseUrl), "/api/auth/magic/verify", "POST", {
+    email,
+    code: sent.dev_code,
+  });
+  return { ...client(baseUrl, auth.token), email, userId: auth.user_id };
+}
+
 export async function jsonRequest<T>(
   actor: HttpClient,
   path: string,

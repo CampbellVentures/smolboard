@@ -60,6 +60,7 @@ interface EditorState {
   responsePrompt: string;
   dueAt: string;
   appliesTo: string;
+  speakerUserIds: string[];
 }
 
 const blankEditor: EditorState = {
@@ -70,6 +71,7 @@ const blankEditor: EditorState = {
   responsePrompt: "",
   dueAt: "",
   appliesTo: "accepted",
+  speakerUserIds: [],
 };
 
 export function TasksClient({
@@ -97,6 +99,7 @@ export function TasksClient({
   );
   const [editor, setEditor] = useState<EditorState | null>(null);
   const [saving, setSaving] = useState(false);
+  const [progressFilter, setProgressFilter] = useState<"all" | "pending" | "done">("all");
   const acceptedSpeakers = new Set(
     submissions.filter((row) => row.status === "accepted").map((row) => row.speakerUserId),
   );
@@ -134,6 +137,9 @@ export function TasksClient({
       responsePrompt: fieldsOf(template)[0]?.label ?? "",
       dueAt: toLocalDateTime(template.dueAt),
       appliesTo: template.appliesTo,
+      speakerUserIds: tasks
+        .filter((task) => task.taskTemplateId === template.id)
+        .map((task) => task.speakerUserId),
     });
   }
 
@@ -152,6 +158,7 @@ export function TasksClient({
         responsePrompt: editor.responsePrompt || undefined,
         dueAt: editor.dueAt ? new Date(editor.dueAt).toISOString() : undefined,
         appliesTo: editor.appliesTo,
+        speakerUserIds: editor.appliesTo === "selected" ? editor.speakerUserIds : undefined,
       });
       setEditor(null);
       toast.success(editor.id ? "Task updated" : "Task created", {
@@ -293,7 +300,75 @@ export function TasksClient({
         </>
       )}
 
-      <TaskEditor editor={editor} onChange={setEditor} saving={saving} onSubmit={save} />
+      {templates.length > 0 && profiles.length > 0 ? (
+        <section className="space-y-3">
+          <DashboardToolbar>
+            <div>
+              <h2 className="text-sm font-semibold">Per-speaker progress</h2>
+              <p className="text-xs text-muted-foreground">Every assignment and portal completion at list level.</p>
+            </div>
+            <Select
+              aria-label="Filter task progress"
+              value={progressFilter}
+              onChange={(event) => setProgressFilter(event.target.value as typeof progressFilter)}
+              className="w-40"
+            >
+              <option value="all">All assignments</option>
+              <option value="pending">Incomplete</option>
+              <option value="done">Complete</option>
+            </Select>
+          </DashboardToolbar>
+          <div className="overflow-x-auto rounded-xl border bg-card">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Speaker</TableHead>
+                  {templates.slice().sort((a, b) => a.sortOrder - b.sortOrder).map((template) => (
+                    <TableHead key={template.id}>{template.title}</TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {profiles
+                  .slice()
+                  .sort((a, b) => a.name.localeCompare(b.name))
+                  .filter((profile) => {
+                    if (progressFilter === "all") return true;
+                    return tasks.some(
+                      (task) => task.speakerUserId === profile.userId && task.status === progressFilter,
+                    );
+                  })
+                  .map((profile) => (
+                    <TableRow key={profile.id}>
+                      <TableCell>
+                        <div className="font-medium">{profile.name}</div>
+                        <div className="text-xs text-muted-foreground">{profile.email}</div>
+                      </TableCell>
+                      {templates.slice().sort((a, b) => a.sortOrder - b.sortOrder).map((template) => {
+                        const assignment = tasks.find(
+                          (task) => task.speakerUserId === profile.userId && task.taskTemplateId === template.id,
+                        );
+                        return (
+                          <TableCell key={template.id}>
+                            {assignment ? (
+                              <DashboardStatusBadge status={assignment.status}>
+                                {assignment.status === "done" ? "Complete" : "Incomplete"}
+                              </DashboardStatusBadge>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">Not assigned</span>
+                            )}
+                          </TableCell>
+                        );
+                      })}
+                    </TableRow>
+                  ))}
+              </TableBody>
+            </Table>
+          </div>
+        </section>
+      ) : null}
+
+      <TaskEditor editor={editor} onChange={setEditor} saving={saving} onSubmit={save} profiles={profiles} />
     </DashboardPage>
   );
 }
@@ -303,11 +378,13 @@ function TaskEditor({
   onChange,
   saving,
   onSubmit,
+  profiles,
 }: {
   editor: EditorState | null;
   onChange: (value: EditorState | null) => void;
   saving: boolean;
   onSubmit: (event: React.FormEvent) => void;
+  profiles: SpeakerProfileRow[];
 }) {
   if (!editor) return null;
   const set = <K extends keyof EditorState>(key: K, value: EditorState[K]) => onChange({ ...editor, [key]: value });
@@ -365,10 +442,37 @@ function TaskEditor({
                     onChange={(event) => set("appliesTo", event.target.value)}
                   >
                     <option value="accepted">Accepted speakers</option>
-                    <option value="all">All submitters</option>
+                    <option value="all">All speakers</option>
+                    <option value="selected">Selected speakers</option>
                   </Select>
                 </Field>
               </div>
+              {editor.appliesTo === "selected" ? (
+                <Field>
+                  <FieldLabel>Speakers</FieldLabel>
+                  <div className="max-h-48 space-y-2 overflow-y-auto rounded-lg border p-3">
+                    {profiles.slice().sort((a, b) => a.name.localeCompare(b.name)).map((profile) => (
+                      <label key={profile.id} className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={editor.speakerUserIds.includes(profile.userId)}
+                          onChange={(event) =>
+                            set(
+                              "speakerUserIds",
+                              event.target.checked
+                                ? [...new Set([...editor.speakerUserIds, profile.userId])]
+                                : editor.speakerUserIds.filter((id) => id !== profile.userId),
+                            )
+                          }
+                        />
+                        <span>{profile.name}</span>
+                        <span className="text-xs text-muted-foreground">{profile.email}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <FieldDescription>{editor.speakerUserIds.length} selected</FieldDescription>
+                </Field>
+              ) : null}
               {editor.kind === "link" ? (
                 <Field>
                   <FieldLabel htmlFor="task-target">Destination URL</FieldLabel>

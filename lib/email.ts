@@ -61,6 +61,11 @@ export function markdownToHtml(md: string): string {
 
 export const DEFAULT_TEMPLATES: { key: string; subject: string; body: string }[] = [
   {
+    key: "portal_invite",
+    subject: "Your {{event_name}} speaker portal",
+    body: "Hi {{speaker_name}},\n\nYou have been added as a speaker for {{event_name}}. Open the speaker portal and request a one-time magic code using this exact email address:\n\n[Open your speaker portal]({{portal_link}})\n\n— the {{event_name}} team",
+  },
+  {
     key: "submission_received",
     subject: "We got your talk: {{talk_title}}",
     body: "Hi {{speaker_name}},\n\nThanks for submitting **{{talk_title}}** to {{event_name}}. Our review team will take it from here — you can track status, update your profile, and upload materials any time in your speaker portal:\n\n[Open your speaker portal]({{portal_link}})\n\n— the {{event_name}} team",

@@ -19,6 +19,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -36,7 +38,7 @@ import {
   renderTemplate,
 } from "@/lib/email";
 import { parseJson } from "@/lib/types";
-import type { EmailLogRow, EmailTemplateRow, EventRow } from "@/lib/types";
+import type { EmailLogRow, EmailTemplateRow, EventRow, SpeakerProfileRow } from "@/lib/types";
 
 const SAMPLE_VARS = {
   speaker_name: "Ada Speaker",
@@ -64,19 +66,25 @@ export function EmailsClient({
   event,
   initialTemplates,
   initialLogs,
+  initialProfiles,
 }: {
   event: EventRow;
   initialTemplates: EmailTemplateRow[];
   initialLogs: EmailLogRow[];
+  initialProfiles: SpeakerProfileRow[];
 }) {
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => setHydrated(true), []);
   const templateQuery = db.useQuery<EmailTemplateRow>("EmailTemplate");
   const logQuery = db.useQuery<EmailLogRow>("EmailLog");
+  const profileQuery = db.useQuery<SpeakerProfileRow>("SpeakerProfile");
   const templates = (!hydrated || templateQuery.loading ? initialTemplates : templateQuery.data).filter(
     (row) => row.eventId === event.id,
   );
   const logs = (!hydrated || logQuery.loading ? initialLogs : logQuery.data).filter(
+    (row) => row.eventId === event.id,
+  );
+  const profiles = (!hydrated || profileQuery.loading ? initialProfiles : profileQuery.data).filter(
     (row) => row.eventId === event.id,
   );
   const [selectedKey, setSelectedKey] = useState(DEFAULT_TEMPLATES[0].key);
@@ -89,6 +97,15 @@ export function EmailsClient({
   const [enabled, setEnabled] = useState(effective.enabled);
   const [editorReady, setEditorReady] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [campaignSubject, setCampaignSubject] = useState(`Welcome to ${event.name} speakers`);
+  const [campaignBody, setCampaignBody] = useState(
+    "Hi {{speaker_name}},\n\nWelcome to {{event_name}}. We’re excited to have you join us. Your profile, sessions, and onboarding tasks are available in the speaker portal:\n\n{{portal_link}}",
+  );
+  const [recipientSearch, setRecipientSearch] = useState("");
+  const [selectedProfiles, setSelectedProfiles] = useState<string[]>([]);
+  const [previewProfileId, setPreviewProfileId] = useState("");
+  const [campaignConfirmed, setCampaignConfirmed] = useState(false);
+  const [campaignSending, setCampaignSending] = useState(false);
   const editorContent = useMemo(() => templateEditorContent(effective), [editorInstanceKey]);
 
   useEffect(() => {
@@ -168,6 +185,41 @@ export function EmailsClient({
     }
   }
 
+  const filteredProfiles = profiles.filter((profile) => {
+    const needle = recipientSearch.trim().toLowerCase();
+    return !needle || profile.name.toLowerCase().includes(needle) || profile.email.toLowerCase().includes(needle);
+  });
+  const previewProfile =
+    profiles.find((profile) => profile.id === previewProfileId) ??
+    profiles.find((profile) => selectedProfiles.includes(profile.id)) ??
+    profiles[0];
+  const realPreviewVars = previewProfile
+    ? {
+        speaker_name: previewProfile.name,
+        event_name: event.name,
+        portal_link: `${typeof window === "undefined" ? "" : window.location.origin}/portal`,
+      }
+    : { speaker_name: "Speaker", event_name: event.name, portal_link: "/portal" };
+
+  async function sendCampaign() {
+    setCampaignSending(true);
+    try {
+      const result = await callFn<{ queued: number }>("queueSpeakerEmail", {
+        eventId: event.id,
+        profileIds: selectedProfiles,
+        subject: campaignSubject,
+        body: campaignBody,
+        confirmed: campaignConfirmed,
+      });
+      toast.success(`Queued ${result.queued} speaker email${result.queued === 1 ? "" : "s"}`);
+      setCampaignConfirmed(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not queue the speaker email.");
+    } finally {
+      setCampaignSending(false);
+    }
+  }
+
   return (
     <DashboardPage>
       <DashboardStatStrip
@@ -184,11 +236,76 @@ export function EmailsClient({
       />
 
       {hydrated ? (
-        <Tabs defaultValue="templates">
+        <Tabs defaultValue="compose">
           <TabsList>
+            <TabsTrigger value="compose">Compose</TabsTrigger>
             <TabsTrigger value="templates">Templates</TabsTrigger>
             <TabsTrigger value="log">Delivery log</TabsTrigger>
           </TabsList>
+          <TabsContent value="compose" className="pt-3">
+            <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.8fr)]">
+              <div className="space-y-5">
+                <DashboardPanel title="Recipients" description="Select speakers directly or select the current filtered list.">
+                  <div className="mb-3 flex flex-wrap gap-2">
+                    <Input
+                      aria-label="Filter email recipients"
+                      value={recipientSearch}
+                      onChange={(event_) => setRecipientSearch(event_.target.value)}
+                      placeholder="Filter by name or email…"
+                      className="min-w-56 flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setSelectedProfiles((current) => [...new Set([...current, ...filteredProfiles.map((profile) => profile.id)])])}
+                    >
+                      Select filtered ({filteredProfiles.length})
+                    </Button>
+                    <Button type="button" variant="ghost" onClick={() => setSelectedProfiles([])}>Clear</Button>
+                  </div>
+                  <div className="max-h-64 divide-y overflow-y-auto rounded-lg border">
+                    {filteredProfiles.map((profile) => (
+                      <label key={profile.id} className="flex items-center gap-3 px-3 py-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={selectedProfiles.includes(profile.id)}
+                          onChange={(event_) => {
+                            setSelectedProfiles((current) =>
+                              event_.target.checked
+                                ? [...new Set([...current, profile.id])]
+                                : current.filter((id) => id !== profile.id),
+                            );
+                            setCampaignConfirmed(false);
+                          }}
+                        />
+                        <span className="min-w-0 flex-1"><span className="font-medium">{profile.name}</span><span className="ml-2 text-xs text-muted-foreground">{profile.email}</span></span>
+                        <DashboardStatusBadge status={profile.status}>{profile.status}</DashboardStatusBadge>
+                      </label>
+                    ))}
+                  </div>
+                  <p className="mt-2 text-xs text-muted-foreground">{selectedProfiles.length} selected</p>
+                </DashboardPanel>
+                <DashboardPanel title="General speaker email" description="Use merge fields such as {{speaker_name}}, {{event_name}}, and {{portal_link}}.">
+                  <FieldGroup>
+                    <Field><FieldLabel htmlFor="campaign-subject">Subject</FieldLabel><Input id="campaign-subject" value={campaignSubject} onChange={(event_) => { setCampaignSubject(event_.target.value); setCampaignConfirmed(false); }} /></Field>
+                    <Field><FieldLabel htmlFor="campaign-body">Body</FieldLabel><Textarea id="campaign-body" rows={10} value={campaignBody} onChange={(event_) => { setCampaignBody(event_.target.value); setCampaignConfirmed(false); }} /></Field>
+                    <label className="flex items-start gap-2 rounded-lg border p-3 text-sm">
+                      <input type="checkbox" checked={campaignConfirmed} onChange={(event_) => setCampaignConfirmed(event_.target.checked)} />
+                      <span><span className="font-medium">Confirm send to {selectedProfiles.length} selected speaker{selectedProfiles.length === 1 ? "" : "s"}</span><span className="mt-0.5 block text-xs text-muted-foreground">The server reparses this exact recipient list and writes one delivery log per recipient.</span></span>
+                    </label>
+                  </FieldGroup>
+                  <div className="mt-4 flex justify-end"><Button type="button" onClick={sendCampaign} disabled={campaignSending || !campaignConfirmed || selectedProfiles.length === 0 || !campaignSubject.trim() || !campaignBody.trim()}><Send data-icon="inline-start" /> {campaignSending ? "Queueing…" : "Send to selected"}</Button></div>
+                </DashboardPanel>
+              </div>
+              <DashboardPanel title="Recipient preview" description="Merge fields resolved with a real event speaker." variant="subtle">
+                <Field className="mb-3"><FieldLabel htmlFor="preview-recipient">Preview as</FieldLabel><Select id="preview-recipient" value={previewProfile?.id ?? ""} onChange={(event_) => setPreviewProfileId(event_.target.value)}>{profiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.name} · {profile.email}</option>)}</Select></Field>
+                <div className="rounded-lg border bg-background p-4">
+                  <div className="font-semibold">{renderTemplate(campaignSubject, realPreviewVars)}</div>
+                  <div className="mt-4 whitespace-pre-wrap text-sm text-muted-foreground">{renderTemplate(campaignBody, realPreviewVars)}</div>
+                </div>
+              </DashboardPanel>
+            </div>
+          </TabsContent>
           <TabsContent value="templates" className="pt-3">
           <div className="grid items-start gap-5 lg:grid-cols-[220px_minmax(0,1fr)]">
             <DashboardPanel title="Messages" description="Automated speaker email" variant="subtle">

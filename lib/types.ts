@@ -91,6 +91,15 @@ export interface SpeakerProfileRow {
   company?: string;
   jobTitle?: string;
   headshotFileId?: string;
+  headshotUrl?: string;
+  status: string;
+  claimStatus: string;
+  logistics?: string;
+  tagsJson?: string[];
+  customJson?: Record<string, unknown>;
+  invitedAt?: string;
+  claimedAt?: string;
+  updatedAt?: string;
   linksJson?: Record<string, string>;
   createdAt: string;
 }

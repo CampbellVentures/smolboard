@@ -2,7 +2,7 @@ import { mutation, v } from "@pylonsync/functions";
 import { matchesEventAnchor } from "../lib/tenantAnchors";
 
 const KINDS = ["confirm", "upload", "form", "link"];
-const APPLIES_TO = ["accepted", "all"];
+const APPLIES_TO = ["accepted", "all", "selected"];
 
 export default mutation({
   args: {
@@ -15,6 +15,7 @@ export default mutation({
     responsePrompt: v.optional(v.string()),
     dueAt: v.optional(v.string()),
     appliesTo: v.string(),
+    speakerUserIds: v.optional(v.array(v.id("User"))),
   },
   async handler(ctx, args) {
     const event = await ctx.db.unsafe.get("Event", args.eventId);
@@ -25,7 +26,7 @@ export default mutation({
     if (!title) throw ctx.error("INVALID_ARGS", "Task title is required.");
     if (!KINDS.includes(args.kind)) throw ctx.error("INVALID_ARGS", "Unsupported task type.");
     if (!APPLIES_TO.includes(args.appliesTo)) {
-      throw ctx.error("INVALID_ARGS", "Task audience must be accepted speakers or all speakers.");
+      throw ctx.error("INVALID_ARGS", "Task audience must be accepted, all, or selected speakers.");
     }
     if (args.kind === "link" && !args.target?.trim()) {
       throw ctx.error("INVALID_ARGS", "Link tasks require a destination URL.");
@@ -77,20 +78,44 @@ export default mutation({
 
     // Creating a task after speakers were accepted must still assign it. This
     // is idempotent and also fills any gaps when an existing template changes.
+    const profiles = (await ctx.db.unsafe.query("SpeakerProfile", { eventId: args.eventId })).filter(
+      (profile) => profile.orgId === event.orgId,
+    );
+    const profileUsers = new Set(profiles.map((profile) => profile.userId as string));
     const submissions = await ctx.db.unsafe.query("Submission", { eventId: args.eventId });
-    const eligible = new Set(
+    const accepted = new Set(
       submissions
-        .filter(
-          (submission) =>
-            submission.orgId === event.orgId &&
-            (args.appliesTo === "all" || submission.status === "accepted"),
-        )
+        .filter((submission) => submission.orgId === event.orgId && submission.status === "accepted")
         .map((submission) => submission.speakerUserId as string),
     );
+    for (const profile of profiles) {
+      if (profile.status === "confirmed") accepted.add(profile.userId as string);
+    }
+    const requested = new Set(args.speakerUserIds ?? []);
+    if (args.appliesTo === "selected" && requested.size === 0) {
+      throw ctx.error("INVALID_ARGS", "Select at least one speaker for this task.");
+    }
+    if ([...requested].some((userId) => !profileUsers.has(userId))) {
+      throw ctx.error("NOT_FOUND", "A selected speaker does not belong to this event.");
+    }
+    const eligible =
+      args.appliesTo === "selected"
+        ? requested
+        : args.appliesTo === "all"
+          ? profileUsers
+          : accepted;
     const assigned = (await ctx.db.unsafe.query("SpeakerTask", { taskTemplateId: templateId })).filter(
       (task) => task.eventId === args.eventId && task.orgId === event.orgId,
     );
     const alreadyAssigned = new Set(assigned.map((task) => task.speakerUserId as string));
+    if (args.appliesTo === "selected") {
+      for (const task of assigned) {
+        if (!eligible.has(task.speakerUserId as string)) {
+          await ctx.db.unsafe.delete("SpeakerTask", task.id as string);
+          alreadyAssigned.delete(task.speakerUserId as string);
+        }
+      }
+    }
     let tasksCreated = 0;
     for (const speakerUserId of eligible) {
       if (alreadyAssigned.has(speakerUserId)) continue;

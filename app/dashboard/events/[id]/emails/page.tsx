@@ -1,7 +1,7 @@
 import React, { use } from "react";
 import { type Metadata, type PageProps } from "@pylonsync/react";
 import { EmailsClient } from "./emails-client";
-import type { EmailLogRow, EmailTemplateRow, EventRow } from "@/lib/types";
+import type { EmailLogRow, EmailTemplateRow, EventRow, SpeakerProfileRow } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Emails — smolboard", robots: "noindex" };
 
@@ -21,5 +21,8 @@ export default function EmailsPage({ auth, params, response, serverData }: PageP
   const logs = use(serverData.list<EmailLogRow>("EmailLog")).filter(
     (row) => row.eventId === event.id,
   );
-  return <EmailsClient event={event} initialTemplates={templates} initialLogs={logs} />;
+  const profiles = use(serverData.list<SpeakerProfileRow>("SpeakerProfile")).filter(
+    (row) => row.eventId === event.id,
+  );
+  return <EmailsClient event={event} initialTemplates={templates} initialLogs={logs} initialProfiles={profiles} />;
 }

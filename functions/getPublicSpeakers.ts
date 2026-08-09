@@ -14,6 +14,7 @@ export default query<
       bio: string | null;
       company: string | null;
       jobTitle: string | null;
+      headshotUrl: string | null;
       talks: string[];
     }[];
   }
@@ -59,6 +60,7 @@ export default query<
             bio: (p.bio as string) ?? null,
             company: (p.company as string) ?? null,
             jobTitle: (p.jobTitle as string) ?? null,
+            headshotUrl: (p.headshotUrl as string) ?? null,
             talks,
           };
         })
