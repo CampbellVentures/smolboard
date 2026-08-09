@@ -47,6 +47,7 @@ import {
   type AgendaSession,
 } from "@/lib/agenda";
 import { parseJson } from "@/lib/types";
+import { useOrgSlug } from "@/components/use-org-slug";
 import type {
   EventRow,
   RoomRow,
@@ -725,9 +726,12 @@ function TracksView({
 
 /* ======================= Publish toggle ======================= */
 
-// Flips Event.schedulePublished — the gate on the public /[slug]/schedule and
-// /[slug]/speakers feeds. Off = both pages show "not published yet".
+// Flips Event.schedulePublished — the gate on the public schedule and
+// speakers feeds at /<org-slug>/<event-slug>/…. Off = both pages show "not
+// published yet".
 function PublishToggle({ event }: { event: EventRow }) {
+  const orgSlug = useOrgSlug(event.orgId);
+  const scheduleUrl = orgSlug ? `/${orgSlug}/${event.slug}/schedule` : null;
   const [busy, setBusy] = useState(false);
   async function toggle() {
     setBusy(true);
@@ -736,7 +740,7 @@ function PublishToggle({ event }: { event: EventRow }) {
       toast.success(
         event.schedulePublished
           ? "Schedule unpublished."
-          : `Schedule is live at /${event.slug}/schedule`,
+          : `Schedule is live${scheduleUrl ? ` at ${scheduleUrl}` : ""}`,
       );
     } finally {
       setBusy(false);
@@ -753,9 +757,9 @@ function PublishToggle({ event }: { event: EventRow }) {
       >
         {event.schedulePublished ? "Unpublish" : "Publish schedule"}
       </Button>
-      {event.schedulePublished && (
+      {event.schedulePublished && scheduleUrl && (
         <a
-          href={`/${event.slug}/schedule`}
+          href={scheduleUrl}
           target="_blank"
           rel="noreferrer"
           className="text-[12.5px] font-medium text-muted-foreground underline underline-offset-2 hover:text-foreground"

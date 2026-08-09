@@ -1,10 +1,10 @@
 import { query, v } from "@pylonsync/functions";
 
-// Public speaker gallery for /[eventSlug]/speakers. Anonymous; lists ONLY
-// speakers with an accepted submission, ONLY safe profile fields (no email).
-// Gated on the published schedule like getPublicSchedule.
+// Public speaker gallery for /<org-slug>/<event-slug>/speakers. Anonymous;
+// lists ONLY speakers with an accepted submission, ONLY safe profile fields
+// (no email). Gated on the published schedule like getPublicSchedule.
 export default query<
-  { eventSlug: string },
+  { orgSlug: string; eventSlug: string },
   {
     event: { name: string; slug: string } | null;
     published: boolean;
@@ -19,11 +19,18 @@ export default query<
   }
 >({
   auth: "public",
-  args: { eventSlug: v.string() },
+  args: { orgSlug: v.string(), eventSlug: v.string() },
   async handler(ctx, args) {
     // ctx.db.unsafe: anonymous public feed — output filtered to safe fields,
     // gated on schedulePublished.
-    const event = await ctx.db.unsafe.lookup("Event", "slug", args.eventSlug.trim().toLowerCase());
+    const orgs = await ctx.db.unsafe.query("Org", { slug: args.orgSlug.trim().toLowerCase() });
+    const events = orgs.length
+      ? await ctx.db.unsafe.query("Event", {
+          orgId: orgs[0].id as string,
+          slug: args.eventSlug.trim().toLowerCase(),
+        })
+      : [];
+    const event = events[0];
     if (!event || event.cfpStatus === "draft") {
       return { event: null, published: false, speakers: [] };
     }

@@ -14,6 +14,7 @@ import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field
 import { Input } from "@/components/ui/input";
 import { ChevronRight, FilePlus2, ExternalLink } from "lucide-react";
 import { slugify } from "@/lib/forms";
+import { useOrgSlug } from "@/components/use-org-slug";
 import type { EventRow, SubmissionFormRow } from "@/lib/types";
 
 // Starter fields for a new CFP form — matches the common conference shape so
@@ -53,6 +54,7 @@ function StatusBadge({ status }: { status: string }) {
 
 export function FormsList({ event, initial }: { event: EventRow; initial: SubmissionFormRow[] }) {
   const router = useRouter();
+  const orgSlug = useOrgSlug(event.orgId);
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => setHydrated(true), []);
   const { data, loading } = db.useQuery<SubmissionFormRow>("SubmissionForm");
@@ -160,11 +162,13 @@ export function FormsList({ event, initial }: { event: EventRow; initial: Submis
                   </span>
                   <StatusBadge status={f.status} />
                 </div>
-                <div className="mt-0.5 text-xs text-zinc-400">/cfp/{event.slug}/{f.slug}</div>
+                <div className="mt-0.5 text-xs text-zinc-400">
+                  /{orgSlug ?? "…"}/{event.slug}/cfp/{f.slug}
+                </div>
               </Link>
-              {f.status === "open" && (
+              {f.status === "open" && orgSlug && (
                 <a
-                  href={`/cfp/${event.slug}/${f.slug}`}
+                  href={`/${orgSlug}/${event.slug}/cfp/${f.slug}`}
                   target="_blank"
                   rel="noreferrer"
                   className="flex h-10 shrink-0 items-center gap-1 rounded-lg px-2 text-[13px] font-medium text-muted-foreground hover:bg-background hover:text-foreground"

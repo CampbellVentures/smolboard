@@ -3,13 +3,13 @@
 Open-source speaker & CFP management — a [Sessionboard](https://www.sessionboard.com/) replacement built for the [AI Engineer hackathon](https://x.com/swyx/status/2085517544795079014). One [Pylon](https://pylonsync.com) process serves the API, auth, live sync, SSR, and the agent runtime.
 
 **Live demo:** https://smolboard.smallware.run
-**Public schedule example:** https://smolboard.smallware.run/ai-engineer-sandbox/schedule
+**Public schedule example:** https://smolboard.smallware.run/ai-engineer/ai-engineer-sandbox/schedule
 
 ## What it does
 
 The six requirements from the brief, all working end to end:
 
-1. **Custom CFP forms** — visual builder with conditional logic (show field X when answer Y) and first-match category routing. Server re-validates everything, including conditional requireds. Public form at `/cfp/<event>/<form>`.
+1. **Custom CFP forms** — visual builder with conditional logic (show field X when answer Y) and first-match category routing. Server re-validates everything, including conditional requireds. Public form at `/<org>/<event>/cfp/<form>`.
 2. **Speaker portal** — passwordless (6-digit email code). Speakers are auto-created on submission; they track status live, edit their profile, upload files, and complete onboarding tasks at `/portal`.
 3. **Automated speaker emails** — per-event templates with merge tags, accept/reject sends, daily cron reminders for overdue tasks, and **real calendar invites**: `.ics` attached as `text/calendar; method=REQUEST` (RSVP-able in Gmail/Outlook), stable UID + SEQUENCE bump so a reschedule updates the speaker's calendar instead of duplicating.
 4. **Review & scoring** — score-sorted submissions table, per-criterion star scoring, committee comments, multi-round advancement, bulk accept/reject with confirmation. Two reviewers scoring at once see each other's scores land live.
@@ -31,7 +31,7 @@ Sessionboard sells "AI & MCP" as six named agents. smolboard ships one tool belt
 
   Mint the `pk.` API key at `/api/auth/api-keys` (or the dashboard). The MCP client runs *as you* — every tool re-checks org membership server-side, so an agent can never do more than its human.
 
-Public read API (no auth): `POST /api/fn/getPublicSchedule` and `POST /api/fn/getPublicSpeakers` with `{"eventSlug": "..."}`.
+Public read API (no auth): `POST /api/fn/getPublicSchedule` and `POST /api/fn/getPublicSpeakers` with `{"orgSlug": "...", "eventSlug": "..."}`.
 
 ## Run it
 

@@ -37,6 +37,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { buildOnboardingRows } from "@/lib/tasks";
+import { useOrgSlug } from "@/components/use-org-slug";
 import type {
   EventRow,
   ReviewRoundRow,
@@ -155,9 +156,11 @@ export function EventOverview({
 
   const [selectedSpeakers, setSelectedSpeakers] = useState<string[]>([]);
   const [copied, setCopied] = useState(false);
-  const cfpUrl = `/cfp/${event.slug}`;
+  const orgSlug = useOrgSlug(event.orgId);
+  const cfpUrl = orgSlug ? `/${orgSlug}/${event.slug}/cfp` : null;
 
   async function copyCfp() {
+    if (!cfpUrl) return;
     await navigator.clipboard.writeText(`${window.location.origin}${cfpUrl}`);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
@@ -229,12 +232,14 @@ export function EventOverview({
           </div>
           <div className="flex shrink-0 flex-wrap gap-2">
             {renderPrimaryAction(overview.primaryAction, overview.primaryLabel)}
-            <Button asChild variant="outline">
-              <a href={cfpUrl} target="_blank" rel="noreferrer">
-                <ExternalLink data-icon="inline-start" />
-                Preview CFP
-              </a>
-            </Button>
+            {cfpUrl && (
+              <Button asChild variant="outline">
+                <a href={cfpUrl} target="_blank" rel="noreferrer">
+                  <ExternalLink data-icon="inline-start" />
+                  Preview CFP
+                </a>
+              </Button>
+            )}
           </div>
         </div>
 

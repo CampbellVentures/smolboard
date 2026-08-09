@@ -32,6 +32,12 @@ export default query<{ token: string }, CalendarInviteResult | null>({
 
     const base = ctx.env.PYLON_PUBLIC_URL || "http://localhost:4321";
     const icsUrl = `${base}/calendar/${args.token}`;
+    const org = await ctx.db.unsafe.get("Org", event.orgId as string);
+    // Public schedule URL needs the org slug; fall back to the portal when
+    // the org hasn't been given one yet.
+    const scheduleUrl = org?.slug
+      ? `${base}/${org.slug as string}/${event.slug as string}/schedule`
+      : `${base}/portal`;
     const input = {
       start: session.startTime as string,
       end: session.endTime as string,
@@ -51,7 +57,7 @@ export default query<{ token: string }, CalendarInviteResult | null>({
         description: input.description,
         location: input.location,
         attendeeEmail: profile[0].email as string,
-        url: `${base}/${event.slug as string}/schedule`,
+        url: scheduleUrl,
       }),
       title: input.summary,
       start: input.start,

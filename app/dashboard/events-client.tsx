@@ -132,7 +132,8 @@ export function EventsList({
                       spellCheck={false}
                     />
                     <FieldDescription>
-                      Used in /cfp/&lt;handle&gt; and /&lt;handle&gt;/schedule.
+                      The event&apos;s public pages live at
+                      /&lt;workspace&gt;/&lt;handle&gt;.
                     </FieldDescription>
                   </Field>
                   <div className="grid gap-4 sm:grid-cols-2">

@@ -1,29 +1,14 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { callFn, Link } from "@pylonsync/react";
+import { callFn } from "@pylonsync/react";
 import { dayKey, fmtTime, minutesInDay } from "@/lib/agenda";
-import { CalendarDays, Loader2, MapPin } from "lucide-react";
-import { BrandMark } from "@/components/brand";
-
-const TONES = [
-  "bg-violet-100 text-violet-700",
-  "bg-sky-100 text-sky-700",
-  "bg-emerald-100 text-emerald-700",
-  "bg-amber-100 text-amber-700",
-  "bg-rose-100 text-rose-700",
-  "bg-cyan-100 text-cyan-700",
-];
-function initials(name: string): string {
-  const words = name.trim().split(/\s+/).filter(Boolean);
-  if (words.length === 0) return "?";
-  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
-  return `${words[0][0]}${words[words.length - 1][0]}`.toUpperCase();
-}
-function tone(name: string): string {
-  const h = [...name].reduce((t, c) => t + c.charCodeAt(0), 0);
-  return TONES[h % TONES.length];
-}
+import { CalendarDays, Loader2 } from "lucide-react";
+import {
+  InitialsAvatar,
+  PublicEventShell,
+  type PublicEventInfo,
+} from "@/components/public-shell";
 
 interface Feed {
   event: {
@@ -59,14 +44,15 @@ function dayLabel(day: string): string {
   return `${DAY_NAMES[d.getUTCDay()]} · ${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}`;
 }
 
-export function PublicSchedule({ eventSlug, eventName }: { eventSlug: string; eventName: string }) {
+export function PublicSchedule({ event }: { event: PublicEventInfo }) {
+  const { orgSlug, slug: eventSlug } = event;
   const [feed, setFeed] = useState<Feed | null>(null);
   const [error, setError] = useState(false);
   useEffect(() => {
-    callFn<Feed>("getPublicSchedule", { eventSlug })
+    callFn<Feed>("getPublicSchedule", { orgSlug, eventSlug })
       .then(setFeed)
       .catch(() => setError(true));
-  }, [eventSlug]);
+  }, [orgSlug, eventSlug]);
 
   const tz = feed?.event?.timezone ?? "UTC";
   const days = useMemo(() => {
@@ -99,33 +85,8 @@ export function PublicSchedule({ eventSlug, eventName }: { eventSlug: string; ev
   }, [daySessions]);
 
   return (
-    <div className="min-h-screen bg-zinc-50">
-      <header className="border-b border-zinc-200/70 bg-white">
-        <div className="mx-auto max-w-3xl px-6 py-10">
-          <div className="flex items-center gap-2">
-            <BrandMark size={20} />
-            <p className="text-[13px] font-semibold uppercase tracking-wide text-zinc-400">Schedule</p>
-          </div>
-          <h1 className="mt-1 text-balance text-3xl font-semibold tracking-tight text-zinc-900">
-            {feed?.event?.name ?? eventName}
-          </h1>
-          <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-zinc-500">
-            {feed?.event?.location && (
-              <span className="flex items-center gap-1.5">
-                <MapPin className="size-4 text-zinc-400" /> {feed.event.location}
-              </span>
-            )}
-            <Link href={`/${eventSlug}/speakers`} className="font-medium text-zinc-600 underline underline-offset-2">
-              Speakers
-            </Link>
-            <Link href={`/cfp/${eventSlug}`} className="font-medium text-zinc-600 underline underline-offset-2">
-              Call for speakers
-            </Link>
-          </div>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-3xl px-6 py-8">
+    <PublicEventShell event={event} active="schedule">
+      <>
         {!feed && !error && (
           <div className="flex items-center justify-center gap-2 py-20 text-sm text-zinc-400">
             <Loader2 className="size-4 animate-spin" /> Loading schedule…
@@ -213,12 +174,7 @@ export function PublicSchedule({ eventSlug, eventName }: { eventSlug: string; ev
                           <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
                             {s.speakers.map((sp) => (
                               <span key={sp.name} className="flex items-center gap-1.5 font-medium text-zinc-700">
-                                <span
-                                  aria-hidden="true"
-                                  className={`flex size-5 items-center justify-center rounded-full text-[9px] font-semibold ${tone(sp.name)}`}
-                                >
-                                  {initials(sp.name)}
-                                </span>
+                                <InitialsAvatar name={sp.name} />
                                 {sp.name}
                                 {sp.company ? <span className="font-normal text-zinc-400"> · {sp.company}</span> : null}
                               </span>
@@ -256,14 +212,7 @@ export function PublicSchedule({ eventSlug, eventName }: { eventSlug: string; ev
             </div>
           </>
         )}
-      </main>
-
-      <footer className="mx-auto flex max-w-3xl items-center justify-center gap-1.5 px-6 pb-10 text-xs text-zinc-400">
-        <BrandMark size={14} />
-        <a href="/" className="transition-colors hover:text-zinc-900">
-          Powered by smolboard
-        </a>
-      </footer>
-    </div>
+      </>
+    </PublicEventShell>
   );
 }

@@ -34,10 +34,20 @@ const Org = entity(
   "Org",
   {
     name: field.string(),
-    createdBy: field.id("User"),
+    // Public URL handle: every event page lives under /<org-slug>/<event-slug>.
+    // App-owned (the framework mirror only writes name/createdBy/createdAt);
+    // set by ensureOrgSlug on first dashboard load and editable in workspace
+    // settings.
+    slug: field.string().optional(),
+    createdBy: field.id("User").serverOnly(),
     createdAt: field.datetime(),
   },
-  { indexes: [{ name: "by_created_by", fields: ["createdBy"], unique: false }] },
+  {
+    indexes: [
+      { name: "by_created_by", fields: ["createdBy"], unique: false },
+      { name: "by_slug", fields: ["slug"], unique: true },
+    ],
+  },
 );
 
 const OrgMember = entity(
@@ -88,7 +98,7 @@ const Event = entity(
   {
     orgId: field.id("Org").readonly(),
     name: field.string(),
-    // Global URL handle: /cfp/[slug], /[slug]/schedule.
+    // URL handle within the org's public site: /<org-slug>/<slug>/….
     slug: field.string(),
     description: field.string().optional(),
     startDate: field.datetime().optional(),
@@ -103,7 +113,7 @@ const Event = entity(
   },
   {
     indexes: [
-      { name: "by_slug", fields: ["slug"], unique: true },
+      { name: "by_org_slug", fields: ["orgId", "slug"], unique: true },
       { name: "by_org", fields: ["orgId"], unique: false },
     ],
   },
@@ -463,10 +473,13 @@ const userPolicy = policy({
   allowDelete: "false",
 });
 
+// Orgs are publicly readable: the public event site lives at
+// /<org-slug>/<event-slug> and anonymous visitors resolve the org by slug.
+// Only name/slug/createdAt are exposed — createdBy is serverOnly.
 const orgPolicy = policy({
   name: "org_access",
   entity: "Org",
-  allowRead: "auth.tenantId == data.id",
+  allowRead: "true",
   allowInsert: "false",
   allowUpdate: "false",
   allowDelete: "false",

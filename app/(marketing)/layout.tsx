@@ -122,7 +122,7 @@ function MobileNav({ signedIn }: { signedIn: boolean }) {
       <div className="fixed inset-x-0 top-14 z-40 max-h-[calc(100vh-3.5rem)] overflow-y-auto border-b border-zinc-200 bg-white shadow-[0_24px_48px_-24px_rgba(0,0,0,0.25)]">
         <div className="mx-auto max-w-5xl space-y-6 px-6 py-6">
           <div className="flex flex-col">
-            <a href="/ai-engineer-sandbox/schedule" className="rounded-lg px-2 py-2 text-[14px] font-medium text-zinc-700 transition-colors hover:bg-zinc-50">
+            <a href="/ai-engineer/ai-engineer-sandbox/schedule" className="rounded-lg px-2 py-2 text-[14px] font-medium text-zinc-700 transition-colors hover:bg-zinc-50">
               Live demo
             </a>
             <a href="/portal" className="rounded-lg px-2 py-2 text-[14px] font-medium text-zinc-700 transition-colors hover:bg-zinc-50">
@@ -196,7 +196,7 @@ export default function MarketingLayout({ children, auth }: LayoutProps) {
             </Link>
             <nav className="hidden items-center gap-6 md:flex">
               <a
-                href="/ai-engineer-sandbox/schedule"
+                href="/ai-engineer/ai-engineer-sandbox/schedule"
                 className="text-[13.5px] text-zinc-600 transition-colors hover:text-zinc-900"
               >
                 Live demo

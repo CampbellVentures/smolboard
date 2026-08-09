@@ -12,6 +12,7 @@ import {
   type OrgMember,
   type PendingInvite,
 } from "@pylonsync/client";
+import { callFn } from "@pylonsync/react";
 import { Building2, Mail } from "lucide-react";
 import {
   DashboardEmptyState,
@@ -86,6 +87,7 @@ export function RoleBadge({ role }: { role: string }) {
 export interface OrgInfo {
   id: string;
   name: string;
+  slug?: string;
   createdAt: string;
 }
 
@@ -349,6 +351,8 @@ function SettingsView({
           {error && <p className="text-xs text-red-600">{error}</p>}
         </form>
 
+        <OrgSlugEditor org={org} canManage={canManage} />
+
         <dl className="mt-5 grid grid-cols-2 gap-y-3 border-t border-zinc-100 pt-4 text-sm">
           <dt className="text-zinc-500">Your role</dt>
           <dd className="text-right">
@@ -371,6 +375,63 @@ function SettingsView({
         )}
       </DashboardPanel>
     </DashboardPage>
+  );
+}
+
+// The workspace's public URL handle: /<handle>/<event>/… for every public
+// event page. Renaming breaks previously shared links, so the helper says so.
+function OrgSlugEditor({ org, canManage }: { org: OrgInfo; canManage: boolean }) {
+  const [slug, setSlug] = useState(org.slug ?? "");
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const dirty = slug.trim().toLowerCase() !== (org.slug ?? "") && slug.trim().length > 0;
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    if (!dirty) return;
+    setSaving(true);
+    setError(null);
+    setSaved(false);
+    try {
+      await callFn("updateOrgSlug", { slug: slug.trim().toLowerCase() });
+      setSaved(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't update the handle.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <form onSubmit={save} className="mt-5 flex max-w-xl flex-col gap-1.5 border-t border-zinc-100 pt-4">
+      <Label htmlFor="workspace-slug">URL handle</Label>
+      <div className="flex items-center gap-2">
+        <Input
+          id="workspace-slug"
+          value={slug}
+          onChange={(e) => {
+            setSlug(e.target.value);
+            setSaved(false);
+          }}
+          placeholder={org.slug ?? "my-workspace"}
+          disabled={!canManage}
+          spellCheck={false}
+          autoComplete="off"
+        />
+        {canManage && (
+          <Button type="submit" size="sm" disabled={!dirty || saving}>
+            {saving ? "…" : "Save"}
+          </Button>
+        )}
+      </div>
+      <p className="text-xs text-zinc-400">
+        Public event pages live at /{slug.trim().toLowerCase() || "<handle>"}/&lt;event&gt;.
+        Changing it breaks links you have already shared.
+      </p>
+      {saved && <p className="text-xs text-green-600">Handle updated.</p>}
+      {error && <p className="text-xs text-red-600">{error}</p>}
+    </form>
   );
 }
 

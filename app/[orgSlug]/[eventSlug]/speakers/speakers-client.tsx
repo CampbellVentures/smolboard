@@ -1,8 +1,13 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { callFn, Link } from "@pylonsync/react";
+import { callFn } from "@pylonsync/react";
 import { Loader2, Mic2 } from "lucide-react";
+import {
+  InitialsAvatar,
+  PublicEventShell,
+  type PublicEventInfo,
+} from "@/components/public-shell";
 
 interface Feed {
   event: { name: string; slug: string } | null;
@@ -17,51 +22,19 @@ interface Feed {
   }[];
 }
 
-const TONES = [
-  "bg-violet-100 text-violet-700",
-  "bg-sky-100 text-sky-700",
-  "bg-emerald-100 text-emerald-700",
-  "bg-amber-100 text-amber-700",
-  "bg-rose-100 text-rose-700",
-  "bg-cyan-100 text-cyan-700",
-];
-
-function initials(name: string): string {
-  const words = name.trim().split(/\s+/).filter(Boolean);
-  if (words.length === 0) return "?";
-  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
-  return `${words[0][0]}${words[words.length - 1][0]}`.toUpperCase();
-}
-
-export function PublicSpeakers({ eventSlug, eventName }: { eventSlug: string; eventName: string }) {
+export function PublicSpeakers({ event }: { event: PublicEventInfo }) {
+  const { orgSlug, slug: eventSlug } = event;
   const [feed, setFeed] = useState<Feed | null>(null);
   const [error, setError] = useState(false);
   useEffect(() => {
-    callFn<Feed>("getPublicSpeakers", { eventSlug })
+    callFn<Feed>("getPublicSpeakers", { orgSlug, eventSlug })
       .then(setFeed)
       .catch(() => setError(true));
-  }, [eventSlug]);
+  }, [orgSlug, eventSlug]);
 
   return (
-    <div className="min-h-screen bg-zinc-50">
-      <header className="border-b border-zinc-200/70 bg-white">
-        <div className="mx-auto max-w-4xl px-6 py-10">
-          <p className="text-[13px] font-medium uppercase tracking-wide text-zinc-400">Speakers</p>
-          <h1 className="mt-1 text-balance text-3xl font-semibold tracking-tight text-zinc-900">
-            {feed?.event?.name ?? eventName}
-          </h1>
-          <div className="mt-3 flex flex-wrap items-center gap-4 text-sm">
-            <Link href={`/${eventSlug}/schedule`} className="font-medium text-zinc-600 underline underline-offset-2">
-              Schedule
-            </Link>
-            <Link href={`/cfp/${eventSlug}`} className="font-medium text-zinc-600 underline underline-offset-2">
-              Call for speakers
-            </Link>
-          </div>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-4xl px-6 py-8">
+    <PublicEventShell event={event} active="speakers">
+      <>
         {!feed && !error && (
           <div className="flex items-center justify-center gap-2 py-20 text-sm text-zinc-400">
             <Loader2 className="size-4 animate-spin" /> Loading speakers…
@@ -76,21 +49,14 @@ export function PublicSpeakers({ eventSlug, eventName }: { eventSlug: string; ev
         )}
 
         {feed?.published && feed.speakers.length > 0 && (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {feed.speakers.map((sp, i) => (
+          <div className="grid gap-4 sm:grid-cols-2">
+            {feed.speakers.map((sp) => (
               <article
                 key={sp.name}
                 className="rounded-xl bg-white p-5 shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.04)]"
               >
                 <div className="flex items-center gap-3">
-                  <span
-                    className={
-                      "flex size-11 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold " +
-                      TONES[i % TONES.length]
-                    }
-                  >
-                    {initials(sp.name)}
-                  </span>
+                  <InitialsAvatar name={sp.name} className="size-11 text-[13px]" />
                   <div className="min-w-0">
                     <h2 className="truncate text-[15px] font-semibold text-zinc-900">{sp.name}</h2>
                     <p className="truncate text-xs text-zinc-500">
@@ -114,11 +80,7 @@ export function PublicSpeakers({ eventSlug, eventName }: { eventSlug: string; ev
             ))}
           </div>
         )}
-      </main>
-
-      <footer className="mx-auto max-w-4xl px-6 pb-10 text-center text-xs text-zinc-300">
-        Powered by smolboard
-      </footer>
-    </div>
+      </>
+    </PublicEventShell>
   );
 }

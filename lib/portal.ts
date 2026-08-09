@@ -2,6 +2,8 @@ export interface PortalSession {
   id: string;
   eventName: string;
   eventSlug: string;
+  // Null until the organizer's workspace has a public URL handle.
+  orgSlug: string | null;
   title: string;
   startTime: string;
   endTime: string;

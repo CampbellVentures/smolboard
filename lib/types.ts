@@ -27,6 +27,13 @@ export function routingOf(row: { routingJson?: unknown }): RoutingConfig | undef
   return parseRouting(parseJson(row.routingJson));
 }
 
+export interface OrgRow {
+  id: string;
+  name: string;
+  slug?: string;
+  createdAt: string;
+}
+
 export interface EventRow {
   id: string;
   orgId: string;

@@ -12,6 +12,7 @@ export default query<Record<string, never>, { sessions: PortalSession[] }>({
       const eventId = profile.eventId as string;
       const event = await ctx.db.unsafe.get("Event", eventId);
       if (!event) continue;
+      const org = await ctx.db.unsafe.get("Org", event.orgId as string);
       const [eventSessions, rooms] = await Promise.all([
         ctx.db.unsafe.query("Session", { eventId }),
         ctx.db.unsafe.query("Room", { eventId }),
@@ -25,6 +26,7 @@ export default query<Record<string, never>, { sessions: PortalSession[] }>({
           id: session.id as string,
           eventName: event.name as string,
           eventSlug: event.slug as string,
+          orgSlug: (org?.slug as string | undefined) ?? null,
           title: session.title as string,
           startTime: session.startTime as string,
           endTime: session.endTime as string,

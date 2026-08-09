@@ -37,6 +37,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { lastEventStorageKey } from "@/lib/dashboard-routing";
 import { CopilotChat } from "@/components/copilot-chat";
+import { useEnsureOrgSlug } from "@/components/use-org-slug";
 
 // Three-pane organizer shell (SPEC.md → "Organizer UI shell"):
 //   [nav sidebar] [copilot pane] [content]
@@ -366,6 +367,9 @@ export function AppShell({
       localStorage.setItem(lastEventStorageKey(workspaceId), event.id);
     }
   }, [event, workspaceId]);
+  // Every workspace that opens the dashboard gets a public URL handle, so
+  // /<org-slug>/<event-slug> pages and dashboard preview links always resolve.
+  useEnsureOrgSlug(Boolean(workspaceId));
 
   function setCopilot(next: boolean) {
     setCopilotOpen(next);

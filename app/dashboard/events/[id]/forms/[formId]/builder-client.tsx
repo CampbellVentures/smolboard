@@ -24,6 +24,7 @@ import {
 } from "@/lib/forms";
 import { parseJson } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { useOrgSlug } from "@/components/use-org-slug";
 import {
   ArrowDown,
   ArrowUp,
@@ -67,7 +68,7 @@ export function FormBuilder({
   event,
   form,
 }: {
-  event: { id: string; slug: string };
+  event: { id: string; slug: string; orgId: string };
   form: {
     id: string;
     name: string;
@@ -79,6 +80,7 @@ export function FormBuilder({
     confirmationMessage?: string;
   };
 }) {
+  const orgSlug = useOrgSlug(event.orgId);
   const [name, setName] = useState(form.name);
   const [description, setDescription] = useState(form.description ?? "");
   const [confirmation, setConfirmation] = useState(form.confirmationMessage ?? "");
@@ -200,7 +202,7 @@ export function FormBuilder({
           />
           <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <span className="break-all text-xs text-zinc-400">
-              Public URL: /cfp/{event.slug}/{slugify(name) || form.slug}
+              Public URL: /{orgSlug ?? "…"}/{event.slug}/cfp/{slugify(name) || form.slug}
             </span>
             <div className="flex items-center gap-3">
               {savedAt && !saving && <span className="text-xs text-emerald-600">Saved</span>}

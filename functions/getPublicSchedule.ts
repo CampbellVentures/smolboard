@@ -1,11 +1,11 @@
 import { query, v } from "@pylonsync/functions";
 
-// Public schedule feed for /[eventSlug]/schedule — and the public API bonus
-// (SPEC): GET /api/query/... equivalent via POST /api/fn/getPublicSchedule.
-// Anonymous; gated on the organizer's "publish schedule" toggle. Returns ONLY
-// safe fields — speaker emails and internal ids stay server-side.
+// Public schedule feed for /<org-slug>/<event-slug>/schedule — and the public
+// API bonus (SPEC): POST /api/fn/getPublicSchedule. Anonymous; gated on the
+// organizer's "publish schedule" toggle. Returns ONLY safe fields — speaker
+// emails and internal ids stay server-side.
 export default query<
-  { eventSlug: string },
+  { orgSlug: string; eventSlug: string },
   {
     event: {
       name: string;
@@ -33,11 +33,18 @@ export default query<
   }
 >({
   auth: "public",
-  args: { eventSlug: v.string() },
+  args: { orgSlug: v.string(), eventSlug: v.string() },
   async handler(ctx, args) {
     // ctx.db.unsafe: anonymous public feed — rows are filtered to safe fields
     // below and the whole payload is gated on schedulePublished.
-    const event = await ctx.db.unsafe.lookup("Event", "slug", args.eventSlug.trim().toLowerCase());
+    const orgs = await ctx.db.unsafe.query("Org", { slug: args.orgSlug.trim().toLowerCase() });
+    const events = orgs.length
+      ? await ctx.db.unsafe.query("Event", {
+          orgId: orgs[0].id as string,
+          slug: args.eventSlug.trim().toLowerCase(),
+        })
+      : [];
+    const event = events[0];
     if (!event || event.cfpStatus === "draft") {
       return { event: null, published: false, rooms: [], tracks: [], sessions: [] };
     }

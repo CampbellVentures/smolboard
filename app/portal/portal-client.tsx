@@ -327,6 +327,12 @@ export function PortalHome({
           </React.Fragment>
         ))}
       </main>
+      <footer className="mx-auto flex max-w-3xl items-center justify-center gap-1.5 px-6 pb-10 text-xs text-zinc-400">
+        <BrandMark size={14} />
+        <a href="/" className="transition-colors hover:text-zinc-900">
+          Powered by smolboard
+        </a>
+      </footer>
     </div>
   );
 }
@@ -375,9 +381,9 @@ function ScheduleSection({
                   </p>
                   <p className="mt-0.5 text-xs text-zinc-400">{session.eventName}</p>
                 </div>
-                {session.schedulePublished ? (
+                {session.schedulePublished && session.orgSlug ? (
                   <Button asChild type="button" size="sm" variant="ghost">
-                    <a href={`/${session.eventSlug}/schedule`}>
+                    <a href={`/${session.orgSlug}/${session.eventSlug}/schedule`}>
                       View <ExternalLink data-icon="inline-end" />
                     </a>
                   </Button>
