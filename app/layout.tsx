@@ -29,7 +29,9 @@ export default function RootLayout({ children }: LayoutProps) {
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+        {/* Assets live under /assets/img/ (3 path segments) so the top-level
+            [orgSlug]/[eventSlug] routes can never shadow them. */}
+        <link rel="icon" type="image/svg+xml" href="/assets/img/icon.svg" />
         {/* No <title> here on purpose — each page's exported `metadata` /
             `generateMetadata` sets it. A hardcoded title in the layout would
             render first and win over the page's, so every tab would read

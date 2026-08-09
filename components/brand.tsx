@@ -2,7 +2,7 @@ import * as React from "react";
 
 // The smolboard mark: a lime mic on ink, rounded square.
 // Inline SVG so every surface (nav, auth, portal) renders the same artwork at
-// any size with no asset request; public/icon.svg is the same drawing for the
+// any size with no asset request; public/assets/img/icon.svg is the same drawing for the
 // favicon. Change the colors in ONE place: BRAND_INK/BRAND_LIME (+ globals.css
 // and lib/site.config.ts colors).
 

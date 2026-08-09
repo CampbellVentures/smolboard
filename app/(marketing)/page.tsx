@@ -70,7 +70,7 @@ export default function LandingPage({ auth }: PageProps) {
         <div className="relative mt-12">
           <div className="overflow-hidden rounded-xl shadow-[0_0_0_1px_rgba(0,0,0,0.08),0_24px_60px_-24px_rgba(0,0,0,0.25)]">
             <img
-              src="/hero-dashboard.png"
+              src="/assets/img/hero-dashboard.png"
               alt="The smolboard event dashboard: a submissions table with speakers, categories, review scores, and statuses, next to the event navigation."
               width={2720}
               height={1720}
