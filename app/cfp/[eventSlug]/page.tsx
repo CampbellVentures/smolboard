@@ -1,6 +1,7 @@
 import React, { use } from "react";
 import { Link, type Metadata, type PageProps } from "@pylonsync/react";
 import { CalendarDays, MapPin, ArrowRight } from "lucide-react";
+import { BrandMark } from "@/components/brand";
 import type { EventRow, SubmissionFormRow } from "@/lib/types";
 
 export const metadata: Metadata = {
@@ -23,14 +24,18 @@ export default function CfpIndexPage({ params, response, serverData }: PageProps
   const cfpOpen = event.cfpStatus === "open" && forms.length > 0;
 
   return (
-    <div className="min-h-screen bg-zinc-50">
-      <div className="mx-auto max-w-2xl px-6 py-16">
-        <p className="text-[13px] font-medium uppercase tracking-wide text-zinc-400">
-          Call for speakers
-        </p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-zinc-900">
-          {event.name}
-        </h1>
+    <div className="flex min-h-screen flex-col bg-zinc-50">
+      <header className="border-b border-zinc-200/70 bg-white">
+        <div className="mx-auto max-w-2xl px-6 py-10">
+          <div className="flex items-center gap-2">
+            <BrandMark size={20} />
+            <p className="text-[13px] font-semibold uppercase tracking-wide text-zinc-400">
+              Call for speakers
+            </p>
+          </div>
+          <h1 className="mt-1 text-balance text-3xl font-semibold tracking-tight text-zinc-900">
+            {event.name}
+          </h1>
         <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-zinc-500">
           {event.startDate && (
             <span className="flex items-center gap-1.5">
@@ -45,13 +50,16 @@ export default function CfpIndexPage({ params, response, serverData }: PageProps
             </span>
           )}
         </div>
-        {event.description && (
-          <p className="mt-5 whitespace-pre-line text-[15px] leading-relaxed text-zinc-600">
-            {event.description}
-          </p>
-        )}
+          {event.description && (
+            <p className="mt-4 whitespace-pre-line text-[15px] leading-relaxed text-zinc-600">
+              {event.description}
+            </p>
+          )}
+        </div>
+      </header>
 
-        <div className="mt-10">
+      <main className="mx-auto w-full max-w-2xl flex-1 px-6 py-10">
+        <div>
           {!cfpOpen ? (
             <div className="rounded-xl border border-zinc-200 bg-white px-6 py-10 text-center">
               <p className="text-sm font-medium text-zinc-700">
@@ -92,7 +100,11 @@ export default function CfpIndexPage({ params, response, serverData }: PageProps
             </div>
           )}
         </div>
-      </div>
+      </main>
+      <footer className="mx-auto flex max-w-2xl items-center justify-center gap-1.5 px-6 pb-10 text-xs text-zinc-400">
+        <BrandMark size={14} />
+        <a href="/" className="transition-colors hover:text-zinc-900">Powered by smolboard</a>
+      </footer>
     </div>
   );
 }

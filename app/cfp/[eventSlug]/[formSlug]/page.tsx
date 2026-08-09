@@ -1,6 +1,7 @@
 import React, { use } from "react";
 import { type Metadata, type PageProps } from "@pylonsync/react";
 import { CfpForm } from "./cfp-form";
+import { BrandMark } from "@/components/brand";
 import type { EventRow, SubmissionFormRow } from "@/lib/types";
 
 export const metadata: Metadata = {
@@ -29,13 +30,13 @@ export default function CfpFormPage({
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50">
-      <div className="mx-auto max-w-2xl px-6 py-12">
+    <div className="flex min-h-screen flex-col bg-zinc-50">
+      <div className="mx-auto w-full max-w-2xl flex-1 px-6 py-12">
         <a
           href={`/cfp/${event.slug}`}
-          className="text-[13px] font-medium text-zinc-400 hover:text-zinc-700"
+          className="flex w-fit items-center gap-2 text-[13px] font-medium text-zinc-400 transition-colors hover:text-zinc-700"
         >
-          ← {event.name}
+          <BrandMark size={18} /> ← {event.name}
         </a>
         <h1 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-900">{form.name}</h1>
         {form.description && (
@@ -49,6 +50,10 @@ export default function CfpFormPage({
           />
         </div>
       </div>
+      <footer className="mx-auto flex max-w-2xl items-center justify-center gap-1.5 px-6 pb-10 text-xs text-zinc-400">
+        <BrandMark size={14} />
+        <a href="/" className="transition-colors hover:text-zinc-900">Powered by smolboard</a>
+      </footer>
     </div>
   );
 }

@@ -151,7 +151,7 @@ export function PublicSchedule({ eventSlug, eventName }: { eventSlug: string; ev
                   className={
                     "rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-colors " +
                     (activeDay === d
-                      ? "bg-zinc-900 text-white"
+                      ? "bg-zinc-900 text-lime-300"
                       : "bg-white text-zinc-600 shadow-[0_0_0_1px_rgba(0,0,0,0.06)] hover:text-zinc-900")
                   }
                 >
