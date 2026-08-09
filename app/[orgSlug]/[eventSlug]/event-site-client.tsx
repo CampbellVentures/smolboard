@@ -10,7 +10,7 @@ import { InitialsAvatar, type PublicEventInfo } from "@/components/public-shell"
 // the header tabs are anchor links that scroll here. Only the CFP is a
 // separate route (it's a form flow).
 
-interface ScheduleFeed {
+export interface ScheduleFeed {
   event: { timezone: string } | null;
   published: boolean;
   rooms: { id: string; name: string }[];
@@ -28,7 +28,7 @@ interface ScheduleFeed {
   }[];
 }
 
-interface SpeakersFeed {
+export interface SpeakersFeed {
   published: boolean;
   speakers: {
     name: string;
@@ -52,23 +52,33 @@ export function EventSite({
   event,
   description,
   cfpOpen,
+  initialSchedule = null,
+  initialSpeakers = null,
 }: {
   event: PublicEventInfo;
   description: string | null;
   cfpOpen: boolean;
+  // SSR'd feeds (serverData.fn). The client fetch below is only a fallback so
+  // the page still fills in if a caller ever renders without them.
+  initialSchedule?: ScheduleFeed | null;
+  initialSpeakers?: SpeakersFeed | null;
 }) {
   const { orgSlug, slug: eventSlug } = event;
-  const [schedule, setSchedule] = useState<ScheduleFeed | null>(null);
-  const [speakers, setSpeakers] = useState<SpeakersFeed | null>(null);
+  const [schedule, setSchedule] = useState<ScheduleFeed | null>(initialSchedule);
+  const [speakers, setSpeakers] = useState<SpeakersFeed | null>(initialSpeakers);
   const [error, setError] = useState(false);
   useEffect(() => {
-    callFn<ScheduleFeed>("getPublicSchedule", { orgSlug, eventSlug })
-      .then(setSchedule)
-      .catch(() => setError(true));
-    callFn<SpeakersFeed>("getPublicSpeakers", { orgSlug, eventSlug })
-      .then(setSpeakers)
-      .catch(() => setError(true));
-  }, [orgSlug, eventSlug]);
+    if (!initialSchedule) {
+      callFn<ScheduleFeed>("getPublicSchedule", { orgSlug, eventSlug })
+        .then(setSchedule)
+        .catch(() => setError(true));
+    }
+    if (!initialSpeakers) {
+      callFn<SpeakersFeed>("getPublicSpeakers", { orgSlug, eventSlug })
+        .then(setSpeakers)
+        .catch(() => setError(true));
+    }
+  }, [orgSlug, eventSlug, initialSchedule, initialSpeakers]);
 
   return (
     <>

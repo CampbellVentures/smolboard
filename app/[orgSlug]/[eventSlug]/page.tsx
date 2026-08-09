@@ -1,6 +1,6 @@
 import React, { use } from "react";
 import { type Metadata, type PageProps } from "@pylonsync/react";
-import { EventSite } from "./event-site-client";
+import { EventSite, type ScheduleFeed, type SpeakersFeed } from "./event-site-client";
 import { PublicEventShell } from "@/components/public-shell";
 import { publicEventInfo, resolvePublicEvent } from "@/lib/public-site";
 import type { EventRow, OrgRow, SubmissionFormRow } from "@/lib/types";
@@ -34,6 +34,11 @@ export default function EventHomePage({
   const cfpOpen =
     event.cfpStatus === "open" &&
     use(formsPromise).some((f) => f.eventId === event.id && f.status === "open");
+  // Schedule + speakers render server-side (serverData.fn, SDK ≥0.4.0) — the
+  // feeds arrive in the HTML instead of loading after hydration.
+  const feedArgs = { orgSlug: params.orgSlug, eventSlug: params.eventSlug };
+  const schedule = use(serverData.fn<ScheduleFeed>("getPublicSchedule", feedArgs));
+  const speakers = use(serverData.fn<SpeakersFeed>("getPublicSpeakers", feedArgs));
 
   return (
     <PublicEventShell event={publicEventInfo(org, event)} active="home">
@@ -41,6 +46,8 @@ export default function EventHomePage({
         event={publicEventInfo(org, event)}
         description={event.description ?? null}
         cfpOpen={cfpOpen}
+        initialSchedule={schedule}
+        initialSpeakers={speakers}
       />
     </PublicEventShell>
   );
