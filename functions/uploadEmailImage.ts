@@ -66,7 +66,8 @@ export default action<
 
     const confirm = await fetch(`${STACK0_API}/v1/cdn/upload/${slot.assetId}/confirm`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}` },
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: "{}",
     });
     if (!confirm.ok) throw ctx.error("UPSTREAM", `CDN confirm failed (${confirm.status}).`);
     const asset = (await confirm.json()) as { cdnUrl?: string };
