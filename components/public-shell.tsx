@@ -16,13 +16,14 @@ export interface PublicEventInfo {
   endDate?: string | null;
 }
 
-export type PublicTab = "overview" | "schedule" | "speakers" | "cfp";
+export type PublicTab = "home" | "cfp";
 
-const TABS: { key: PublicTab; label: string; path: string }[] = [
-  { key: "overview", label: "Overview", path: "" },
-  { key: "schedule", label: "Schedule", path: "/schedule" },
-  { key: "speakers", label: "Speakers", path: "/speakers" },
-  { key: "cfp", label: "Call for speakers", path: "/cfp" },
+// Schedule and Speakers are sections of the one event page, so their nav
+// entries are anchors; only the CFP is a separate route.
+const TABS: { key: string; cfp?: boolean; label: string; path: string }[] = [
+  { key: "schedule", label: "Schedule", path: "#schedule" },
+  { key: "speakers", label: "Speakers", path: "#speakers" },
+  { key: "cfp", cfp: true, label: "Call for speakers", path: "/cfp" },
 ];
 
 export function PublicEventShell({
@@ -35,13 +36,15 @@ export function PublicEventShell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen flex-col bg-zinc-50">
+    <div className="flex min-h-screen scroll-smooth flex-col bg-zinc-50">
       <header className="border-b border-zinc-200/70 bg-white">
         <div className="mx-auto w-full max-w-3xl px-6">
           <div className="pt-10">
-            <BrandMark size={22} />
+            <Link href={`/${event.orgSlug}/${event.slug}`} className="inline-flex">
+              <BrandMark size={22} />
+            </Link>
             <h1 className="mt-4 text-balance text-3xl font-semibold tracking-tight text-zinc-900">
-              {event.name}
+              <Link href={`/${event.orgSlug}/${event.slug}`}>{event.name}</Link>
             </h1>
             <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-zinc-500">
               {event.startDate && (
@@ -59,21 +62,24 @@ export function PublicEventShell({
             </div>
           </div>
           <nav className="-mb-px mt-6 flex gap-6" aria-label="Event pages">
-            {TABS.map((t) => (
-              <Link
-                key={t.key}
-                href={`/${event.orgSlug}/${event.slug}${t.path}`}
-                aria-current={active === t.key ? "page" : undefined}
-                className={
-                  "flex h-11 items-center border-b-2 text-[13.5px] font-medium transition-colors " +
-                  (active === t.key
-                    ? "border-zinc-900 text-zinc-900"
-                    : "border-transparent text-zinc-500 hover:text-zinc-900")
-                }
-              >
-                {t.label}
-              </Link>
-            ))}
+            {TABS.map((t) => {
+              const isActive = t.cfp === true && active === "cfp";
+              return (
+                <Link
+                  key={t.key}
+                  href={`/${event.orgSlug}/${event.slug}${t.path}`}
+                  aria-current={isActive ? "page" : undefined}
+                  className={
+                    "flex h-11 items-center border-b-2 text-[13.5px] font-medium transition-colors " +
+                    (isActive
+                      ? "border-zinc-900 text-zinc-900"
+                      : "border-transparent text-zinc-500 hover:text-zinc-900")
+                  }
+                >
+                  {t.label}
+                </Link>
+              );
+            })}
           </nav>
         </div>
       </header>

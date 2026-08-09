@@ -3,7 +3,7 @@
 Open-source speaker & CFP management — a [Sessionboard](https://www.sessionboard.com/) replacement built for the [AI Engineer hackathon](https://x.com/swyx/status/2085517544795079014). One [Pylon](https://pylonsync.com) process serves the API, auth, live sync, SSR, and the agent runtime.
 
 **Live demo:** https://smolboard.smallware.run
-**Public schedule example:** https://smolboard.smallware.run/ai-engineer/ai-engineer-sandbox/schedule
+**Public schedule example:** https://smolboard.smallware.run/ai-engineer/ai-engineer-sandbox
 
 ## What it does
 

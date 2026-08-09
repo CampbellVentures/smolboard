@@ -36,7 +36,7 @@ export default query<{ token: string }, CalendarInviteResult | null>({
     // Public schedule URL needs the org slug; fall back to the portal when
     // the org hasn't been given one yet.
     const scheduleUrl = org?.slug
-      ? `${base}/${org.slug as string}/${event.slug as string}/schedule`
+      ? `${base}/${org.slug as string}/${event.slug as string}#schedule`
       : `${base}/portal`;
     const input = {
       start: session.startTime as string,

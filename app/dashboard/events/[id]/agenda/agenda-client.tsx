@@ -731,7 +731,7 @@ function TracksView({
 // published yet".
 function PublishToggle({ event }: { event: EventRow }) {
   const orgSlug = useOrgSlug(event.orgId);
-  const scheduleUrl = orgSlug ? `/${orgSlug}/${event.slug}/schedule` : null;
+  const scheduleUrl = orgSlug ? `/${orgSlug}/${event.slug}#schedule` : null;
   const [busy, setBusy] = useState(false);
   async function toggle() {
     setBusy(true);

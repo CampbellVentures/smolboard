@@ -383,7 +383,7 @@ function ScheduleSection({
                 </div>
                 {session.schedulePublished && session.orgSlug ? (
                   <Button asChild type="button" size="sm" variant="ghost">
-                    <a href={`/${session.orgSlug}/${session.eventSlug}/schedule`}>
+                    <a href={`/${session.orgSlug}/${session.eventSlug}#schedule`}>
                       View <ExternalLink data-icon="inline-end" />
                     </a>
                   </Button>

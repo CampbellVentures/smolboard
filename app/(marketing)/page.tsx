@@ -57,7 +57,7 @@ export default function LandingPage({ auth }: PageProps) {
               {signedIn ? "Open dashboard" : "Get started free"}
             </Link>
             <a
-              href="/ai-engineer/ai-engineer-sandbox/schedule"
+              href="/ai-engineer/ai-engineer-sandbox"
               className="inline-flex h-10 items-center rounded-full px-4 text-[14px] font-medium text-zinc-600 transition-colors hover:text-zinc-900"
             >
               See a live schedule →
