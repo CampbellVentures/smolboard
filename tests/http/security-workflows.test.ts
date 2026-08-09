@@ -80,15 +80,11 @@ test("speakers see their own submissions and tasks but not another speaker's row
   expect([403, 404]).toContain(otherTask.status);
 }, 30_000);
 
-test("org members are tenant-scoped, while current reviewer permissions allow own-org review administration", async () => {
+test("generic members lose raw review access and designated reviewers see only assigned projections", async () => {
   const fixture = await createTwoOrgFixture(server.baseUrl, "member-scope");
   const ownRounds = await entityList<{ id: string }>(fixture.a.reviewer, "ReviewRound");
-  expect(ownRounds.map((row) => row.id)).toContain(fixture.a.roundId);
-  expect(ownRounds.map((row) => row.id)).not.toContain(fixture.b.roundId);
+  expect(ownRounds).toEqual([]);
 
-  // Characterization vulnerability for plan 002: a generic reviewer/member can
-  // administer review rounds in their workspace. Flip this expectation after
-  // organizer/reviewer authorization is separated.
   const ownWrite = await jsonRequest(fixture.a.reviewer, "/api/fn/saveReviewRound", "POST", {
     eventId: fixture.a.eventId,
     roundId: fixture.a.roundId,
@@ -97,7 +93,7 @@ test("org members are tenant-scoped, while current reviewer permissions allow ow
     criteriaJson: [{ key: "quality", label: "Quality", max: 5 }],
     status: "open",
   });
-  expect(ownWrite.response.status).toBe(200);
+  expect([400, 403]).toContain(ownWrite.response.status);
 
   const foreignWrite = await entityUpdate(fixture.a.reviewer, "ReviewRound", fixture.b.roundId, {
     name: "Foreign mutation",
@@ -114,15 +110,38 @@ test("org members are tenant-scoped, while current reviewer permissions allow ow
   });
   expect(peerReview.response.status).toBe(200);
 
-  // Characterization vulnerabilities for plan 002: the reviewer currently sees
-  // every submission, speaker identity, and peer review in the workspace.
   const visibleSubmissions = await entityList<{ id: string }>(fixture.a.reviewer, "Submission");
   const visibleProfiles = await entityList<{ id: string; email: string }>(fixture.a.reviewer, "SpeakerProfile");
   const visibleReviews = await entityList<{ id: string; comment?: string }>(fixture.a.reviewer, "Review");
-  expect(visibleSubmissions.map((row) => row.id)).toEqual(expect.arrayContaining(fixture.a.submissionIds));
-  expect(visibleProfiles.map((row) => row.id)).toEqual(expect.arrayContaining(fixture.a.profileIds));
-  expect(visibleProfiles.some((row) => row.email === fixture.a.speakers[0].email)).toBe(true);
-  expect(visibleReviews.some((row) => row.comment === "Visible peer comment")).toBe(true);
+  expect(visibleSubmissions).toEqual([]);
+  expect(visibleProfiles).toEqual([]);
+  expect(visibleReviews).toEqual([]);
+
+  await callFn(fixture.a.owner, "setReviewerMembership", {
+    orgId: fixture.a.id,
+    userId: fixture.a.reviewer.userId,
+    active: true,
+  });
+  await callFn(fixture.a.owner, "setReviewRoundReviewer", {
+    eventId: fixture.a.eventId,
+    roundId: fixture.a.roundId,
+    reviewerUserId: fixture.a.reviewer.userId,
+    active: true,
+  });
+  await callFn(fixture.a.owner, "assignReview", {
+    eventId: fixture.a.eventId,
+    roundId: fixture.a.roundId,
+    submissionId: fixture.a.submissionIds[0],
+    reviewerUserId: fixture.a.reviewer.userId,
+  });
+  const queue = await callFn<{ items: Array<{ submission: { id: string }; author?: unknown; peerReviews?: unknown[] }> }>(
+    fixture.a.reviewer,
+    "getReviewerQueue",
+    { orgId: fixture.a.id },
+  );
+  expect(queue.items.map((item) => item.submission.id)).toEqual([fixture.a.submissionIds[0]]);
+  expect(queue.items[0].author).toBeUndefined();
+  expect(queue.items[0].peerReviews).toBeUndefined();
 }, 30_000);
 
 test("cross-tenant child anchors are denied while derived same-tenant writes pass", async () => {

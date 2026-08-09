@@ -8,7 +8,7 @@ export default mutation({
     if (!template) throw ctx.error("NOT_FOUND", "Task template not found.");
     const event = await ctx.db.unsafe.get("Event", template.eventId as string);
     if (!event || event.orgId !== template.orgId) throw ctx.error("NOT_FOUND", "Task template not found.");
-    await ctx.requireMember(event.orgId as string);
+    await ctx.requireMember(event.orgId as string, { role: ["owner", "admin"] });
     const tasks = (await ctx.db.unsafe.query("SpeakerTask", { taskTemplateId: args.templateId })).filter(
       (task) => matchesEventAnchor(task, template.eventId as string, template.orgId as string),
     );

@@ -119,13 +119,21 @@ function MembersList({
   const canManage = isManager(role);
   const [members, setMembers] = useState<OrgMember[] | null>(null);
   const [invites, setInvites] = useState<PendingInvite[] | null>(null);
+  const [reviewerIds, setReviewerIds] = useState<Set<string>>(new Set());
   const [email, setEmail] = useState("");
   const [note, setNote] = useState<string | null>(null);
   const [inviting, setInviting] = useState(false);
 
   async function load() {
     setMembers(await listOrgMembers(orgId));
-    if (canManage) setInvites(await listInvites(orgId));
+    if (canManage) {
+      const [nextInvites, reviewerMemberships] = await Promise.all([
+        listInvites(orgId),
+        callFn<{ userId: string; status: string }[]>("listReviewerMemberships", { orgId }),
+      ]);
+      setInvites(nextInvites);
+      setReviewerIds(new Set(reviewerMemberships.filter((membership) => membership.status === "active").map((membership) => membership.userId)));
+    }
   }
   useEffect(() => {
     void load();
@@ -157,6 +165,17 @@ function MembersList({
     } finally {
       void load();
     }
+  }
+
+  async function toggleReviewer(userId: string) {
+    const active = !reviewerIds.has(userId);
+    await callFn("setReviewerMembership", { orgId, userId, active });
+    setReviewerIds((current) => {
+      const next = new Set(current);
+      if (active) next.add(userId);
+      else next.delete(userId);
+      return next;
+    });
   }
 
   return (
@@ -214,15 +233,25 @@ function MembersList({
                         <div className="truncate text-xs text-zinc-500">{m.email}</div>
                       )}
                     </div>
+                    {reviewerIds.has(m.user_id) ? <Badge variant="outline">Reviewer</Badge> : null}
                     <RoleBadge role={m.role} />
+                    {canManage && m.role === "member" ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => void toggleReviewer(m.user_id)}
+                      >
+                        {reviewerIds.has(m.user_id) ? "Remove reviewer" : "Make reviewer"}
+                      </Button>
+                    ) : null}
                   </li>
                 );
               })}
         </ul>
         {!canManage && (
           <p className="mt-3 text-xs text-zinc-400">
-            Only owners and admins can invite new members. Every member can review
-            and score submissions.
+            Only owners and admins can invite members or designate reviewers.
           </p>
         )}
       </DashboardPanel>

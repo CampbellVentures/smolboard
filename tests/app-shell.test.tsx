@@ -83,3 +83,25 @@ test("dashboard shell provides a mobile navigation sheet", () => {
       .getAttribute("href"),
   ).toBe("/dashboard/events");
 });
+
+test("reviewer mode exposes only the assignment queue and no organizer copilot", () => {
+  render(
+    <AppShell
+      active="reviews"
+      title="Review queue"
+      userEmail="reviewer@example.com"
+      userId="reviewer-1"
+      userName="Rae Reviewer"
+      workspaceId="org-1"
+      orgName="AIE"
+      reviewerMode
+    >
+      Assigned reviews
+    </AppShell>,
+  );
+
+  expect(screen.getAllByRole("link", { name: "Review queue" }).length).toBeGreaterThan(0);
+  expect(screen.queryByRole("link", { name: "All events" })).toBeNull();
+  expect(screen.queryByRole("link", { name: "Team" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Ask smolboard" })).toBeNull();
+});

@@ -3,8 +3,8 @@ import { type Metadata, type PageProps } from "@pylonsync/react";
 import { EventOverview } from "../overview-client";
 import type {
   EventRow,
+  ReviewAssignmentRow,
   ReviewRoundRow,
-  ReviewRow,
   SpeakerFileRow,
   SpeakerProfileRow,
   SpeakerTaskRow,
@@ -53,7 +53,7 @@ export default function EventOverviewPage({
   const files = use(serverData.list<SpeakerFileRow>("SpeakerFile")).filter(
     (row) => row.eventId === event.id,
   );
-  const reviews = use(serverData.list<ReviewRow>("Review")).filter(
+  const assignments = use(serverData.list<ReviewAssignmentRow>("ReviewAssignment")).filter(
     (row) => row.eventId === event.id,
   );
   const rounds = use(serverData.list<ReviewRoundRow>("ReviewRound")).filter(
@@ -69,7 +69,7 @@ export default function EventOverviewPage({
       initialTasks={tasks}
       initialTemplates={templates}
       initialFiles={files}
-      initialReviews={reviews}
+      initialAssignments={assignments}
       initialRounds={rounds}
     />
   );

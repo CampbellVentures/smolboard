@@ -37,11 +37,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { buildOnboardingRows } from "@/lib/tasks";
+import { assignmentProgress } from "@/lib/reviews";
 import { useOrgSlug } from "@/components/use-org-slug";
 import type {
   EventRow,
+  ReviewAssignmentRow,
   ReviewRoundRow,
-  ReviewRow,
   SpeakerFileRow,
   SpeakerProfileRow,
   SpeakerTaskRow,
@@ -80,7 +81,7 @@ export function EventOverview({
   initialTasks,
   initialTemplates,
   initialFiles,
-  initialReviews,
+  initialAssignments,
   initialRounds,
 }: {
   event: EventRow;
@@ -90,7 +91,7 @@ export function EventOverview({
   initialTasks: SpeakerTaskRow[];
   initialTemplates: TaskTemplateRow[];
   initialFiles: SpeakerFileRow[];
-  initialReviews: ReviewRow[];
+  initialAssignments: ReviewAssignmentRow[];
   initialRounds: ReviewRoundRow[];
 }) {
   const [hydrated, setHydrated] = useState(false);
@@ -101,7 +102,7 @@ export function EventOverview({
   const taskQuery = db.useQuery<SpeakerTaskRow>("SpeakerTask");
   const templateQuery = db.useQuery<TaskTemplateRow>("TaskTemplate");
   const fileQuery = db.useQuery<SpeakerFileRow>("SpeakerFile");
-  const reviewQuery = db.useQuery<ReviewRow>("Review");
+  const assignmentQuery = db.useQuery<ReviewAssignmentRow>("ReviewAssignment");
   const roundQuery = db.useQuery<ReviewRoundRow>("ReviewRound");
 
   const submissions = (
@@ -119,7 +120,9 @@ export function EventOverview({
   const files = (!hydrated || fileQuery.loading ? initialFiles : fileQuery.data).filter(
     (row) => row.eventId === event.id,
   );
-  const reviews = (!hydrated || reviewQuery.loading ? initialReviews : reviewQuery.data).filter(
+  const assignments = (
+    !hydrated || assignmentQuery.loading ? initialAssignments : assignmentQuery.data
+  ).filter(
     (row) => row.eventId === event.id,
   );
   const rounds = (!hydrated || roundQuery.loading ? initialRounds : roundQuery.data).filter(
@@ -400,21 +403,18 @@ export function EventOverview({
                   .slice()
                   .sort((a, b) => a.roundNumber - b.roundNumber)
                   .map((round) => {
-                    const eligible = submissions.filter(
-                      (submission) => submission.currentRound >= round.roundNumber,
-                    ).length;
-                    const roundReviews = reviews.filter((review) => review.roundId === round.id).length;
-                    const percent =
-                      eligible === 0 ? 0 : Math.min(100, Math.round((roundReviews / eligible) * 100));
+                    const progress = assignmentProgress(
+                      assignments.filter((assignment) => assignment.roundId === round.id),
+                    );
                     return (
                       <div key={round.id}>
                         <div className="flex items-center justify-between gap-3 text-sm">
                           <span>{round.name}</span>
                           <span className="tabular-nums text-muted-foreground">
-                            {roundReviews} of {eligible}
+                            {progress.complete} of {progress.total}
                           </span>
                         </div>
-                        <Progress value={percent} className="mt-2" />
+                        <Progress value={progress.percent} className="mt-2" />
                       </div>
                     );
                   })}

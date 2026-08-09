@@ -6,7 +6,7 @@ export default query({
   async handler(ctx, args) {
     const event = await ctx.db.unsafe.get("Event", args.eventId);
     if (!event) throw ctx.error("NOT_FOUND", "Event not found.");
-    await ctx.requireMember(event.orgId as string);
+    await ctx.requireMember(event.orgId as string, { role: ["owner", "admin"] });
 
     // ctx.db.unsafe: membership verified above.
     const tasks = await ctx.db.unsafe.query("SpeakerTask", { eventId: args.eventId });

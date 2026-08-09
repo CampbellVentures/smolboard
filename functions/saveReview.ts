@@ -17,7 +17,7 @@ export default mutation({
       ctx.db.unsafe.get("ReviewRound", args.roundId),
     ]);
     if (!event) throw ctx.error("NOT_FOUND", "Event not found.");
-    await ctx.requireMember(event.orgId as string);
+    await ctx.requireMember(event.orgId as string, { role: ["owner", "admin"] });
     if (
       !submission ||
       !round ||

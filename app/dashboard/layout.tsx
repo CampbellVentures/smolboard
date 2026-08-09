@@ -17,6 +17,7 @@ interface LayoutProps {
 }
 
 const WORKSPACE_TITLES: { key: WorkspaceNavKey; href: string; title: string }[] = [
+  { key: "reviews", href: "/dashboard/reviews", title: "Review queue" },
   { key: "settings", href: "/dashboard/settings", title: "Settings" },
   { key: "members", href: "/dashboard/members", title: "Team" },
   { key: "events", href: "/dashboard/events", title: "Events" },
@@ -55,10 +56,42 @@ export default function DashboardLayout({
     serverData.get<{ email?: string; displayName?: string }>("User", auth.user_id),
   );
   const org = use(serverData.get<{ name?: string }>("Org", auth.tenant_id));
+  const reviewerMemberships = use(
+    serverData.query<{ status?: string }>("ReviewerMembership", {
+      orgId: auth.tenant_id,
+      userId: auth.user_id,
+    }),
+  );
+  const isOrganizer = auth.roles.some((role) => role === "owner" || role === "admin");
+  const reviewerMode = !isOrganizer;
   const userName =
     me?.displayName?.trim() || me?.email?.split("@")[0]?.trim() || "Organizer";
 
   const path = (url ?? "").split("?")[0];
+  if (reviewerMode && path !== "/dashboard/reviews") {
+    response.redirect("/dashboard/reviews");
+    return null;
+  }
+  if (path === "/dashboard/reviews") {
+    return (
+      <AppShell
+        active="reviews"
+        title="Review queue"
+        userEmail={me?.email ?? ""}
+        userId={auth.user_id}
+        userName={userName}
+        workspaceId={auth.tenant_id}
+        orgName={org?.name}
+        reviewerMode={reviewerMode}
+      >
+        {reviewerMode && reviewerMemberships.some((membership) => membership.status === "active")
+          ? children
+          : reviewerMode
+            ? <p className="text-sm text-muted-foreground">An organizer must activate your reviewer access.</p>
+            : children}
+      </AppShell>
+    );
+  }
 
   // Event-scoped section: /dashboard/events/<id>[/<section>...]. Resolve the
   // event server-side so the sidebar shows its name; pages below still verify

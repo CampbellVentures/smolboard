@@ -45,7 +45,7 @@ import { useEnsureOrgSlug } from "@/components/use-org-slug";
 // label, and the account card pinned to the sidebar's base (menu opens
 // upward). The copilot preview opens from the top bar until M3.5 connects it.
 
-export type WorkspaceNavKey = "events" | "members" | "settings";
+export type WorkspaceNavKey = "events" | "members" | "settings" | "reviews";
 export type EventNavKey =
   | "overview"
   | "forms"
@@ -173,6 +173,10 @@ const WORKSPACE_NAV: NavEntry<WorkspaceNavKey>[] = [
   },
   { key: "members", label: "Team", href: "/dashboard/members", Icon: Users, group: "Workspace" },
   { key: "settings", label: "Settings", href: "/dashboard/settings", Icon: SettingsIcon, group: "Workspace" },
+];
+
+const REVIEWER_NAV: NavEntry<WorkspaceNavKey>[] = [
+  { key: "reviews", label: "Review queue", href: "/dashboard/reviews", Icon: Inbox, group: "Reviews" },
 ];
 
 function eventNav(eventId: string): NavEntry<EventNavKey>[] {
@@ -332,6 +336,7 @@ export function AppShell({
   workspaceId,
   orgName,
   event,
+  reviewerMode = false,
   actions,
   children,
 }: {
@@ -344,6 +349,7 @@ export function AppShell({
   orgName?: string;
   // When set, the sidebar switches to event-scoped nav.
   event?: { id: string; name: string };
+  reviewerMode?: boolean;
   // Right-aligned header controls (e.g. "+ New form").
   actions?: React.ReactNode;
   children: React.ReactNode;
@@ -400,7 +406,7 @@ export function AppShell({
           </>
         ) : (
           <GroupedNav
-            items={WORKSPACE_NAV}
+            items={reviewerMode ? REVIEWER_NAV : WORKSPACE_NAV}
             active={active}
             pinnedGroup="Workspace"
           />
@@ -463,7 +469,7 @@ export function AppShell({
                     )}
                   </div>
                   <GroupedNav
-                    items={event ? eventNav(event.id) : WORKSPACE_NAV}
+                    items={event ? eventNav(event.id) : reviewerMode ? REVIEWER_NAV : WORKSPACE_NAV}
                     active={active}
                     pinnedGroup={event ? undefined : "Workspace"}
                     onNavigate={() => setMobileNavOpen(false)}
@@ -486,7 +492,7 @@ export function AppShell({
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2">
             {actions}
-            <Button
+            {!reviewerMode ? <Button
               type="button"
               size="sm"
               variant="ghost"
@@ -498,7 +504,7 @@ export function AppShell({
               <Sparkles data-icon="inline-start" />
               <span className="hidden xl:inline">Ask smolboard</span>
               <span className="xl:hidden">Ask</span>
-            </Button>
+            </Button> : null}
             <PresenceIndicator
               roomId={presenceRoomId}
               userId={userId}

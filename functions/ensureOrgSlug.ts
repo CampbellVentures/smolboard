@@ -9,7 +9,7 @@ export default mutation<Record<string, never>, { slug: string }>({
   async handler(ctx) {
     const orgId = ctx.auth.tenantId;
     if (!orgId) throw ctx.error("FORBIDDEN", "Select a workspace first.");
-    await ctx.requireMember(orgId);
+    await ctx.requireMember(orgId, { role: ["owner", "admin"] });
 
     const org = await ctx.db.get("Org", orgId);
     if (!org) throw ctx.error("NOT_FOUND", "Workspace not found.");

@@ -5,7 +5,7 @@ export default mutation({
   async handler(ctx, args) {
     const event = await ctx.db.unsafe.get("Event", args.eventId);
     if (!event) throw ctx.error("NOT_FOUND", "Event not found.");
-    await ctx.requireMember(event.orgId as string);
+    await ctx.requireMember(event.orgId as string, { role: ["owner", "admin"] });
     const user = await ctx.db.unsafe.get("User", ctx.auth.userId);
     if (!user?.email) throw ctx.error("INVALID_ARGS", "Your account has no email address.");
 

@@ -106,10 +106,17 @@ export interface SpeakerFileRow {
   createdAt: string;
 }
 
+export type ReviewCriterionType = "numeric" | "select" | "text";
+
 export interface ReviewCriterion {
   key: string;
   label: string;
-  max: number;
+  type?: ReviewCriterionType;
+  min?: number;
+  max?: number;
+  options?: string[];
+  weight?: number;
+  required?: boolean;
 }
 
 export interface ReviewRoundRow {
@@ -120,6 +127,44 @@ export interface ReviewRoundRow {
   name: string;
   criteriaJson?: ReviewCriterion[];
   status: string;
+  opensAt?: string;
+  closesAt?: string;
+  anonymized: boolean;
+  revealPeerReviews: boolean;
+}
+
+export interface ReviewerMembershipRow {
+  id: string;
+  orgId: string;
+  userId: string;
+  status: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface ReviewRoundReviewerRow {
+  id: string;
+  orgId: string;
+  eventId: string;
+  roundId: string;
+  reviewerUserId: string;
+  status: string;
+  addedAt: string;
+}
+
+export interface ReviewAssignmentRow {
+  id: string;
+  orgId: string;
+  eventId: string;
+  roundId: string;
+  submissionId: string;
+  reviewerUserId: string;
+  status: "assigned" | "complete" | "recused";
+  assignedAt: string;
+  completedAt?: string;
+  recusedAt?: string;
+  recusalReason?: string;
 }
 
 export interface ReviewRow {
@@ -129,11 +174,44 @@ export interface ReviewRow {
   submissionId: string;
   roundId: string;
   reviewerUserId: string;
-  scoresJson?: Record<string, number>;
+  scoresJson?: Record<string, number | string>;
   comment?: string;
   recommendation?: string;
   createdAt: string;
   updatedAt?: string;
+}
+
+export interface ReviewerQueueItem {
+  assignmentId: string;
+  assignmentStatus: ReviewAssignmentRow["status"];
+  event: { id: string; name: string };
+  round: {
+    id: string;
+    name: string;
+    status: string;
+    opensAt?: string;
+    closesAt?: string;
+    anonymized: boolean;
+    criteria: ReviewCriterion[];
+  };
+  submission: {
+    id: string;
+    title: string;
+    abstract?: string;
+    category?: string;
+    answers?: Record<string, unknown>;
+  };
+  author?: {
+    name: string;
+    email: string;
+    company?: string;
+    jobTitle?: string;
+  };
+  review?: Pick<ReviewRow, "id" | "scoresJson" | "comment" | "recommendation">;
+  peerReviews?: Array<{
+    scoresJson?: Record<string, unknown>;
+    recommendation?: string;
+  }>;
 }
 
 export interface RoomRow {

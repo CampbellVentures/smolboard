@@ -6,7 +6,7 @@ export default query({
   async handler(ctx, args) {
     const sub = await ctx.db.unsafe.get("Submission", args.submissionId);
     if (!sub) throw ctx.error("NOT_FOUND", "Submission not found.");
-    await ctx.requireMember(sub.orgId as string);
+    await ctx.requireMember(sub.orgId as string, { role: ["owner", "admin"] });
 
     // ctx.db.unsafe: membership verified above.
     const profiles = await ctx.db.unsafe.query("SpeakerProfile", {

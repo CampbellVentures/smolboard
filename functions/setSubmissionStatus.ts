@@ -26,7 +26,7 @@ export default mutation<
     const sub = await ctx.db.get("Submission", args.submissionId);
     if (!sub) throw ctx.error("NOT_FOUND", "Submission not found.");
     // Authorize against the submission's own workspace, never caller input.
-    await ctx.requireMember(sub.orgId as string);
+    await ctx.requireMember(sub.orgId as string, { role: ["owner", "admin"] });
 
     await ctx.db.unsafe.update("Submission", args.submissionId, {
       status: args.status,

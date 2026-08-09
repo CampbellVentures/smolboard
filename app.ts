@@ -221,6 +221,26 @@ const SpeakerFile = entity(
   },
 );
 
+const ReviewerMembership = entity(
+  "ReviewerMembership",
+  {
+    orgId: field.id("Org").readonly(),
+    userId: field.id("User").readonly(),
+    // Framework role remains `member`; this app-owned designation is the
+    // reviewer authority checked by every review function.
+    status: field.string().default("active"),
+    createdBy: field.id("User").readonly(),
+    createdAt: field.datetime().defaultNow(),
+    updatedAt: field.datetime().optional(),
+  },
+  {
+    indexes: [
+      { name: "by_org_user", fields: ["orgId", "userId"], unique: true },
+      { name: "by_user", fields: ["userId"], unique: false },
+    ],
+  },
+);
+
 const ReviewRound = entity(
   "ReviewRound",
   {
@@ -228,14 +248,65 @@ const ReviewRound = entity(
     eventId: field.id("Event").readonly(),
     roundNumber: field.int(),
     name: field.string(),
-    // ReviewCriterion[]: { key, label, max } (e.g. Relevance 1–5).
+    // ReviewCriterion[]; legacy { key, label, max } rows remain numeric.
     criteriaJson: field.json().optional(),
+    opensAt: field.datetime().optional(),
+    closesAt: field.datetime().optional(),
+    anonymized: field.boolean().default(true),
+    revealPeerReviews: field.boolean().default(false),
     // "open" | "closed"
     status: field.string().default("open"),
   },
   {
     indexes: [
       { name: "by_event_round", fields: ["eventId", "roundNumber"], unique: true },
+    ],
+  },
+);
+
+const ReviewRoundReviewer = entity(
+  "ReviewRoundReviewer",
+  {
+    orgId: field.id("Org").readonly(),
+    eventId: field.id("Event").readonly(),
+    roundId: field.id("ReviewRound").readonly(),
+    reviewerUserId: field.id("User").readonly(),
+    status: field.string().default("active"),
+    addedAt: field.datetime().defaultNow(),
+  },
+  {
+    indexes: [
+      { name: "by_round_reviewer", fields: ["roundId", "reviewerUserId"], unique: true },
+      { name: "by_reviewer", fields: ["reviewerUserId"], unique: false },
+    ],
+  },
+);
+
+const ReviewAssignment = entity(
+  "ReviewAssignment",
+  {
+    orgId: field.id("Org").readonly(),
+    eventId: field.id("Event").readonly(),
+    roundId: field.id("ReviewRound").readonly(),
+    submissionId: field.id("Submission").readonly(),
+    reviewerUserId: field.id("User").readonly(),
+    // "assigned" | "complete" | "recused"
+    status: field.string().default("assigned"),
+    assignedAt: field.datetime().defaultNow(),
+    completedAt: field.datetime().optional(),
+    recusedAt: field.datetime().optional(),
+    recusalReason: field.string().optional(),
+  },
+  {
+    indexes: [
+      {
+        name: "by_round_submission_reviewer",
+        fields: ["roundId", "submissionId", "reviewerUserId"],
+        unique: true,
+      },
+      { name: "by_round_reviewer", fields: ["roundId", "reviewerUserId"], unique: false },
+      { name: "by_reviewer", fields: ["reviewerUserId"], unique: false },
+      { name: "by_submission", fields: ["submissionId"], unique: false },
     ],
   },
 );
@@ -495,7 +566,7 @@ const orgMemberPolicy = policy({
 const orgInvitePolicy = policy({
   name: "org_invite_access",
   entity: "OrgInvite",
-  allowRead: "auth.tenantId == data.orgId",
+  allowRead: 'auth.tenantId == data.orgId && auth.hasAnyRole("owner", "admin")',
   allowInsert: "false",
   allowUpdate: "false",
   allowDelete: "false",
@@ -507,9 +578,9 @@ const eventPolicy = policy({
   name: "event_access",
   entity: "Event",
   allowRead: 'auth.tenantId == data.orgId || data.cfpStatus != "draft"',
-  allowInsert: "auth.tenantId == data.orgId",
-  allowUpdate: "auth.tenantId == data.orgId",
-  allowDelete: "auth.tenantId == data.orgId",
+  allowInsert: 'auth.tenantId == data.orgId && auth.hasAnyRole("owner", "admin")',
+  allowUpdate: 'auth.tenantId == data.orgId && auth.hasAnyRole("owner", "admin")',
+  allowDelete: 'auth.tenantId == data.orgId && auth.hasAnyRole("owner", "admin")',
 });
 
 // Open forms are public (the CFP page renders fieldsJson).
@@ -522,17 +593,17 @@ const formPolicy = policy({
   allowDelete: "false",
 });
 
-// Speakers read their own rows (live portal queries); all speaker writes go
-// through functions (submitCfp / updateMySubmission) so validation + status
-// rules apply. Organizers manage rows but status changes should use functions
-// so emails fire.
+// Reviewers are framework members, so tenant equality alone is not an
+// organizer gate. Raw proposal access is owner/admin or speaker-self only;
+// reviewers receive assignment-scoped projections from getReviewerQueue.
 const submissionPolicy = policy({
   name: "submission_access",
   entity: "Submission",
-  allowRead: "auth.tenantId == data.orgId || auth.userId == data.speakerUserId",
+  allowRead:
+    'auth.userId == data.speakerUserId || (auth.tenantId == data.orgId && auth.hasAnyRole("owner", "admin"))',
   allowInsert: "false",
-  allowUpdate: "auth.tenantId == data.orgId",
-  allowDelete: "auth.tenantId == data.orgId",
+  allowUpdate: 'auth.tenantId == data.orgId && auth.hasAnyRole("owner", "admin")',
+  allowDelete: 'auth.tenantId == data.orgId && auth.hasAnyRole("owner", "admin")',
 });
 
 // Speakers own their profile and may edit it directly from the portal — the
@@ -541,37 +612,68 @@ const submissionPolicy = policy({
 const speakerProfilePolicy = policy({
   name: "speaker_profile_access",
   entity: "SpeakerProfile",
-  allowRead: "auth.tenantId == data.orgId || auth.userId == data.userId",
+  allowRead:
+    'auth.userId == data.userId || (auth.tenantId == data.orgId && auth.hasAnyRole("owner", "admin"))',
   allowInsert: "false",
-  allowUpdate: "auth.tenantId == data.orgId || auth.userId == data.userId",
-  allowDelete: "auth.tenantId == data.orgId",
+  allowUpdate:
+    'auth.userId == data.userId || (auth.tenantId == data.orgId && auth.hasAnyRole("owner", "admin"))',
+  allowDelete: 'auth.tenantId == data.orgId && auth.hasAnyRole("owner", "admin")',
 });
 
 const speakerFilePolicy = policy({
   name: "speaker_file_access",
   entity: "SpeakerFile",
-  allowRead: "auth.tenantId == data.orgId || auth.userId == data.userId",
+  allowRead:
+    'auth.userId == data.userId || (auth.tenantId == data.orgId && auth.hasAnyRole("owner", "admin"))',
   allowInsert: "false",
   allowUpdate: "false",
-  allowDelete: "auth.tenantId == data.orgId || auth.userId == data.userId",
+  allowDelete:
+    'auth.userId == data.userId || (auth.tenantId == data.orgId && auth.hasAnyRole("owner", "admin"))',
 });
 
 const reviewRoundPolicy = policy({
   name: "review_round_access",
   entity: "ReviewRound",
-  allowRead: "auth.tenantId == data.orgId",
+  allowRead: 'auth.tenantId == data.orgId && auth.hasAnyRole("owner", "admin")',
   allowInsert: "false",
   allowUpdate: "false",
   allowDelete: "false",
 });
 
-// Any org member can read all reviews (scores are visible to the committee).
-// Writes go through saveReview so reviewer identity and cross-entity anchors
-// are derived and validated server-side.
 const reviewPolicy = policy({
   name: "review_access",
   entity: "Review",
-  allowRead: "auth.tenantId == data.orgId",
+  allowRead: 'auth.tenantId == data.orgId && auth.hasAnyRole("owner", "admin")',
+  allowInsert: "false",
+  allowUpdate: "false",
+  allowDelete: "false",
+});
+
+const reviewerMembershipPolicy = policy({
+  name: "reviewer_membership_access",
+  entity: "ReviewerMembership",
+  allowRead:
+    'auth.userId == data.userId || (auth.tenantId == data.orgId && auth.hasAnyRole("owner", "admin"))',
+  allowInsert: "false",
+  allowUpdate: "false",
+  allowDelete: "false",
+});
+
+const reviewRoundReviewerPolicy = policy({
+  name: "review_round_reviewer_access",
+  entity: "ReviewRoundReviewer",
+  allowRead:
+    'auth.userId == data.reviewerUserId || (auth.tenantId == data.orgId && auth.hasAnyRole("owner", "admin"))',
+  allowInsert: "false",
+  allowUpdate: "false",
+  allowDelete: "false",
+});
+
+const reviewAssignmentPolicy = policy({
+  name: "review_assignment_access",
+  entity: "ReviewAssignment",
+  allowRead:
+    'auth.userId == data.reviewerUserId || (auth.tenantId == data.orgId && auth.hasAnyRole("owner", "admin"))',
   allowInsert: "false",
   allowUpdate: "false",
   allowDelete: "false",
@@ -580,7 +682,7 @@ const reviewPolicy = policy({
 const roomPolicy = policy({
   name: "room_access",
   entity: "Room",
-  allowRead: "auth.tenantId == data.orgId",
+  allowRead: 'auth.tenantId == data.orgId && auth.hasAnyRole("owner", "admin")',
   allowInsert: "false",
   allowUpdate: "false",
   allowDelete: "false",
@@ -588,7 +690,7 @@ const roomPolicy = policy({
 const trackPolicy = policy({
   name: "track_access",
   entity: "Track",
-  allowRead: "auth.tenantId == data.orgId",
+  allowRead: 'auth.tenantId == data.orgId && auth.hasAnyRole("owner", "admin")',
   allowInsert: "false",
   allowUpdate: "false",
   allowDelete: "false",
@@ -596,7 +698,7 @@ const trackPolicy = policy({
 const sessionPolicy = policy({
   name: "session_access",
   entity: "Session",
-  allowRead: "auth.tenantId == data.orgId",
+  allowRead: 'auth.tenantId == data.orgId && auth.hasAnyRole("owner", "admin")',
   allowInsert: "false",
   allowUpdate: "false",
   allowDelete: "false",
@@ -606,7 +708,7 @@ const taskTemplatePolicy = policy({
   name: "task_template_access",
   entity: "TaskTemplate",
   allowRead:
-    "auth.tenantId == data.orgId || exists(SpeakerTask where taskTemplateId == data.id and speakerUserId == auth.userId)",
+    '(auth.tenantId == data.orgId && auth.hasAnyRole("owner", "admin")) || exists(SpeakerTask where taskTemplateId == data.id and speakerUserId == auth.userId)',
   allowInsert: "false",
   allowUpdate: "false",
   allowDelete: "false",
@@ -617,7 +719,8 @@ const taskTemplatePolicy = policy({
 const speakerTaskPolicy = policy({
   name: "speaker_task_access",
   entity: "SpeakerTask",
-  allowRead: "auth.tenantId == data.orgId || auth.userId == data.speakerUserId",
+  allowRead:
+    'auth.userId == data.speakerUserId || (auth.tenantId == data.orgId && auth.hasAnyRole("owner", "admin"))',
   allowInsert: "false",
   allowUpdate: "false",
   allowDelete: "false",
@@ -626,15 +729,15 @@ const speakerTaskPolicy = policy({
 const emailTemplatePolicy = policy({
   name: "email_template_access",
   entity: "EmailTemplate",
-  allowRead: "auth.tenantId == data.orgId",
-  allowInsert: "auth.tenantId == data.orgId",
-  allowUpdate: "auth.tenantId == data.orgId",
-  allowDelete: "auth.tenantId == data.orgId",
+  allowRead: 'auth.tenantId == data.orgId && auth.hasAnyRole("owner", "admin")',
+  allowInsert: 'auth.tenantId == data.orgId && auth.hasAnyRole("owner", "admin")',
+  allowUpdate: 'auth.tenantId == data.orgId && auth.hasAnyRole("owner", "admin")',
+  allowDelete: 'auth.tenantId == data.orgId && auth.hasAnyRole("owner", "admin")',
 });
 const emailLogPolicy = policy({
   name: "email_log_access",
   entity: "EmailLog",
-  allowRead: "auth.tenantId == data.orgId",
+  allowRead: 'auth.tenantId == data.orgId && auth.hasAnyRole("owner", "admin")',
   allowInsert: "false",
   allowUpdate: "false",
   allowDelete: "false",
@@ -642,15 +745,15 @@ const emailLogPolicy = policy({
 const copilotThreadPolicy = policy({
   name: "copilot_thread_access",
   entity: "CopilotThread",
-  allowRead: "auth.tenantId == data.orgId",
+  allowRead: 'auth.tenantId == data.orgId && auth.hasAnyRole("owner", "admin")',
   allowInsert: "false",
   allowUpdate: "false",
-  allowDelete: "auth.tenantId == data.orgId",
+  allowDelete: 'auth.tenantId == data.orgId && auth.hasAnyRole("owner", "admin")',
 });
 const copilotMessagePolicy = policy({
   name: "copilot_message_access",
   entity: "CopilotMessage",
-  allowRead: "auth.tenantId == data.orgId",
+  allowRead: 'auth.tenantId == data.orgId && auth.hasAnyRole("owner", "admin")',
   allowInsert: "false",
   allowUpdate: "false",
   allowDelete: "false",
@@ -678,7 +781,10 @@ const manifest = buildManifest({
     Submission,
     SpeakerProfile,
     SpeakerFile,
+    ReviewerMembership,
     ReviewRound,
+    ReviewRoundReviewer,
+    ReviewAssignment,
     Review,
     Room,
     Track,
@@ -703,7 +809,10 @@ const manifest = buildManifest({
     submissionPolicy,
     speakerProfilePolicy,
     speakerFilePolicy,
+    reviewerMembershipPolicy,
     reviewRoundPolicy,
+    reviewRoundReviewerPolicy,
+    reviewAssignmentPolicy,
     reviewPolicy,
     roomPolicy,
     trackPolicy,

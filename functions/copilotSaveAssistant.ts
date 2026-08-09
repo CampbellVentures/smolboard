@@ -14,7 +14,7 @@ export default mutation({
     // start-turn mutation already verified membership for this thread's org.
     const thread = await ctx.db.unsafe.get("CopilotThread", args.threadId);
     if (!thread) throw ctx.error("NOT_FOUND", "Thread not found.");
-    await ctx.requireMember(thread.orgId as string);
+    await ctx.requireMember(thread.orgId as string, { role: ["owner", "admin"] });
     const id = await ctx.db.unsafe.insert("CopilotMessage", {
       orgId: thread.orgId as string,
       threadId: args.threadId,

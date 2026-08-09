@@ -34,7 +34,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { fieldsOf, parseJson } from "@/lib/types";
-import { reviewRoundForNumber } from "@/lib/reviews";
+import { aggregateSubmissionScore, reviewRoundForNumber } from "@/lib/reviews";
 import type {
   EventRow,
   ReviewRoundRow,
@@ -112,21 +112,18 @@ export function AbstractsView({
   );
 
   const avgScore = useMemo(() => {
-    const by: Record<string, { total: number; n: number }> = {};
-    for (const r of reviews) {
-      const scores = parseJson<Record<string, number>>(r.scoresJson);
-      if (!scores) continue;
-      const vals = Object.values(scores).filter((v) => typeof v === "number");
-      if (vals.length === 0) continue;
-      const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
-      by[r.submissionId] ??= { total: 0, n: 0 };
-      by[r.submissionId].total += mean;
-      by[r.submissionId].n += 1;
-    }
     const out: Record<string, { avg: number; n: number }> = {};
-    for (const [k, v] of Object.entries(by)) out[k] = { avg: v.total / v.n, n: v.n };
+    for (const submission of submissions) {
+      const round = reviewRoundForNumber(rounds, submission.currentRound);
+      if (!round) continue;
+      const currentReviews = reviews.filter(
+        (review) => review.submissionId === submission.id && review.roundId === round.id,
+      );
+      const score = aggregateSubmissionScore(round.criteriaJson, currentReviews);
+      if (score !== undefined) out[submission.id] = { avg: score * 5, n: currentReviews.length };
+    }
     return out;
-  }, [reviews]);
+  }, [reviews, rounds, submissions]);
 
   const rows = useMemo(() => {
     let list = submissions;
@@ -261,6 +258,13 @@ export function AbstractsView({
             )}
           </div>
           <div className="flex items-center gap-3">
+            {rounds.length > 0 ? (
+              <ReviewOperations
+                eventId={event.id}
+                round={rounds[rounds.length - 1]}
+                category={categoryFilter || undefined}
+              />
+            ) : null}
             <AddRoundButton event={event} rounds={rounds} />
             <span className="text-xs tabular-nums text-muted-foreground">
               {rows.length} of {submissions.length}
@@ -838,5 +842,53 @@ export function AddRoundButton({ event, rounds }: { event: EventRow; rounds: Rev
     >
       <Plus data-icon="inline-start" /> Add round {next}
     </Button>
+  );
+}
+
+function ReviewOperations({
+  eventId,
+  round,
+  category,
+}: {
+  eventId: string;
+  round: ReviewRoundRow;
+  category?: string;
+}) {
+  const [note, setNote] = useState<string | null>(null);
+  async function assign() {
+    const result = await callFn<{ created: number }>("bulkAssignReviews", {
+      eventId,
+      roundId: round.id,
+      category,
+      assignmentsPerSubmission: 1,
+    });
+    setNote(`${result.created} assigned`);
+  }
+  async function remind() {
+    const result = await callFn<{ queued: number }>("sendReviewReminders", {
+      eventId,
+      roundId: round.id,
+    });
+    setNote(`${result.queued} reminders queued`);
+  }
+  async function download() {
+    const result = await callFn<{ filename: string; csv: string }>("exportReviewCsv", {
+      eventId,
+      roundId: round.id,
+    });
+    const url = URL.createObjectURL(new Blob([result.csv], { type: "text/csv;charset=utf-8" }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = result.filename;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
+  return (
+    <div className="flex items-center gap-1">
+      <Button type="button" size="sm" variant="outline" onClick={() => void assign()}>Assign reviewers</Button>
+      <Button type="button" size="sm" variant="ghost" onClick={() => void remind()}>Remind</Button>
+      <Button type="button" size="sm" variant="ghost" onClick={() => void download()}>Export CSV</Button>
+      {note ? <span className="text-xs text-muted-foreground">{note}</span> : null}
+    </div>
   );
 }

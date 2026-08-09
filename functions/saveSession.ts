@@ -22,7 +22,7 @@ export default mutation({
   async handler(ctx, args) {
     const event = await ctx.db.unsafe.get("Event", args.eventId);
     if (!event) throw ctx.error("NOT_FOUND", "Event not found.");
-    await ctx.requireMember(event.orgId as string);
+    await ctx.requireMember(event.orgId as string, { role: ["owner", "admin"] });
 
     const data = validateData(ctx, args.data);
     const existing = args.sessionId

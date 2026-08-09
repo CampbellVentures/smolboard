@@ -11,7 +11,7 @@ export default mutation({
   async handler(ctx, args) {
     const session = await ctx.db.unsafe.get("Session", args.sessionId);
     if (!session) throw ctx.error("NOT_FOUND", "Session not found.");
-    await ctx.requireMember(session.orgId as string);
+    await ctx.requireMember(session.orgId as string, { role: ["owner", "admin"] });
     if (!session.startTime || !session.endTime) {
       throw ctx.error("INVALID_ARGS", "Schedule the session before sending invites.");
     }

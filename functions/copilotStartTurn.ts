@@ -22,7 +22,7 @@ export default mutation<
   async handler(ctx, args) {
     const event = await ctx.db.unsafe.get("Event", args.eventId);
     if (!event) throw ctx.error("NOT_FOUND", "Event not found.");
-    await ctx.requireMember(event.orgId as string);
+    await ctx.requireMember(event.orgId as string, { role: ["owner", "admin"] });
     const message = args.message.trim();
     if (!message) throw ctx.error("INVALID_ARGS", "Say something first.");
     if (message.length > 4000) throw ctx.error("INVALID_ARGS", "Keep messages under 4000 characters.");

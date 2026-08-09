@@ -7,7 +7,7 @@ export default mutation({
     if (!room) throw ctx.error("NOT_FOUND", "Room not found.");
     const event = await ctx.db.unsafe.get("Event", room.eventId as string);
     if (!event || event.orgId !== room.orgId) throw ctx.error("NOT_FOUND", "Room event not found.");
-    await ctx.requireMember(event.orgId as string);
+    await ctx.requireMember(event.orgId as string, { role: ["owner", "admin"] });
     const sessions = (await ctx.db.unsafe.query("Session", { eventId: event.id as string })).filter(
       (row) => row.orgId === event.orgId,
     );
