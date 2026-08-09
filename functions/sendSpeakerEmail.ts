@@ -1,5 +1,5 @@
 import { action, v } from "@pylonsync/functions";
-import { markdownToHtml, renderTemplate } from "../lib/email";
+import { renderEmailHtml, renderTemplate } from "../lib/email";
 
 export default action({
   internal: true,
@@ -8,6 +8,7 @@ export default action({
     toEmail: v.string(),
     subject: v.string(),
     body: v.string(),
+    bodyHtml: v.optional(v.string()),
     vars: v.json(),
   },
   async handler(ctx, args) {
@@ -19,10 +20,11 @@ export default action({
     const vars = args.vars as Record<string, string>;
     const subject = renderTemplate(args.subject, vars);
     const text = renderTemplate(args.body, vars);
+    const html = renderEmailHtml(args.body, args.bodyHtml, vars);
     let status = "sent";
     let error: string | undefined;
     try {
-      await ctx.email.send({ to: args.toEmail, subject, text, html: markdownToHtml(text) });
+      await ctx.email.send({ to: args.toEmail, subject, text, html });
     } catch (caught) {
       status = "failed";
       error = caught instanceof Error ? caught.message : String(caught);

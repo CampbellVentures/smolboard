@@ -7,6 +7,9 @@ export default mutation({
     profileIds: v.array(v.id("SpeakerProfile")),
     subject: v.string(),
     body: v.string(),
+    // Optional rich export from the composer; the plain body remains the
+    // text alternative and the fallback when absent.
+    bodyHtml: v.optional(v.string()),
     confirmed: v.bool(),
   },
   async handler(ctx, args) {
@@ -22,6 +25,10 @@ export default mutation({
     const body = args.body.trim();
     if (!subject || subject.length > 200 || !body || body.length > 20_000) {
       throw ctx.error("INVALID_ARGS", "Add a subject and body within the allowed length.");
+    }
+    const bodyHtml = args.bodyHtml?.trim() || undefined;
+    if (bodyHtml && bodyHtml.length > 200_000) {
+      throw ctx.error("INVALID_ARGS", "The email body is too large.");
     }
     const profiles = [];
     for (const id of ids) {
@@ -39,6 +46,7 @@ export default mutation({
         toEmail: profile.email as string,
         subject,
         body,
+        bodyHtml,
         vars: {
           speaker_name: profile.name as string,
           event_name: event.name as string,

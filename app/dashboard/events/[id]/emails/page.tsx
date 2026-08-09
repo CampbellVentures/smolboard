@@ -24,5 +24,16 @@ export default function EmailsPage({ auth, params, response, serverData }: PageP
   const profiles = use(serverData.list<SpeakerProfileRow>("SpeakerProfile")).filter(
     (row) => row.eventId === event.id,
   );
-  return <EmailsClient event={event} initialTemplates={templates} initialLogs={logs} initialProfiles={profiles} />;
+  // The real sender identity, so the editor's From line matches what lands in
+  // inboxes. Server-only env — must be read here, not in the client.
+  const fromAddress = process.env.PYLON_EMAIL_FROM || `${event.name} <no-reply@localhost>`;
+  return (
+    <EmailsClient
+      event={event}
+      fromAddress={fromAddress}
+      initialTemplates={templates}
+      initialLogs={logs}
+      initialProfiles={profiles}
+    />
+  );
 }

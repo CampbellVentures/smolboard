@@ -2,27 +2,29 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { callFn, db } from "@pylonsync/react";
-import { CheckCircle2, Mail, Send, TriangleAlert } from "lucide-react";
-import { toast } from "sonner";
 import {
-  DashboardPage,
-  DashboardPanel,
-  DashboardStatStrip,
-  DashboardStatusBadge,
-} from "@/components/dashboard";
+  ArrowLeft,
+  Check,
+  ChevronDown,
+  Eye,
+  Pencil,
+  PenLine,
+  Send,
+  X,
+} from "lucide-react";
+import { toast } from "sonner";
+import { DashboardPage, DashboardStatusBadge } from "@/components/dashboard";
 import {
   EmailComposer,
   type EmailComposerContent,
   type EmailComposerDocument,
   type EmailComposerHandle,
 } from "@/components/email-composer";
+import { EmailBlockRail, type MergeVariable } from "@/components/email-block-rail";
 import { Button } from "@/components/ui/button";
-import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -40,35 +42,53 @@ import {
 import { parseJson } from "@/lib/types";
 import type { EmailLogRow, EmailTemplateRow, EventRow, SpeakerProfileRow } from "@/lib/types";
 
+// The emails surface, Resend-style: a clean index (automated messages +
+// delivery log) and a full-width document editor — From/Subject inline over a
+// rich canvas with a floating block rail and merge variables. No stat cards,
+// no tab maze.
+
 const SAMPLE_VARS = {
   speaker_name: "Ada Speaker",
   event_name: "AI Engineer Summit",
   talk_title: "Building delightful realtime software",
-  portal_link: "https://smolboard.dev/portal",
+  portal_link: "https://smolboard.app/portal",
   task_list: "• Upload headshot\n• Confirm session details",
   session_time: "Tuesday, Aug 11 at 10:00 AM PDT",
   room: "Main stage",
   calendar_links: "Google Calendar · Outlook · Download .ics",
 };
 
-const MERGE_TAGS = [
-  ["speaker_name", "Speaker"],
-  ["event_name", "Event"],
-  ["talk_title", "Talk"],
-  ["portal_link", "Portal link"],
-  ["task_list", "Task list"],
-  ["session_time", "Session time"],
-  ["room", "Room"],
-  ["calendar_links", "Calendar links"],
-] as const;
+const VARIABLES: MergeVariable[] = [
+  { tag: "speaker_name", label: "Speaker name" },
+  { tag: "event_name", label: "Event name" },
+  { tag: "talk_title", label: "Talk title" },
+  { tag: "portal_link", label: "Portal link" },
+  { tag: "task_list", label: "Task list" },
+  { tag: "session_time", label: "Session time" },
+  { tag: "room", label: "Room" },
+  { tag: "calendar_links", label: "Calendar links" },
+];
+
+const TEMPLATE_DESCRIPTIONS: Record<string, string> = {
+  portal_invite: "Invites a speaker into the portal after their first submission",
+  submission_received: "Confirms a CFP submission landed",
+  accepted: "Sent when a submission is accepted",
+  rejected: "Sent when a submission is declined",
+  task_reminder: "Nudges speakers with open tasks",
+  schedule_invite: "Delivers session times and calendar links",
+};
+
+type View = { kind: "index" } | { kind: "template"; templateKey: string } | { kind: "compose" };
 
 export function EmailsClient({
   event,
+  fromAddress,
   initialTemplates,
   initialLogs,
   initialProfiles,
 }: {
   event: EventRow;
+  fromAddress: string;
   initialTemplates: EmailTemplateRow[];
   initialLogs: EmailLogRow[];
   initialProfiles: SpeakerProfileRow[];
@@ -87,50 +107,366 @@ export function EmailsClient({
   const profiles = (!hydrated || profileQuery.loading ? initialProfiles : profileQuery.data).filter(
     (row) => row.eventId === event.id,
   );
-  const [selectedKey, setSelectedKey] = useState(DEFAULT_TEMPLATES[0].key);
-  const effective = templateValue(selectedKey, templates);
-  const editorInstanceKey = `${selectedKey}:${effective.id ?? "default"}`;
+  const [view, setView] = useState<View>({ kind: "index" });
+
+  if (!hydrated) return <DashboardPage>{null}</DashboardPage>;
+
+  if (view.kind === "template") {
+    return (
+      <TemplateEditor
+        event={event}
+        fromAddress={fromAddress}
+        templateKey={view.templateKey}
+        templates={templates}
+        profiles={profiles}
+        onBack={() => setView({ kind: "index" })}
+      />
+    );
+  }
+  if (view.kind === "compose") {
+    return (
+      <ComposeEditor
+        event={event}
+        fromAddress={fromAddress}
+        profiles={profiles}
+        onBack={() => setView({ kind: "index" })}
+      />
+    );
+  }
+
+  return (
+    <EmailsIndex
+      templates={templates}
+      logs={logs}
+      onOpenTemplate={(templateKey) => setView({ kind: "template", templateKey })}
+      onCompose={() => setView({ kind: "compose" })}
+    />
+  );
+}
+
+/* ============================== Index ============================== */
+
+function EmailsIndex({
+  templates,
+  logs,
+  onOpenTemplate,
+  onCompose,
+}: {
+  templates: EmailTemplateRow[];
+  logs: EmailLogRow[];
+  onOpenTemplate: (key: string) => void;
+  onCompose: () => void;
+}) {
+  const sent = logs.filter((log) => log.status === "sent").length;
+  const failed = logs.filter((log) => log.status === "failed").length;
+  return (
+    <DashboardPage>
+      <div className="mx-auto w-full max-w-3xl">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-sm font-semibold text-foreground">Automated messages</h2>
+            <p className="mt-0.5 text-[13px] text-muted-foreground">
+              Sent for you as speakers move through the event. Click one to edit it.
+            </p>
+          </div>
+          <Button type="button" onClick={onCompose}>
+            <PenLine data-icon="inline-start" /> Compose
+          </Button>
+        </div>
+
+        <div className="mt-4 divide-y divide-border overflow-hidden rounded-xl border border-border bg-card">
+          {DEFAULT_TEMPLATES.map((template) => {
+            const saved = templates.find((row) => row.key === template.key);
+            const enabled = saved?.enabled ?? true;
+            return (
+              <button
+                key={template.key}
+                type="button"
+                onClick={() => onOpenTemplate(template.key)}
+                className="group flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/50"
+              >
+                <span
+                  className={`size-1.5 shrink-0 rounded-full ${enabled ? "bg-emerald-500" : "bg-zinc-300"}`}
+                  title={enabled ? "Enabled" : "Disabled"}
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-medium text-foreground">
+                    {labelForKey(template.key)}
+                  </span>
+                  <span className="block truncate text-[13px] text-muted-foreground">
+                    {TEMPLATE_DESCRIPTIONS[template.key] ?? (saved?.subject || template.subject)}
+                  </span>
+                </span>
+                {saved ? (
+                  <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                    Customized
+                  </span>
+                ) : null}
+                <Pencil className="size-3.5 shrink-0 text-zinc-300 transition-colors group-hover:text-zinc-500" />
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="mt-10">
+          <div className="flex items-baseline justify-between">
+            <h2 className="text-sm font-semibold text-foreground">Delivery log</h2>
+            <span className="text-xs tabular-nums text-muted-foreground">
+              {sent} delivered{failed > 0 ? ` · ${failed} failed` : ""}
+            </span>
+          </div>
+          {logs.length === 0 ? (
+            <p className="mt-4 rounded-xl border border-dashed border-border px-6 py-10 text-center text-sm text-muted-foreground">
+              No emails have been sent for this event.
+            </p>
+          ) : (
+            <div className="mt-3 overflow-x-auto rounded-xl border border-border bg-card">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Recipient</TableHead>
+                    <TableHead>Message</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Sent</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {logs
+                    .slice()
+                    .sort((a, b) => (a.sentAt < b.sentAt ? 1 : -1))
+                    .slice(0, 50)
+                    .map((log) => (
+                      <TableRow key={log.id}>
+                        <TableCell>{log.toEmail}</TableCell>
+                        <TableCell>
+                          <div className="max-w-72 truncate font-medium">{log.subject}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {labelForKey(log.templateKey ?? "custom")}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <DashboardStatusBadge status={log.status} />
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap text-muted-foreground">
+                          {new Date(log.sentAt).toLocaleString()}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </div>
+      </div>
+    </DashboardPage>
+  );
+}
+
+/* ============================ Editor shell ============================ */
+
+function EditorShell({
+  onBack,
+  title,
+  controls,
+  aboveCanvas,
+  from,
+  subject,
+  onSubjectChange,
+  composerRef,
+  editorContent,
+  initialDocument,
+  onDocumentChange,
+  onReadyChange,
+  editorReady,
+  editorKey,
+  preview,
+  onUploadImage,
+}: {
+  onBack: () => void;
+  title: string;
+  controls: React.ReactNode;
+  aboveCanvas?: React.ReactNode;
+  from: string;
+  subject: string;
+  onSubjectChange: (value: string) => void;
+  composerRef: React.RefObject<EmailComposerHandle | null>;
+  editorContent: EmailComposerContent;
+  initialDocument: EmailComposerDocument;
+  onDocumentChange: (document: EmailComposerDocument) => void;
+  onReadyChange: (ready: boolean) => void;
+  editorReady: boolean;
+  editorKey: string;
+  preview: { subject: string; html: string } | null;
+  onUploadImage: (file: File) => Promise<{ url: string }>;
+}) {
+  return (
+    <DashboardPage>
+      <div className="mx-auto w-full max-w-3xl">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={onBack}
+            className="inline-flex items-center gap-1.5 text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <ArrowLeft className="size-3.5" /> {title}
+          </button>
+          <div className="flex items-center gap-2">{controls}</div>
+        </div>
+
+        {aboveCanvas}
+
+        <div className="relative mt-4">
+          <div className="absolute -left-16 top-8 hidden xl:block">
+            <EmailBlockRail
+              composer={composerRef}
+              variables={VARIABLES}
+              disabled={!editorReady}
+              onUploadImage={onUploadImage}
+            />
+          </div>
+
+          <div className="overflow-hidden rounded-xl border border-border bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+            {preview ? (
+              <>
+                <div className="border-b border-border px-6 py-4">
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                    Preview
+                  </p>
+                  <p className="mt-1 text-[15px] font-semibold text-foreground">
+                    {preview.subject || "No subject"}
+                  </p>
+                </div>
+                <iframe
+                  title="Email preview"
+                  className="h-[560px] w-full bg-white"
+                  sandbox=""
+                  srcDoc={preview.html}
+                />
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-3 border-b border-zinc-100 px-6 py-2.5 text-[13px]">
+                  <span className="w-14 shrink-0 text-muted-foreground">From</span>
+                  <span className="truncate text-muted-foreground">{from}</span>
+                </div>
+                <div className="flex items-center gap-3 border-b border-zinc-100 px-6 py-1.5 text-[13px]">
+                  <label htmlFor="email-subject" className="w-14 shrink-0 text-muted-foreground">
+                    Subject
+                  </label>
+                  <input
+                    id="email-subject"
+                    value={subject}
+                    onChange={(event) => onSubjectChange(event.target.value)}
+                    placeholder="Subject"
+                    className="h-8 w-full bg-transparent text-sm font-medium text-foreground outline-none placeholder:font-normal placeholder:text-zinc-400"
+                  />
+                </div>
+                <div className="px-6 py-4">
+                  <EmailComposer
+                    key={editorKey}
+                    ref={composerRef}
+                    frameless
+                    content={editorContent}
+                    initialDocument={initialDocument}
+                    onDocumentChange={onDocumentChange}
+                    onReadyChange={onReadyChange}
+                    onUploadImage={onUploadImage}
+                  />
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+        {!preview && (
+          <p className="mt-2 text-center text-xs text-muted-foreground">
+            Type <span className="font-mono">/</span> for blocks — or use the rail on the left.
+            Variables like {"{{speaker_name}}"} fill in per recipient.
+          </p>
+        )}
+      </div>
+    </DashboardPage>
+  );
+}
+
+/* ===================== Image upload (shared) ===================== */
+
+// EmailEditor hands us a File; the server action pushes it to the stack0 CDN
+// and returns a public URL that email clients can fetch forever.
+function makeImageUploader(eventId: string) {
+  return async (file: File) => {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    let binary = "";
+    for (let i = 0; i < bytes.length; i += 0x8000) {
+      binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+    }
+    return callFn<{ url: string }>("uploadEmailImage", {
+      eventId,
+      filename: file.name,
+      mimeType: file.type,
+      dataBase64: btoa(binary),
+    });
+  };
+}
+
+/* ======================= Preview-as (shared) ======================= */
+
+function usePreviewVars(event: EventRow, profiles: SpeakerProfileRow[]) {
+  const [previewProfileId, setPreviewProfileId] = useState("");
+  const profile = profiles.find((row) => row.id === previewProfileId) ?? profiles[0];
+  const origin = typeof window === "undefined" ? "" : window.location.origin;
+  const vars = {
+    ...SAMPLE_VARS,
+    event_name: event.name,
+    portal_link: `${origin}/portal`,
+    ...(profile ? { speaker_name: profile.name } : {}),
+  };
+  const selector =
+    profiles.length > 0 ? (
+      <Select
+        aria-label="Preview as"
+        value={profile?.id ?? ""}
+        onChange={(event_) => setPreviewProfileId(event_.target.value)}
+        className="h-8 w-44 text-[13px]"
+      >
+        {profiles.map((row) => (
+          <option key={row.id} value={row.id}>
+            {row.name}
+          </option>
+        ))}
+      </Select>
+    ) : null;
+  return { vars, selector };
+}
+
+/* ========================= Template editor ========================= */
+
+function TemplateEditor({
+  event,
+  fromAddress,
+  templateKey,
+  templates,
+  profiles,
+  onBack,
+}: {
+  event: EventRow;
+  fromAddress: string;
+  templateKey: string;
+  templates: EmailTemplateRow[];
+  profiles: SpeakerProfileRow[];
+  onBack: () => void;
+}) {
+  const effective = templateValue(templateKey, templates);
+  const editorKey = `${templateKey}:${effective.id ?? "default"}`;
   const composerRef = useRef<EmailComposerHandle>(null);
-  const restoredInitialScroll = useRef(false);
   const [subject, setSubject] = useState(effective.subject);
   const [document, setDocument] = useState(() => templateDocument(effective));
   const [enabled, setEnabled] = useState(effective.enabled);
   const [editorReady, setEditorReady] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [campaignSubject, setCampaignSubject] = useState(`Welcome to ${event.name} speakers`);
-  const [campaignBody, setCampaignBody] = useState(
-    "Hi {{speaker_name}},\n\nWelcome to {{event_name}}. We’re excited to have you join us. Your profile, sessions, and onboarding tasks are available in the speaker portal:\n\n{{portal_link}}",
-  );
-  const [recipientSearch, setRecipientSearch] = useState("");
-  const [selectedProfiles, setSelectedProfiles] = useState<string[]>([]);
-  const [previewProfileId, setPreviewProfileId] = useState("");
-  const [campaignConfirmed, setCampaignConfirmed] = useState(false);
-  const [campaignSending, setCampaignSending] = useState(false);
-  const editorContent = useMemo(() => templateEditorContent(effective), [editorInstanceKey]);
-
-  useEffect(() => {
-    const next = templateValue(selectedKey, templates);
-    setSubject(next.subject);
-    setDocument(templateDocument(next));
-    setEnabled(next.enabled);
-    setEditorReady(false);
-  }, [editorInstanceKey]);
-
-  useEffect(() => {
-    if (!editorReady || restoredInitialScroll.current) return;
-    restoredInitialScroll.current = true;
-    requestAnimationFrame(() => window.scrollTo({ top: 0, left: 0, behavior: "auto" }));
-  }, [editorReady]);
-
-  const preview = useMemo(
-    () => ({
-      subject: renderTemplate(subject, SAMPLE_VARS),
-      html: renderHtmlTemplate(document.html, SAMPLE_VARS),
-    }),
-    [subject, document.html],
-  );
-  const sent = logs.filter((log) => log.status === "sent").length;
-  const failed = logs.filter((log) => log.status === "failed").length;
+  const [showPreview, setShowPreview] = useState(false);
+  const editorContent = useMemo(() => templateEditorContent(effective), [editorKey]);
+  const { vars, selector } = usePreviewVars(event, profiles);
+  const uploadImage = useMemo(() => makeImageUploader(event.id), [event.id]);
 
   async function saveTemplate(notify = true) {
     setSaving(true);
@@ -141,28 +477,17 @@ export function EmailsClient({
         return false;
       }
       setDocument(nextDocument);
-      const existing = templates.find((row) => row.key === selectedKey);
-      if (existing) {
-        await db.update("EmailTemplate", existing.id, {
-          subject,
-          body: nextDocument.text,
-          bodyHtml: nextDocument.html,
-          bodyJson: nextDocument.json,
-          enabled,
-        });
-      } else {
-        await db.insert("EmailTemplate", {
-          orgId: event.orgId,
-          eventId: event.id,
-          key: selectedKey,
-          subject,
-          body: nextDocument.text,
-          bodyHtml: nextDocument.html,
-          bodyJson: nextDocument.json,
-          enabled,
-        });
-      }
-      if (notify) toast.success("Email template saved");
+      const existing = templates.find((row) => row.key === templateKey);
+      const fields = {
+        subject,
+        body: nextDocument.text,
+        bodyHtml: nextDocument.html,
+        bodyJson: nextDocument.json,
+        enabled,
+      };
+      if (existing) await db.update("EmailTemplate", existing.id, fields);
+      else await db.insert("EmailTemplate", { orgId: event.orgId, eventId: event.id, key: templateKey, ...fields });
+      if (notify) toast.success("Template saved");
       return true;
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not save the template.");
@@ -177,7 +502,7 @@ export function EmailsClient({
     try {
       const result = await callFn<{ queued: boolean; toEmail: string }>("sendTestEmail", {
         eventId: event.id,
-        templateKey: selectedKey,
+        templateKey,
       });
       toast.success("Test email queued", { description: result.toEmail });
     } catch (error) {
@@ -185,259 +510,328 @@ export function EmailsClient({
     }
   }
 
-  const filteredProfiles = profiles.filter((profile) => {
-    const needle = recipientSearch.trim().toLowerCase();
-    return !needle || profile.name.toLowerCase().includes(needle) || profile.email.toLowerCase().includes(needle);
-  });
-  const previewProfile =
-    profiles.find((profile) => profile.id === previewProfileId) ??
-    profiles.find((profile) => selectedProfiles.includes(profile.id)) ??
-    profiles[0];
-  const realPreviewVars = previewProfile
-    ? {
-        speaker_name: previewProfile.name,
-        event_name: event.name,
-        portal_link: `${typeof window === "undefined" ? "" : window.location.origin}/portal`,
+  return (
+    <EditorShell
+      onBack={onBack}
+      title="Messages"
+      controls={
+        <>
+          {showPreview ? selector : null}
+          <label className="mr-1 flex items-center gap-2 text-[13px] text-muted-foreground">
+            Enabled
+            <Switch checked={enabled} onCheckedChange={setEnabled} />
+          </label>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setShowPreview((current) => !current)}
+          >
+            {showPreview ? <Pencil data-icon="inline-start" /> : <Eye data-icon="inline-start" />}
+            {showPreview ? "Edit" : "Preview"}
+          </Button>
+          <Button type="button" variant="outline" size="sm" onClick={sendTest} disabled={saving || !editorReady}>
+            <Send data-icon="inline-start" /> Send test
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => void saveTemplate()}
+            disabled={saving || !editorReady || !subject.trim()}
+          >
+            {saving ? "Saving…" : "Save"}
+          </Button>
+        </>
       }
-    : { speaker_name: "Speaker", event_name: event.name, portal_link: "/portal" };
+      aboveCanvas={
+        <p className="mt-3 text-[13px] text-muted-foreground">
+          <span className="font-medium text-foreground">{labelForKey(templateKey)}</span>
+          {TEMPLATE_DESCRIPTIONS[templateKey] ? ` — ${TEMPLATE_DESCRIPTIONS[templateKey]}.` : null}
+        </p>
+      }
+      from={fromAddress}
+      subject={subject}
+      onSubjectChange={setSubject}
+      composerRef={composerRef}
+      editorContent={editorContent}
+      initialDocument={templateDocument(effective)}
+      onDocumentChange={setDocument}
+      onReadyChange={setEditorReady}
+      editorReady={editorReady}
+      editorKey={editorKey}
+      onUploadImage={uploadImage}
+      preview={
+        showPreview
+          ? { subject: renderTemplate(subject, vars), html: renderHtmlTemplate(document.html, vars) }
+          : null
+      }
+    />
+  );
+}
 
-  async function sendCampaign() {
-    setCampaignSending(true);
+/* ========================== Compose editor ========================== */
+
+const COMPOSE_DEFAULT_BODY =
+  "<p>Hi {{speaker_name}},</p><p>Welcome to {{event_name}}. We’re excited to have you join us. Your profile, sessions, and onboarding tasks are available in the speaker portal:</p><p>{{portal_link}}</p>";
+
+function ComposeEditor({
+  event,
+  fromAddress,
+  profiles,
+  onBack,
+}: {
+  event: EventRow;
+  fromAddress: string;
+  profiles: SpeakerProfileRow[];
+  onBack: () => void;
+}) {
+  const composerRef = useRef<EmailComposerHandle>(null);
+  const [subject, setSubject] = useState(`Welcome to ${event.name} speakers`);
+  const [document, setDocument] = useState<EmailComposerDocument>({
+    text: "",
+    html: COMPOSE_DEFAULT_BODY,
+    json: "",
+  });
+  const [editorReady, setEditorReady] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [armed, setArmed] = useState(false);
+  const [sending, setSending] = useState(false);
+  const { vars, selector } = usePreviewVars(event, profiles);
+  const uploadImage = useMemo(() => makeImageUploader(event.id), [event.id]);
+
+  useEffect(() => {
+    if (!armed) return;
+    const timer = setTimeout(() => setArmed(false), 6000);
+    return () => clearTimeout(timer);
+  }, [armed]);
+
+  async function send() {
+    if (!armed) {
+      setArmed(true);
+      return;
+    }
+    setSending(true);
     try {
+      const exported = await composerRef.current?.exportDocument();
+      if (!exported?.text.trim()) {
+        toast.error("Write the email before sending.");
+        return;
+      }
       const result = await callFn<{ queued: number }>("queueSpeakerEmail", {
         eventId: event.id,
-        profileIds: selectedProfiles,
-        subject: campaignSubject,
-        body: campaignBody,
-        confirmed: campaignConfirmed,
+        profileIds: selected,
+        subject,
+        body: exported.text,
+        bodyHtml: exported.html,
+        confirmed: true,
       });
-      toast.success(`Queued ${result.queued} speaker email${result.queued === 1 ? "" : "s"}`);
-      setCampaignConfirmed(false);
+      toast.success(`Queued ${result.queued} email${result.queued === 1 ? "" : "s"}`);
+      onBack();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not queue the speaker email.");
+      toast.error(error instanceof Error ? error.message : "Could not queue the email.");
     } finally {
-      setCampaignSending(false);
+      setArmed(false);
+      setSending(false);
     }
   }
 
   return (
-    <DashboardPage>
-      <DashboardStatStrip
-        items={[
-          {
-            icon: Mail,
-            label: "Templates",
-            value: DEFAULT_TEMPLATES.length,
-            hint: `${templates.length} customized`,
-          },
-          { icon: CheckCircle2, label: "Delivered", value: sent },
-          { icon: TriangleAlert, label: "Failed", value: failed },
-        ]}
-      />
-
-      {hydrated ? (
-        <Tabs defaultValue="compose">
-          <TabsList>
-            <TabsTrigger value="compose">Compose</TabsTrigger>
-            <TabsTrigger value="templates">Templates</TabsTrigger>
-            <TabsTrigger value="log">Delivery log</TabsTrigger>
-          </TabsList>
-          <TabsContent value="compose" className="pt-3">
-            <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.8fr)]">
-              <div className="space-y-5">
-                <DashboardPanel title="Recipients" description="Select speakers directly or select the current filtered list.">
-                  <div className="mb-3 flex flex-wrap gap-2">
-                    <Input
-                      aria-label="Filter email recipients"
-                      value={recipientSearch}
-                      onChange={(event_) => setRecipientSearch(event_.target.value)}
-                      placeholder="Filter by name or email…"
-                      className="min-w-56 flex-1"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setSelectedProfiles((current) => [...new Set([...current, ...filteredProfiles.map((profile) => profile.id)])])}
-                    >
-                      Select filtered ({filteredProfiles.length})
-                    </Button>
-                    <Button type="button" variant="ghost" onClick={() => setSelectedProfiles([])}>Clear</Button>
-                  </div>
-                  <div className="max-h-64 divide-y overflow-y-auto rounded-lg border">
-                    {filteredProfiles.map((profile) => (
-                      <label key={profile.id} className="flex items-center gap-3 px-3 py-2 text-sm">
-                        <input
-                          type="checkbox"
-                          checked={selectedProfiles.includes(profile.id)}
-                          onChange={(event_) => {
-                            setSelectedProfiles((current) =>
-                              event_.target.checked
-                                ? [...new Set([...current, profile.id])]
-                                : current.filter((id) => id !== profile.id),
-                            );
-                            setCampaignConfirmed(false);
-                          }}
-                        />
-                        <span className="min-w-0 flex-1"><span className="font-medium">{profile.name}</span><span className="ml-2 text-xs text-muted-foreground">{profile.email}</span></span>
-                        <DashboardStatusBadge status={profile.status}>{profile.status}</DashboardStatusBadge>
-                      </label>
-                    ))}
-                  </div>
-                  <p className="mt-2 text-xs text-muted-foreground">{selectedProfiles.length} selected</p>
-                </DashboardPanel>
-                <DashboardPanel title="General speaker email" description="Use merge fields such as {{speaker_name}}, {{event_name}}, and {{portal_link}}.">
-                  <FieldGroup>
-                    <Field><FieldLabel htmlFor="campaign-subject">Subject</FieldLabel><Input id="campaign-subject" value={campaignSubject} onChange={(event_) => { setCampaignSubject(event_.target.value); setCampaignConfirmed(false); }} /></Field>
-                    <Field><FieldLabel htmlFor="campaign-body">Body</FieldLabel><Textarea id="campaign-body" rows={10} value={campaignBody} onChange={(event_) => { setCampaignBody(event_.target.value); setCampaignConfirmed(false); }} /></Field>
-                    <label className="flex items-start gap-2 rounded-lg border p-3 text-sm">
-                      <input type="checkbox" checked={campaignConfirmed} onChange={(event_) => setCampaignConfirmed(event_.target.checked)} />
-                      <span><span className="font-medium">Confirm send to {selectedProfiles.length} selected speaker{selectedProfiles.length === 1 ? "" : "s"}</span><span className="mt-0.5 block text-xs text-muted-foreground">The server reparses this exact recipient list and writes one delivery log per recipient.</span></span>
-                    </label>
-                  </FieldGroup>
-                  <div className="mt-4 flex justify-end"><Button type="button" onClick={sendCampaign} disabled={campaignSending || !campaignConfirmed || selectedProfiles.length === 0 || !campaignSubject.trim() || !campaignBody.trim()}><Send data-icon="inline-start" /> {campaignSending ? "Queueing…" : "Send to selected"}</Button></div>
-                </DashboardPanel>
-              </div>
-              <DashboardPanel title="Recipient preview" description="Merge fields resolved with a real event speaker." variant="subtle">
-                <Field className="mb-3"><FieldLabel htmlFor="preview-recipient">Preview as</FieldLabel><Select id="preview-recipient" value={previewProfile?.id ?? ""} onChange={(event_) => setPreviewProfileId(event_.target.value)}>{profiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.name} · {profile.email}</option>)}</Select></Field>
-                <div className="rounded-lg border bg-background p-4">
-                  <div className="font-semibold">{renderTemplate(campaignSubject, realPreviewVars)}</div>
-                  <div className="mt-4 whitespace-pre-wrap text-sm text-muted-foreground">{renderTemplate(campaignBody, realPreviewVars)}</div>
-                </div>
-              </DashboardPanel>
-            </div>
-          </TabsContent>
-          <TabsContent value="templates" className="pt-3">
-          <div className="grid items-start gap-5 lg:grid-cols-[220px_minmax(0,1fr)]">
-            <DashboardPanel title="Messages" description="Automated speaker email" variant="subtle">
-              <div className="flex flex-col gap-1">
-                {DEFAULT_TEMPLATES.map((template) => (
-                  <Button
-                    key={template.key}
-                    type="button"
-                    variant={selectedKey === template.key ? "secondary" : "ghost"}
-                    className="justify-start"
-                    onClick={() => setSelectedKey(template.key)}
-                  >
-                    {labelForKey(template.key)}
-                  </Button>
-                ))}
-              </div>
-            </DashboardPanel>
-
-            <div className="flex min-w-0 flex-col gap-5">
-              <DashboardPanel
-                title={labelForKey(selectedKey)}
-                description="Merge tags are replaced when the message is sent."
-                variant="elevated"
-                action={
-                  <Field orientation="horizontal" className="w-auto">
-                    <FieldLabel htmlFor="email-enabled">Enabled</FieldLabel>
-                    <Switch id="email-enabled" checked={enabled} onCheckedChange={setEnabled} />
-                  </Field>
-                }
-              >
-                <FieldGroup>
-                  <Field>
-                    <FieldLabel htmlFor="email-subject">Subject</FieldLabel>
-                    <Input id="email-subject" value={subject} onChange={(event_) => setSubject(event_.target.value)} />
-                  </Field>
-                  <Field>
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <FieldLabel>Email body</FieldLabel>
-                      <div className="flex flex-wrap justify-end gap-1.5" aria-label="Insert merge tag">
-                        {MERGE_TAGS.map(([tag, label]) => (
-                          <Button
-                            key={tag}
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            className="px-2 text-xs"
-                            disabled={!editorReady}
-                            onClick={() => composerRef.current?.insertMergeTag(tag)}
-                          >
-                            + {label}
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-                    <EmailComposer
-                      key={editorInstanceKey}
-                      ref={composerRef}
-                      content={editorContent}
-                      initialDocument={templateDocument(effective)}
-                      onDocumentChange={setDocument}
-                      onReadyChange={setEditorReady}
-                    />
-                    <FieldDescription>
-                      Select text to format it, or type <span className="font-mono">/</span> to add headings, lists, buttons, and dividers.
-                    </FieldDescription>
-                  </Field>
-                </FieldGroup>
-                <div className="mt-5 flex justify-end gap-2">
-                  <Button type="button" variant="outline" onClick={sendTest} disabled={saving || !editorReady}>
-                    <Send data-icon="inline-start" /> Send test to me
-                  </Button>
-                  <Button type="button" onClick={() => saveTemplate()} disabled={saving || !editorReady || !subject.trim()}>
-                    {saving ? "Saving…" : "Save template"}
-                  </Button>
-                </div>
-              </DashboardPanel>
-
-              <DashboardPanel title="Preview" description="Exported email with sample speaker data" variant="subtle">
-                <div className="overflow-hidden rounded-lg border bg-muted/30">
-                  <div className="border-b bg-background px-4 py-3 text-sm font-semibold">
-                    {preview.subject || "No subject"}
-                  </div>
-                  <iframe
-                    title="Email preview"
-                    className="h-[460px] w-full bg-white"
-                    sandbox=""
-                    srcDoc={preview.html}
-                  />
-                </div>
-              </DashboardPanel>
-            </div>
-          </div>
-          </TabsContent>
-          <TabsContent value="log" className="pt-3">
-          <DashboardPanel title="Delivery log" description="Every automated and test send">
-            {logs.length === 0 ? (
-              <p className="py-12 text-center text-sm text-muted-foreground">No emails have been sent for this event.</p>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Recipient</TableHead>
-                    <TableHead>Message</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Sent</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {logs
-                    .slice()
-                    .sort((a, b) => (a.sentAt < b.sentAt ? 1 : -1))
-                    .map((log) => (
-                      <TableRow key={log.id}>
-                        <TableCell>{log.toEmail}</TableCell>
-                        <TableCell>
-                          <div className="font-medium">{log.subject}</div>
-                          <div className="text-xs text-muted-foreground">{labelForKey(log.templateKey ?? "custom")}</div>
-                        </TableCell>
-                        <TableCell><DashboardStatusBadge status={log.status} /></TableCell>
-                        <TableCell className="text-muted-foreground">{new Date(log.sentAt).toLocaleString()}</TableCell>
-                      </TableRow>
-                    ))}
-                </TableBody>
-              </Table>
-            )}
-          </DashboardPanel>
-          </TabsContent>
-        </Tabs>
-      ) : null}
-    </DashboardPage>
+    <EditorShell
+      onBack={onBack}
+      title="Messages"
+      controls={
+        <>
+          {showPreview ? selector : null}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setShowPreview((current) => !current)}
+          >
+            {showPreview ? <Pencil data-icon="inline-start" /> : <Eye data-icon="inline-start" />}
+            {showPreview ? "Edit" : "Preview"}
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={armed ? "destructive" : "default"}
+            onClick={() => void send()}
+            disabled={sending || !editorReady || selected.length === 0 || !subject.trim()}
+          >
+            <Send data-icon="inline-start" />
+            {sending
+              ? "Queueing…"
+              : armed
+                ? `Confirm send to ${selected.length}`
+                : `Send to ${selected.length} speaker${selected.length === 1 ? "" : "s"}`}
+          </Button>
+        </>
+      }
+      aboveCanvas={
+        <RecipientRow
+          profiles={profiles}
+          selected={selected}
+          onChange={(next) => {
+            setSelected(next);
+            setArmed(false);
+          }}
+        />
+      }
+      from={fromAddress}
+      subject={subject}
+      onSubjectChange={setSubject}
+      composerRef={composerRef}
+      editorContent={COMPOSE_DEFAULT_BODY}
+      initialDocument={document}
+      onDocumentChange={setDocument}
+      onReadyChange={setEditorReady}
+      editorReady={editorReady}
+      editorKey="compose"
+      onUploadImage={uploadImage}
+      preview={
+        showPreview
+          ? { subject: renderTemplate(subject, vars), html: renderHtmlTemplate(document.html, vars) }
+          : null
+      }
+    />
   );
 }
+
+/* ========================== Recipient row ========================== */
+
+function RecipientRow({
+  profiles,
+  selected,
+  onChange,
+}: {
+  profiles: SpeakerProfileRow[];
+  selected: string[];
+  onChange: (next: string[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onPointerDown(event: MouseEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+    }
+    window.addEventListener("mousedown", onPointerDown);
+    return () => window.removeEventListener("mousedown", onPointerDown);
+  }, [open]);
+
+  const filtered = profiles.filter((profile) => {
+    const needle = search.trim().toLowerCase();
+    return (
+      !needle ||
+      profile.name.toLowerCase().includes(needle) ||
+      profile.email.toLowerCase().includes(needle)
+    );
+  });
+  const selectedProfiles = profiles.filter((profile) => selected.includes(profile.id));
+
+  return (
+    <div ref={rootRef} className="relative mt-3">
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        className="flex w-full flex-wrap items-center gap-1.5 rounded-xl border border-border bg-white px-4 py-2 text-left text-[13px]"
+      >
+        <span className="mr-1 text-muted-foreground">To</span>
+        {selectedProfiles.length === 0 ? (
+          <span className="text-zinc-400">Choose speakers…</span>
+        ) : (
+          selectedProfiles.slice(0, 6).map((profile) => (
+            <span
+              key={profile.id}
+              className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-foreground"
+            >
+              {profile.name}
+              <X
+                className="size-3 text-zinc-400 hover:text-zinc-700"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onChange(selected.filter((id) => id !== profile.id));
+                }}
+              />
+            </span>
+          ))
+        )}
+        {selectedProfiles.length > 6 ? (
+          <span className="text-xs text-muted-foreground">+{selectedProfiles.length - 6} more</span>
+        ) : null}
+        <ChevronDown className="ml-auto size-3.5 shrink-0 text-zinc-400" />
+      </button>
+
+      {open ? (
+        <div className="absolute inset-x-0 top-full z-20 mt-1 rounded-xl border border-border bg-white p-2 shadow-[0_2px_6px_rgba(0,0,0,0.06),0_8px_24px_rgba(0,0,0,0.08)]">
+          <div className="flex items-center gap-2">
+            <Input
+              autoFocus
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search speakers…"
+              className="h-8"
+              aria-label="Search recipients"
+            />
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="shrink-0"
+              onClick={() => onChange([...new Set([...selected, ...filtered.map((p) => p.id)])])}
+            >
+              Add all ({filtered.length})
+            </Button>
+            {selected.length > 0 ? (
+              <Button type="button" size="sm" variant="ghost" className="shrink-0" onClick={() => onChange([])}>
+                Clear
+              </Button>
+            ) : null}
+          </div>
+          <div className="mt-2 max-h-56 overflow-y-auto">
+            {filtered.map((profile) => {
+              const checked = selected.includes(profile.id);
+              return (
+                <button
+                  key={profile.id}
+                  type="button"
+                  onClick={() =>
+                    onChange(
+                      checked
+                        ? selected.filter((id) => id !== profile.id)
+                        : [...selected, profile.id],
+                    )
+                  }
+                  className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-[13px] hover:bg-muted/60"
+                >
+                  <span
+                    className={`flex size-4 shrink-0 items-center justify-center rounded border ${
+                      checked ? "border-zinc-900 bg-zinc-900 text-white" : "border-zinc-300"
+                    }`}
+                  >
+                    {checked ? <Check className="size-3" /> : null}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate">
+                    <span className="font-medium">{profile.name}</span>
+                    <span className="ml-2 text-xs text-muted-foreground">{profile.email}</span>
+                  </span>
+                </button>
+              );
+            })}
+            {filtered.length === 0 ? (
+              <p className="px-2.5 py-4 text-center text-xs text-muted-foreground">No speakers match.</p>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/* ============================= Helpers ============================= */
 
 function templateValue(key: string, custom: EmailTemplateRow[]) {
   const saved = custom.find((row) => row.key === key);
