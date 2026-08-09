@@ -661,8 +661,9 @@ function UserMenu({
   email: string;
   direction: "up" | "down";
 }) {
-  const { signOut } = useAuth();
+  const { signOut, session } = useAuth();
   const initial = (email.trim()[0] || "?").toUpperCase();
+  const avatarUrl = (session as { avatarUrl?: string | null } | null)?.avatarUrl ?? null;
   async function onSignOut() {
     await signOut();
     window.location.assign("/");
@@ -678,9 +679,18 @@ function UserMenu({
             : "flex size-10 items-center justify-center rounded-lg transition-[background-color] hover:bg-muted")
         }
       >
-        <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-semibold text-primary-foreground">
-          {initial}
-        </span>
+        {avatarUrl ? (
+          <img
+            src={avatarUrl}
+            alt=""
+            referrerPolicy="no-referrer"
+            className="size-7 shrink-0 rounded-full object-cover outline outline-1 -outline-offset-1 outline-black/10"
+          />
+        ) : (
+          <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-semibold text-primary-foreground">
+            {initial}
+          </span>
+        )}
         {up ? (
           <>
             <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-foreground">

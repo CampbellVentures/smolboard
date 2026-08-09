@@ -217,9 +217,18 @@ function MembersList({
                 const isMe = m.user_id === currentUserId;
                 return (
                   <li key={m.user_id} className="flex items-center gap-3 py-2.5">
-                    <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-[12px] font-semibold text-zinc-600">
-                      {initial}
-                    </span>
+                    {m.avatar_url ? (
+                      <img
+                        src={m.avatar_url}
+                        alt=""
+                        referrerPolicy="no-referrer"
+                        className="size-8 shrink-0 rounded-full object-cover outline outline-1 -outline-offset-1 outline-black/10"
+                      />
+                    ) : (
+                      <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-[12px] font-semibold text-zinc-600">
+                        {initial}
+                      </span>
+                    )}
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <span className="truncate text-sm font-medium text-zinc-900">
