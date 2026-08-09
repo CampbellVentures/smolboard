@@ -21,6 +21,18 @@ import {
 } from "@/components/dashboard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -370,6 +382,7 @@ function DeleteOrg({
   onDeleted: () => Promise<void>;
 }) {
   const [confirm, setConfirm] = useState("");
+  const [open, setOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const armed = confirm.trim() === org.name;
@@ -389,31 +402,61 @@ function DeleteOrg({
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      <p className="text-sm text-zinc-600">
+    <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <p className="text-pretty text-sm text-muted-foreground">
         Deleting <span className="font-medium">{org.name}</span> removes its events,
         submissions, and speakers for everyone. This can&apos;t be undone.
       </p>
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="confirm-workspace-name" className="font-normal text-muted-foreground">
-          Type <span className="font-medium text-zinc-700">{org.name}</span> to confirm
-        </Label>
-        <Input
-          id="confirm-workspace-name"
-          value={confirm}
-          onChange={(e) => setConfirm(e.target.value)}
-        />
-      </div>
-      {error && <p className="text-xs text-red-600">{error}</p>}
-      <Button
-        type="button"
-        variant="destructive"
-        onClick={remove}
-        disabled={!armed || deleting}
-        className="self-start sm:self-end"
+      <AlertDialog
+        open={open}
+        onOpenChange={(next) => {
+          setOpen(next);
+          if (!next) {
+            setConfirm("");
+            setError(null);
+          }
+        }}
       >
-        {deleting ? "Deleting…" : "Delete workspace"}
-      </Button>
+        <AlertDialogTrigger asChild>
+          <Button type="button" variant="destructive" className="shrink-0">
+            Delete workspace
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete “{org.name}”?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes every event, submission, and speaker in the workspace.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Field data-invalid={!!error}>
+            <FieldLabel htmlFor="confirm-workspace-name">
+              Type {org.name} to confirm
+            </FieldLabel>
+            <Input
+              id="confirm-workspace-name"
+              value={confirm}
+              onChange={(event) => setConfirm(event.target.value)}
+              autoComplete="off"
+              aria-invalid={!!error}
+            />
+            {error ? <FieldError>{error}</FieldError> : null}
+          </Field>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={!armed || deleting}
+              onClick={(event) => {
+                event.preventDefault();
+                void remove();
+              }}
+            >
+              {deleting ? "Deleting…" : "Delete workspace"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

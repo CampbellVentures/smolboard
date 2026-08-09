@@ -5,13 +5,13 @@ import { db, useRouter } from "@pylonsync/react";
 import {
   DashboardEmptyState,
   DashboardPage,
-  DashboardPanel,
   DashboardToolbar,
 } from "@/components/dashboard";
 import { EventCard } from "@/components/event-card";
+import { ResponsiveFormOverlay } from "@/components/responsive-overlay";
 import { Button } from "@/components/ui/button";
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { CalendarPlus } from "lucide-react";
 import { slugify } from "@/lib/forms";
 import { fmtDate } from "./dashboard-client";
@@ -68,68 +68,78 @@ export function EventsList({
 
   return (
     <DashboardPage>
-      {creating ? (
-        <DashboardPanel title="New event" variant="subtle">
-          <form onSubmit={create} className="flex flex-col gap-3">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="event-name">Name</Label>
-                <Input
-                  id="event-name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="AI Engineer World's Fair 2026…"
-                  autoComplete="off"
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="event-slug">URL handle</Label>
-                <Input
-                  id="event-slug"
-                  value={slugTouched ? slug : slugify(name)}
-                  onChange={(e) => {
-                    setSlugTouched(true);
-                    setSlug(e.target.value);
-                  }}
-                  placeholder="aie-2026…"
-                  autoComplete="off"
-                  spellCheck={false}
-                />
-              </div>
-            </div>
-            <p className="text-pretty text-xs text-muted-foreground">
-              The handle sets your public URLs: /cfp/&lt;handle&gt; and /&lt;handle&gt;/schedule.
-            </p>
-            {error && <p className="text-xs text-destructive">{error}</p>}
-            <div className="flex items-center gap-2">
-              <Button type="submit" size="sm" disabled={busy || !name.trim()}>
-                {busy ? "Creating…" : "Create event"}
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                onClick={() => setCreating(false)}
-              >
-                Cancel
-              </Button>
-            </div>
-          </form>
-        </DashboardPanel>
-      ) : (
-        <DashboardToolbar>
-          <p className="text-pretty text-sm text-muted-foreground">
-            {events.length === 0
-              ? "Run your call for speakers, reviews, and agenda from one place."
-              : `${events.length} event${events.length === 1 ? "" : "s"} in this workspace.`}
-          </p>
-          <Button type="button" size="sm" onClick={() => setCreating(true)}>
-            <CalendarPlus data-icon="inline-start" /> New event
-          </Button>
-        </DashboardToolbar>
-      )}
+      <DashboardToolbar>
+        <p className="text-pretty text-sm text-muted-foreground">
+          {events.length === 0
+            ? "Run your call for speakers, reviews, and agenda from one place."
+            : `${events.length} event${events.length === 1 ? "" : "s"} in this workspace.`}
+        </p>
+        <ResponsiveFormOverlay.Root
+          open={creating}
+          onOpenChange={(open) => {
+            setCreating(open);
+            if (!open) setError(null);
+          }}
+        >
+          <ResponsiveFormOverlay.Trigger>
+            <Button type="button" size="sm">
+              <CalendarPlus data-icon="inline-start" /> New event
+            </Button>
+          </ResponsiveFormOverlay.Trigger>
+          <ResponsiveFormOverlay.Content>
+            <form onSubmit={create} className="contents">
+              <ResponsiveFormOverlay.Header>
+                <ResponsiveFormOverlay.Title>New event</ResponsiveFormOverlay.Title>
+                <ResponsiveFormOverlay.Description>
+                  Start with a name and public URL. You can add dates and details next.
+                </ResponsiveFormOverlay.Description>
+              </ResponsiveFormOverlay.Header>
+              <ResponsiveFormOverlay.Body>
+                <FieldGroup className="gap-4">
+                  <Field>
+                    <FieldLabel htmlFor="event-name">Name</FieldLabel>
+                    <Input
+                      id="event-name"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="AI Engineer World's Fair 2026…"
+                      autoComplete="off"
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="event-slug">URL handle</FieldLabel>
+                    <Input
+                      id="event-slug"
+                      value={slugTouched ? slug : slugify(name)}
+                      onChange={(e) => {
+                        setSlugTouched(true);
+                        setSlug(e.target.value);
+                      }}
+                      placeholder="aie-2026…"
+                      autoComplete="off"
+                      spellCheck={false}
+                    />
+                    <FieldDescription>
+                      Used in /cfp/&lt;handle&gt; and /&lt;handle&gt;/schedule.
+                    </FieldDescription>
+                  </Field>
+                  {error ? <FieldError>{error}</FieldError> : null}
+                </FieldGroup>
+              </ResponsiveFormOverlay.Body>
+              <ResponsiveFormOverlay.Footer>
+                <Button type="button" variant="outline" onClick={() => setCreating(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={busy || !name.trim()}>
+                  {busy ? "Creating…" : "Create event"}
+                </Button>
+              </ResponsiveFormOverlay.Footer>
+            </form>
+          </ResponsiveFormOverlay.Content>
+        </ResponsiveFormOverlay.Root>
+      </DashboardToolbar>
 
-      {events.length === 0 && !creating ? (
+      {events.length === 0 ? (
         <DashboardEmptyState
           icon={CalendarPlus}
           title="No events yet"

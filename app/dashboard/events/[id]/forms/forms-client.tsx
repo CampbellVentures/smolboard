@@ -5,11 +5,12 @@ import { db, Link, useRouter } from "@pylonsync/react";
 import {
   DashboardEmptyState,
   DashboardPage,
-  DashboardPanel,
   DashboardStatusBadge,
   DashboardToolbar,
 } from "@/components/dashboard";
+import { ResponsiveFormOverlay } from "@/components/responsive-overlay";
 import { Button } from "@/components/ui/button";
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { ChevronRight, FilePlus2, ExternalLink } from "lucide-react";
 import { slugify } from "@/lib/forms";
@@ -87,40 +88,56 @@ export function FormsList({ event, initial }: { event: EventRow; initial: Submis
 
   return (
     <DashboardPage>
-      {creating ? (
-        <DashboardPanel title="New form" variant="subtle">
-          <form onSubmit={create} className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              aria-label="Form name"
-              autoComplete="off"
-            />
-            <div className="flex items-center gap-2">
-              <Button type="submit" size="sm" disabled={busy || !name.trim()}>
-                {busy ? "Creating…" : "Create form"}
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                onClick={() => setCreating(false)}
-              >
-                Cancel
-              </Button>
-            </div>
-          </form>
-          {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
-        </DashboardPanel>
-      ) : (
-        <DashboardToolbar className="justify-end">
-          <Button type="button" size="sm" onClick={() => setCreating(true)}>
-            <FilePlus2 data-icon="inline-start" /> New form
-          </Button>
-        </DashboardToolbar>
-      )}
+      <DashboardToolbar className="justify-end">
+        <ResponsiveFormOverlay.Root
+          open={creating}
+          onOpenChange={(open) => {
+            setCreating(open);
+            if (!open) setError(null);
+          }}
+        >
+          <ResponsiveFormOverlay.Trigger>
+            <Button type="button" size="sm">
+              <FilePlus2 data-icon="inline-start" /> New form
+            </Button>
+          </ResponsiveFormOverlay.Trigger>
+          <ResponsiveFormOverlay.Content>
+            <form onSubmit={create} className="contents">
+              <ResponsiveFormOverlay.Header>
+                <ResponsiveFormOverlay.Title>New submission form</ResponsiveFormOverlay.Title>
+                <ResponsiveFormOverlay.Description>
+                  Start with the common CFP questions, then customize the form builder.
+                </ResponsiveFormOverlay.Description>
+              </ResponsiveFormOverlay.Header>
+              <ResponsiveFormOverlay.Body>
+                <FieldGroup>
+                  <Field data-invalid={!!error}>
+                    <FieldLabel htmlFor="new-form-name">Form name</FieldLabel>
+                    <Input
+                      id="new-form-name"
+                      value={name}
+                      onChange={(event) => setName(event.target.value)}
+                      autoComplete="off"
+                      aria-invalid={!!error}
+                    />
+                    {error ? <FieldError>{error}</FieldError> : null}
+                  </Field>
+                </FieldGroup>
+              </ResponsiveFormOverlay.Body>
+              <ResponsiveFormOverlay.Footer>
+                <Button type="button" variant="outline" onClick={() => setCreating(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={busy || !name.trim()}>
+                  {busy ? "Creating…" : "Create form"}
+                </Button>
+              </ResponsiveFormOverlay.Footer>
+            </form>
+          </ResponsiveFormOverlay.Content>
+        </ResponsiveFormOverlay.Root>
+      </DashboardToolbar>
 
-      {forms.length === 0 && !creating ? (
+      {forms.length === 0 ? (
         <DashboardEmptyState
           icon={FilePlus2}
           title="No forms yet"

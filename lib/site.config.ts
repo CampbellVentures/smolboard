@@ -133,7 +133,7 @@ export const siteConfig: SiteConfig = {
     ],
   },
 
-  colors: { brand: "#c2410c", brandSoft: "#fff1e7", paper: "#fafafa" },
+  colors: { brand: "#1a1a1a", brandSoft: "#f4f4f5", paper: "#fafafa" },
 
   seo: {
     title: "smolboard — open-source speaker & CFP management",

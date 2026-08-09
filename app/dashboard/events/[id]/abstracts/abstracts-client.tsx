@@ -21,6 +21,17 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { ResponsiveDetailOverlay } from "@/components/responsive-overlay";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { fieldsOf, parseJson } from "@/lib/types";
 import { reviewRoundForNumber } from "@/lib/reviews";
@@ -32,7 +43,7 @@ import type {
   SubmissionFormRow,
   SubmissionRow,
 } from "@/lib/types";
-import { X, ChevronRight, Star, Plus, Inbox } from "lucide-react";
+import { ChevronRight, Star, Plus, Inbox } from "lucide-react";
 
 // Abstracts: dense table + right detail drawer (row click keeps table
 // context), bulk actions over setSubmissionStatus, per-round scoring. All
@@ -93,6 +104,7 @@ export function AbstractsView({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [openId, setOpenId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [bulkConfirmStatus, setBulkConfirmStatus] = useState<string | null>(null);
 
   const categories = useMemo(
     () => [...new Set(submissions.map((s) => s.category).filter(Boolean))] as string[],
@@ -151,11 +163,6 @@ export function AbstractsView({
 
   async function bulkStatus(status: string) {
     const ids = [...selected];
-    const label =
-      status === "accepted" || status === "rejected"
-        ? `${status === "accepted" ? "Accept" : "Reject"} ${ids.length} submission${ids.length === 1 ? "" : "s"} and email the speakers?`
-        : null;
-    if (label && !confirm(label)) return;
     setBusy(true);
     try {
       for (const id of ids) {
@@ -164,6 +171,7 @@ export function AbstractsView({
       setSelected(new Set());
     } finally {
       setBusy(false);
+      setBulkConfirmStatus(null);
     }
   }
 
@@ -223,34 +231,34 @@ export function AbstractsView({
               aria-label="Search submissions"
               autoComplete="off"
             />
-          <Select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="w-auto"
-            aria-label="Filter by status"
-          >
-            <option value="">All statuses</option>
-            {STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {s.replace("_", " ")}
-              </option>
-            ))}
-          </Select>
-          {categories.length > 0 && (
             <Select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
               className="w-auto"
-              aria-label="Filter by category"
+              aria-label="Filter by status"
             >
-              <option value="">All categories</option>
-              {categories.map((c) => (
-                <option key={c} value={c}>
-                  {c}
+              <option value="">All statuses</option>
+              {STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {s.replace("_", " ")}
                 </option>
               ))}
             </Select>
-          )}
+            {categories.length > 0 && (
+              <Select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="w-auto"
+                aria-label="Filter by category"
+              >
+                <option value="">All categories</option>
+                {categories.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </Select>
+            )}
           </div>
           <div className="flex items-center gap-3">
             <AddRoundButton event={event} rounds={rounds} />
@@ -265,13 +273,13 @@ export function AbstractsView({
           <div className="flex items-center gap-2 rounded-lg border border-zinc-900 bg-zinc-900 px-3 py-2 text-white">
             <span className="text-[13px] font-medium">{selected.size} selected</span>
             <div className="ml-auto flex items-center gap-1.5">
-              <BulkBtn onClick={() => bulkStatus("accepted")} disabled={busy}>
+              <BulkBtn onClick={() => setBulkConfirmStatus("accepted")} disabled={busy}>
                 Accept + email
               </BulkBtn>
-              <BulkBtn onClick={() => bulkStatus("rejected")} disabled={busy}>
+              <BulkBtn onClick={() => setBulkConfirmStatus("rejected")} disabled={busy}>
                 Reject + email
               </BulkBtn>
-              <BulkBtn onClick={() => bulkStatus("waitlisted")} disabled={busy}>
+              <BulkBtn onClick={() => void bulkStatus("waitlisted")} disabled={busy}>
                 Waitlist
               </BulkBtn>
               <BulkBtn onClick={bulkAdvance} disabled={busy}>
@@ -387,6 +395,39 @@ export function AbstractsView({
           onClose={() => setOpenId(null)}
         />
       )}
+      <AlertDialog
+        open={bulkConfirmStatus !== null}
+        onOpenChange={(open) => !open && setBulkConfirmStatus(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {bulkConfirmStatus === "accepted" ? "Accept" : "Reject"} {selected.size}{" "}
+              submission{selected.size === 1 ? "" : "s"}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Their statuses will change and the speakers will be emailed immediately.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant={bulkConfirmStatus === "rejected" ? "destructive" : "default"}
+              disabled={busy}
+              onClick={(event) => {
+                event.preventDefault();
+                if (bulkConfirmStatus) void bulkStatus(bulkConfirmStatus);
+              }}
+            >
+              {busy
+                ? "Updating…"
+                : bulkConfirmStatus === "accepted"
+                  ? "Accept and email"
+                  : "Reject and email"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardWidePage>
   );
 }
@@ -437,16 +478,24 @@ function DetailDrawer({
   const answers = parseJson<Record<string, unknown>>(submission.answersJson) ?? {};
   const fields = form ? fieldsOf(form) : [];
   const [busy, setBusy] = useState<string | null>(null);
+  const [confirmStatus, setConfirmStatus] = useState<string | null>(null);
 
-  async function setStatus(status: string) {
-    const notify = status === "accepted" || status === "rejected";
-    if (notify && !confirm(`${status === "accepted" ? "Accept" : "Reject"} “${submission.title}” and email the speaker?`)) return;
+  async function applyStatus(status: string) {
     setBusy(status);
     try {
       await callFn("setSubmissionStatus", { submissionId: submission.id, status });
     } finally {
       setBusy(null);
+      setConfirmStatus(null);
     }
+  }
+
+  function setStatus(status: string) {
+    if (status === "accepted" || status === "rejected") {
+      setConfirmStatus(status);
+      return;
+    }
+    void applyStatus(status);
   }
 
   // Never fall back to a different round: that would silently attach a score
@@ -454,33 +503,22 @@ function DetailDrawer({
   const activeRound = reviewRoundForNumber(rounds, submission.currentRound);
 
   return (
-    <aside className="hidden w-[380px] shrink-0 lg:block">
-      <div className="sticky top-6 max-h-[calc(100vh-6rem)] overflow-y-auto rounded-xl border border-zinc-200 bg-white">
-        <div className="flex items-start justify-between gap-3 border-b border-zinc-100 p-4">
-          <div className="min-w-0">
-            <h3 className="text-[15px] font-semibold leading-snug text-zinc-900">
-              {submission.title}
-            </h3>
-            <div className="mt-1 flex items-center gap-2">
-              <StatusPill status={submission.status} />
-              {submission.category && (
-                <span className="text-xs text-zinc-400">{submission.category}</span>
-              )}
-              <span className="text-xs text-zinc-400">round {submission.currentRound}</span>
-            </div>
+    <ResponsiveDetailOverlay.Root open onOpenChange={(open) => !open && onClose()}>
+      <ResponsiveDetailOverlay.Content>
+        <ResponsiveDetailOverlay.Header>
+          <ResponsiveDetailOverlay.Title>{submission.title}</ResponsiveDetailOverlay.Title>
+          <ResponsiveDetailOverlay.Description>
+            Review submission and record your score.
+          </ResponsiveDetailOverlay.Description>
+        </ResponsiveDetailOverlay.Header>
+        <ResponsiveDetailOverlay.Body className="flex flex-col gap-5">
+          <div className="flex items-center gap-2">
+            <StatusPill status={submission.status} />
+            {submission.category && (
+              <span className="text-xs text-zinc-400">{submission.category}</span>
+            )}
+            <span className="text-xs text-muted-foreground">round {submission.currentRound}</span>
           </div>
-          <Button
-            type="button"
-            size="icon"
-            variant="ghost"
-            aria-label="Close details"
-            onClick={onClose}
-          >
-            <X />
-          </Button>
-        </div>
-
-        <div className="space-y-5 p-4">
           {/* Quick actions */}
           <div className="flex flex-wrap gap-1.5">
             {["accepted", "rejected", "waitlisted"].map((s) => (
@@ -561,9 +599,41 @@ function DetailDrawer({
             currentUserId={currentUserId}
             event={event}
           />
-        </div>
-      </div>
-    </aside>
+        </ResponsiveDetailOverlay.Body>
+      </ResponsiveDetailOverlay.Content>
+      <AlertDialog
+        open={confirmStatus !== null}
+        onOpenChange={(open) => !open && setConfirmStatus(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmStatus === "accepted" ? "Accept" : "Reject"} “{submission.title}”?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              The submission status will change and the speaker will be emailed immediately.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={busy !== null}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant={confirmStatus === "rejected" ? "destructive" : "default"}
+              disabled={busy !== null}
+              onClick={(event) => {
+                event.preventDefault();
+                if (confirmStatus) void applyStatus(confirmStatus);
+              }}
+            >
+              {busy
+                ? "Updating…"
+                : confirmStatus === "accepted"
+                  ? "Accept and email"
+                  : "Reject and email"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </ResponsiveDetailOverlay.Root>
   );
 }
 

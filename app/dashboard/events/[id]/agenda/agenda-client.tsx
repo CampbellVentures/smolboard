@@ -9,9 +9,21 @@ import {
   DashboardToolbar,
   DashboardWidePage,
 } from "@/components/dashboard";
+import { ResponsiveFormOverlay } from "@/components/responsive-overlay";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import {
   Table,
@@ -788,18 +800,31 @@ function RoomsManager({
           className="group flex items-center gap-1 rounded-full bg-zinc-100 px-2.5 py-1 text-[12px] font-medium text-zinc-600"
         >
           {r.name}
-          <button
-            type="button"
-            aria-label={`Remove ${r.name}`}
-            onClick={() => {
-              if (confirm(`Remove room "${r.name}"? Its sessions move to Unscheduled.`)) {
-                void removeRoom(r.id, sessions);
-              }
-            }}
-            className="hidden text-zinc-400 hover:text-red-600 group-hover:block"
-          >
-            <X className="size-3" />
-          </button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <button
+                type="button"
+                aria-label={`Remove ${r.name}`}
+                className="rounded-full text-muted-foreground opacity-60 hover:text-destructive hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <X className="size-3" aria-hidden="true" />
+              </button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Remove “{r.name}”?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Sessions in this room will move back to Unscheduled.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction variant="destructive" onClick={() => void removeRoom(r.id, sessions)}>
+                  Remove room
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </span>
       ))}
       {adding ? (
@@ -913,81 +938,81 @@ function SessionPopover({
     }
   }
 
+  const timeLabel = session.startTime
+    ? `${fmtTime(minutesInDay(session.startTime, tz))}${
+        session.endTime ? `–${fmtTime(minutesInDay(session.endTime, tz))}` : ""
+      }`
+    : "Unscheduled";
+
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 p-4"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-sm rounded-xl border border-zinc-200 bg-white p-5 shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-start justify-between gap-3">
-          <Input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            onBlur={() => title.trim() && title !== session.title && patch({ title: title.trim() })}
-            className="font-medium"
-            aria-label="Session title"
-          />
-          <Button type="button" size="icon" variant="ghost" aria-label="Close" onClick={onClose}>
-            <X />
-          </Button>
-        </div>
-
-        {session.startTime && (
-          <p className="mt-2 text-xs text-zinc-400">
-            {fmtTime(minutesInDay(session.startTime, tz))}
-            {session.endTime ? `–${fmtTime(minutesInDay(session.endTime, tz))}` : ""}
-          </p>
-        )}
-
-        <div className="mt-4 grid grid-cols-2 gap-3">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="session-duration">Duration</Label>
-            <Select
-              id="session-duration"
-              value={duration}
-              disabled={!session.startTime}
-              onChange={(e) =>
-                session.startTime &&
-                patch({
-                  endTime: new Date(
-                    Date.parse(session.startTime) + Number(e.target.value) * 60000,
-                  ).toISOString(),
-                })
-              }
-            >
-              {DURATIONS.map((d) => (
-                <option key={d} value={d}>
-                  {d} min
-                </option>
-              ))}
-              {!DURATIONS.includes(duration) && <option value={duration}>{duration} min</option>}
-            </Select>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="session-track">Track</Label>
-            <Select
-              id="session-track"
-              value={session.trackId ?? ""}
-              onChange={(e) => patch({ trackId: e.target.value || undefined })}
-            >
-              <option value="">None</option>
-              {tracks.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </Select>
-          </div>
-        </div>
-
-        <div className="mt-5 flex flex-wrap items-center justify-between gap-2 border-t border-zinc-100 pt-3">
+    <ResponsiveFormOverlay.Root open onOpenChange={(open) => !open && onClose()}>
+      <ResponsiveFormOverlay.Content>
+        <ResponsiveFormOverlay.Header>
+          <ResponsiveFormOverlay.Title>Edit session</ResponsiveFormOverlay.Title>
+          <ResponsiveFormOverlay.Description>{timeLabel}</ResponsiveFormOverlay.Description>
+        </ResponsiveFormOverlay.Header>
+        <ResponsiveFormOverlay.Body>
+          <FieldGroup className="gap-4">
+            <Field>
+              <FieldLabel htmlFor={`session-title-${session.id}`}>Title</FieldLabel>
+              <Input
+                id={`session-title-${session.id}`}
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                onBlur={() =>
+                  title.trim() && title !== session.title && patch({ title: title.trim() })
+                }
+                className="font-medium"
+              />
+            </Field>
+            <FieldGroup className="grid grid-cols-2 gap-3">
+              <Field>
+                <FieldLabel htmlFor="session-duration">Duration</FieldLabel>
+                <Select
+                  id="session-duration"
+                  value={duration}
+                  disabled={!session.startTime}
+                  onChange={(e) =>
+                    session.startTime &&
+                    patch({
+                      endTime: new Date(
+                        Date.parse(session.startTime) + Number(e.target.value) * 60000,
+                      ).toISOString(),
+                    })
+                  }
+                >
+                  {DURATIONS.map((d) => (
+                    <option key={d} value={d}>
+                      {d} min
+                    </option>
+                  ))}
+                  {!DURATIONS.includes(duration) && (
+                    <option value={duration}>{duration} min</option>
+                  )}
+                </Select>
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="session-track">Track</FieldLabel>
+                <Select
+                  id="session-track"
+                  value={session.trackId ?? ""}
+                  onChange={(e) => patch({ trackId: e.target.value || undefined })}
+                >
+                  <option value="">None</option>
+                  {tracks.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            </FieldGroup>
+          </FieldGroup>
+        </ResponsiveFormOverlay.Body>
+        <ResponsiveFormOverlay.Footer className="sm:flex-row sm:justify-between">
           <Button
             type="button"
-            size="sm"
-            variant="ghost"
+            variant="outline"
             onClick={() => {
               void patch({ roomId: undefined, startTime: undefined, endTime: undefined });
               onClose();
@@ -1001,22 +1026,36 @@ function SessionPopover({
                 <CalendarPlus data-icon="inline-start" /> {inviteBusy ? "Queuing…" : "Send invites"}
               </Button>
             ) : null}
-            <Button
-              type="button"
-              size="sm"
-              variant="destructive"
-              onClick={() => {
-                if (confirm(`Delete session "${session.title}"?`)) {
-                  void db.delete("Session", session.id);
-                  onClose();
-                }
-              }}
-            >
-              <Trash2 data-icon="inline-start" /> Delete
-            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button type="button" variant="destructive">
+                  <Trash2 data-icon="inline-start" /> Delete
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete “{session.title}”?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This removes the session from the agenda. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    variant="destructive"
+                    onClick={() => {
+                      void db.delete("Session", session.id);
+                      onClose();
+                    }}
+                  >
+                    Delete session
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
-        </div>
-      </div>
-    </div>
+        </ResponsiveFormOverlay.Footer>
+      </ResponsiveFormOverlay.Content>
+    </ResponsiveFormOverlay.Root>
   );
 }

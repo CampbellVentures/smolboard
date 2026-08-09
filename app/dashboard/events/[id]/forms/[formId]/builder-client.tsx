@@ -4,6 +4,7 @@ import React, { useMemo, useState } from "react";
 import { db } from "@pylonsync/react";
 import { DashboardPanel, DashboardWidePage } from "@/components/dashboard";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -195,8 +196,8 @@ export function FormBuilder({
             className="mt-3 resize-none"
             aria-label="Form description"
           />
-          <div className="mt-3 flex items-center justify-between">
-            <span className="text-xs text-zinc-400">
+          <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <span className="break-all text-xs text-zinc-400">
               Public URL: /cfp/{event.slug}/{slugify(name) || form.slug}
             </span>
             <div className="flex items-center gap-3">
@@ -365,7 +366,7 @@ function FieldEditor({
               onChange={(e) => onPatch({ label: e.target.value })}
             />
           </label>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid gap-3 sm:grid-cols-2">
             <label className="block">
               <span className="mb-1 block text-xs font-medium text-zinc-500">Help text</span>
               <Input
@@ -382,12 +383,12 @@ function FieldEditor({
             </label>
           </div>
           {field.type !== "section" && (
-            <label className="flex items-center gap-2 text-[13px] text-zinc-700">
-              <input
-                type="checkbox"
+            <label className="flex min-h-9 items-center gap-2 text-[13px] text-zinc-700">
+              <Checkbox
                 checked={field.required ?? false}
-                onChange={(e) => onPatch({ required: e.target.checked || undefined })}
-                className="size-4 rounded border-zinc-300 accent-zinc-900"
+                onCheckedChange={(checked) =>
+                  onPatch({ required: checked === true || undefined })
+                }
               />
               Required
             </label>
@@ -454,11 +455,11 @@ function ShowIfEditor({
           {rules.map((r, i) => {
             const target = upstream.find((f) => f.key === r.field);
             return (
-              <li key={i} className="flex items-center gap-2">
+              <li key={i} className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_7rem_minmax(0,1fr)_auto] sm:items-center">
                 <Select
                   value={r.field}
                   onChange={(e) => patch(i, { field: e.target.value })}
-                  className="flex-1"
+                  className="w-full"
                   aria-label="Condition field"
                 >
                   {upstream.map((f) => (
@@ -470,7 +471,7 @@ function ShowIfEditor({
                 <Select
                   value={r.op}
                   onChange={(e) => patch(i, { op: e.target.value as ShowIfOp })}
-                  className="w-28"
+                  className="w-full"
                   aria-label="Condition operator"
                 >
                   {OPS.map((o) => (
@@ -484,7 +485,7 @@ function ShowIfEditor({
                     <Select
                       value={r.value ?? ""}
                       onChange={(e) => patch(i, { value: e.target.value })}
-                      className="flex-1"
+                      className="w-full"
                       aria-label="Condition value"
                     >
                       <option value="">Select…</option>
@@ -498,7 +499,7 @@ function ShowIfEditor({
                     <Input
                       value={r.value ?? ""}
                       onChange={(e) => patch(i, { value: e.target.value })}
-                      className="flex-1"
+                      className="w-full"
                       aria-label="Condition value"
                     />
                   ))}
@@ -566,12 +567,12 @@ function RoutingEditor({
           {routing.rules.map((r, i) => {
             const target = answerable.find((f) => f.key === r.field);
             return (
-              <li key={i} className="flex items-center gap-2">
-                <span className="text-xs text-zinc-400">if</span>
+              <li key={i} className="grid gap-2 sm:grid-cols-[auto_minmax(0,1fr)_6rem_minmax(0,1fr)_auto_8rem_auto] sm:items-center">
+                <span className="hidden text-xs text-zinc-400 sm:inline">if</span>
                 <Select
                   value={r.field}
                   onChange={(e) => patch(i, { field: e.target.value })}
-                  className="flex-1"
+                  className="w-full"
                   aria-label="Routing field"
                 >
                   {answerable.map((f) => (
@@ -583,7 +584,7 @@ function RoutingEditor({
                 <Select
                   value={r.op}
                   onChange={(e) => patch(i, { op: e.target.value as ShowIfOp })}
-                  className="w-24"
+                  className="w-full"
                   aria-label="Routing operator"
                 >
                   {OPS.map((o) => (
@@ -597,7 +598,7 @@ function RoutingEditor({
                     <Select
                       value={r.value ?? ""}
                       onChange={(e) => patch(i, { value: e.target.value })}
-                      className="flex-1"
+                      className="w-full"
                       aria-label="Routing value"
                     >
                       <option value="">Select…</option>
@@ -611,16 +612,16 @@ function RoutingEditor({
                     <Input
                       value={r.value ?? ""}
                       onChange={(e) => patch(i, { value: e.target.value })}
-                      className="flex-1"
+                      className="w-full"
                       aria-label="Routing value"
                     />
                   ))}
-                <span className="text-xs text-zinc-400">→</span>
+                <span className="hidden text-xs text-zinc-400 sm:inline">→</span>
                 <Input
                   value={r.category}
                   onChange={(e) => patch(i, { category: e.target.value })}
                   placeholder="Category…"
-                  className="w-32"
+                  className="w-full"
                   aria-label="Routing category"
                 />
                 <Button

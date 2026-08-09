@@ -6,14 +6,7 @@ import { FileUpload, sendMagicLink, verifyMagicLink, useAuth } from "@pylonsync/
 import { Button } from "@/components/ui/button";
 import { BrandMark } from "@/components/brand";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { ResponsiveFormOverlay } from "@/components/responsive-overlay";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
@@ -455,50 +448,56 @@ function SubmissionEditor({
       >
         <Pencil />
       </Button>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[calc(100vh-2rem)] max-w-2xl overflow-y-auto">
-          <form onSubmit={save}>
-            <DialogHeader>
-              <DialogTitle>Edit submission</DialogTitle>
-              <DialogDescription>
+      <ResponsiveFormOverlay.Root open={open} onOpenChange={setOpen}>
+        <ResponsiveFormOverlay.Content className="max-w-2xl">
+          <form onSubmit={save} className="contents">
+            <ResponsiveFormOverlay.Header>
+              <ResponsiveFormOverlay.Title>Edit submission</ResponsiveFormOverlay.Title>
+              <ResponsiveFormOverlay.Description>
                 Changes are allowed while the call for speakers is open.
-              </DialogDescription>
-            </DialogHeader>
-            <FieldGroup className="mt-5 gap-4">
-              <Field>
-                <FieldLabel htmlFor={`submission-title-${submission.id}`}>Talk title</FieldLabel>
-                <Input
-                  id={`submission-title-${submission.id}`}
-                  value={title}
-                  maxLength={200}
-                  onChange={(event) => setTitle(event.target.value)}
-                />
-              </Field>
-              <Field>
-                <FieldLabel htmlFor={`submission-abstract-${submission.id}`}>Abstract</FieldLabel>
-                <Textarea
-                  id={`submission-abstract-${submission.id}`}
-                  value={abstract}
-                  rows={5}
-                  onChange={(event) => setAbstract(event.target.value)}
-                />
-              </Field>
-              {fields.length > 0 ? (
-                <FormRenderer fields={fields} answers={answers} onChange={setAnswers} />
-              ) : null}
-              {error ? <p className="text-sm text-red-600">{error}</p> : null}
-            </FieldGroup>
-            <DialogFooter className="mt-6">
+              </ResponsiveFormOverlay.Description>
+            </ResponsiveFormOverlay.Header>
+            <ResponsiveFormOverlay.Body>
+              <FieldGroup className="gap-4">
+                <Field>
+                  <FieldLabel htmlFor={`submission-title-${submission.id}`}>
+                    Talk title
+                  </FieldLabel>
+                  <Input
+                    id={`submission-title-${submission.id}`}
+                    value={title}
+                    maxLength={200}
+                    onChange={(event) => setTitle(event.target.value)}
+                  />
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor={`submission-abstract-${submission.id}`}>
+                    Abstract
+                  </FieldLabel>
+                  <Textarea
+                    id={`submission-abstract-${submission.id}`}
+                    value={abstract}
+                    rows={5}
+                    onChange={(event) => setAbstract(event.target.value)}
+                  />
+                </Field>
+                {fields.length > 0 ? (
+                  <FormRenderer fields={fields} answers={answers} onChange={setAnswers} />
+                ) : null}
+                {error ? <p className="text-sm text-destructive">{error}</p> : null}
+              </FieldGroup>
+            </ResponsiveFormOverlay.Body>
+            <ResponsiveFormOverlay.Footer>
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                 Cancel
               </Button>
               <Button type="submit" disabled={busy || !title.trim()}>
                 {busy ? "Saving…" : "Save changes"}
               </Button>
-            </DialogFooter>
+            </ResponsiveFormOverlay.Footer>
           </form>
-        </DialogContent>
-      </Dialog>
+        </ResponsiveFormOverlay.Content>
+      </ResponsiveFormOverlay.Root>
     </>
   );
 }

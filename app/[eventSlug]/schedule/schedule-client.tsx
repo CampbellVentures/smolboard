@@ -104,7 +104,7 @@ export function PublicSchedule({ eventSlug, eventName }: { eventSlug: string; ev
         <div className="mx-auto max-w-3xl px-6 py-10">
           <div className="flex items-center gap-2">
             <BrandMark size={20} />
-            <p className="text-[13px] font-semibold uppercase tracking-wide text-orange-600">Schedule</p>
+            <p className="text-[13px] font-semibold uppercase tracking-wide text-zinc-400">Schedule</p>
           </div>
           <h1 className="mt-1 text-balance text-3xl font-semibold tracking-tight text-zinc-900">
             {feed?.event?.name ?? eventName}
@@ -260,7 +260,7 @@ export function PublicSchedule({ eventSlug, eventName }: { eventSlug: string; ev
 
       <footer className="mx-auto flex max-w-3xl items-center justify-center gap-1.5 px-6 pb-10 text-xs text-zinc-400">
         <BrandMark size={14} />
-        <a href="/" className="transition-colors hover:text-orange-600">
+        <a href="/" className="transition-colors hover:text-zinc-900">
           Powered by smolboard
         </a>
       </footer>

@@ -4,6 +4,17 @@ import React, { useState } from "react";
 import { db, useRouter } from "@pylonsync/react";
 import { DashboardPage, DashboardPanel } from "@/components/dashboard";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
@@ -46,6 +57,8 @@ export function EventSettings({ event }: { event: EventRow }) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
@@ -73,9 +86,15 @@ export function EventSettings({ event }: { event: EventRow }) {
   }
 
   async function remove() {
-    if (!confirm(`Delete "${event.name}" and everything in it? This can't be undone.`)) return;
-    await db.delete("Event", event.id);
-    window.location.assign("/dashboard");
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await db.delete("Event", event.id);
+      window.location.assign("/dashboard");
+    } catch {
+      setDeleting(false);
+      setDeleteError("Could not delete the event. Try again.");
+    }
   }
 
   return (
@@ -140,13 +159,38 @@ export function EventSettings({ event }: { event: EventRow }) {
           <p className="text-pretty text-sm text-muted-foreground">
             Deleting removes forms, submissions, and speaker data for this event.
           </p>
-          <Button
-            type="button"
-            variant="destructive"
-            onClick={remove}
-          >
-            Delete event
-          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button type="button" variant="destructive">Delete event</Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete “{event.name}”?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This removes its forms, submissions, sessions, and speaker data. This action
+                  cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              {deleteError ? (
+                <p role="alert" className="text-sm text-destructive">
+                  {deleteError}
+                </p>
+              ) : null}
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  variant="destructive"
+                  disabled={deleting}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    void remove();
+                  }}
+                >
+                  {deleting ? "Deleting…" : "Delete event"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </DashboardPanel>
     </DashboardPage>

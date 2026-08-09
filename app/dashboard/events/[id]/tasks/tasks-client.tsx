@@ -12,14 +12,7 @@ import {
   DashboardToolbar,
 } from "@/components/dashboard";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { ResponsiveFormOverlay } from "@/components/responsive-overlay";
 import {
   Field,
   FieldDescription,
@@ -319,75 +312,124 @@ function TaskEditor({
   if (!editor) return null;
   const set = <K extends keyof EditorState>(key: K, value: EditorState[K]) => onChange({ ...editor, [key]: value });
   return (
-    <Dialog open onOpenChange={(open) => !open && onChange(null)}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{editor.id ? "Edit speaker task" : "New speaker task"}</DialogTitle>
-          <DialogDescription>Assigned tasks appear live in each speaker’s portal.</DialogDescription>
-        </DialogHeader>
-        <form onSubmit={onSubmit}>
-          <FieldGroup>
-            <Field>
-              <FieldLabel htmlFor="task-title">Title</FieldLabel>
-              <Input id="task-title" value={editor.title} onChange={(event) => set("title", event.target.value)} autoFocus required />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="task-description">Instructions</FieldLabel>
-              <Textarea id="task-description" rows={3} value={editor.description} onChange={(event) => set("description", event.target.value)} />
-            </Field>
-            <div className="grid gap-4 sm:grid-cols-2">
+    <ResponsiveFormOverlay.Root open onOpenChange={(open) => !open && onChange(null)}>
+      <ResponsiveFormOverlay.Content>
+        <form onSubmit={onSubmit} className="contents">
+          <ResponsiveFormOverlay.Header>
+            <ResponsiveFormOverlay.Title>
+              {editor.id ? "Edit speaker task" : "New speaker task"}
+            </ResponsiveFormOverlay.Title>
+            <ResponsiveFormOverlay.Description>
+              Assigned tasks appear live in each speaker’s portal.
+            </ResponsiveFormOverlay.Description>
+          </ResponsiveFormOverlay.Header>
+          <ResponsiveFormOverlay.Body>
+            <FieldGroup className="gap-4">
               <Field>
-                <FieldLabel htmlFor="task-kind">Task type</FieldLabel>
-                <Select id="task-kind" value={editor.kind} onChange={(event) => set("kind", event.target.value)}>
-                  <option value="confirm">Confirmation</option>
-                  <option value="upload">File upload</option>
-                  <option value="form">Written response</option>
-                  <option value="link">External link</option>
-                </Select>
+                <FieldLabel htmlFor="task-title">Title</FieldLabel>
+                <Input
+                  id="task-title"
+                  value={editor.title}
+                  onChange={(event) => set("title", event.target.value)}
+                  required
+                />
               </Field>
               <Field>
-                <FieldLabel htmlFor="task-audience">Assign to</FieldLabel>
-                <Select id="task-audience" value={editor.appliesTo} onChange={(event) => set("appliesTo", event.target.value)}>
-                  <option value="accepted">Accepted speakers</option>
-                  <option value="all">All submitters</option>
-                </Select>
+                <FieldLabel htmlFor="task-description">Instructions</FieldLabel>
+                <Textarea
+                  id="task-description"
+                  rows={3}
+                  value={editor.description}
+                  onChange={(event) => set("description", event.target.value)}
+                />
               </Field>
-            </div>
-            {editor.kind === "link" ? (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field>
+                  <FieldLabel htmlFor="task-kind">Task type</FieldLabel>
+                  <Select
+                    id="task-kind"
+                    value={editor.kind}
+                    onChange={(event) => set("kind", event.target.value)}
+                  >
+                    <option value="confirm">Confirmation</option>
+                    <option value="upload">File upload</option>
+                    <option value="form">Written response</option>
+                    <option value="link">External link</option>
+                  </Select>
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="task-audience">Assign to</FieldLabel>
+                  <Select
+                    id="task-audience"
+                    value={editor.appliesTo}
+                    onChange={(event) => set("appliesTo", event.target.value)}
+                  >
+                    <option value="accepted">Accepted speakers</option>
+                    <option value="all">All submitters</option>
+                  </Select>
+                </Field>
+              </div>
+              {editor.kind === "link" ? (
+                <Field>
+                  <FieldLabel htmlFor="task-target">Destination URL</FieldLabel>
+                  <Input
+                    id="task-target"
+                    type="url"
+                    value={editor.target}
+                    onChange={(event) => set("target", event.target.value)}
+                    placeholder="https://…"
+                    required
+                  />
+                </Field>
+              ) : null}
+              {editor.kind === "upload" ? (
+                <Field>
+                  <FieldLabel htmlFor="task-file-kind">Required file</FieldLabel>
+                  <Select
+                    id="task-file-kind"
+                    value={editor.target || "document"}
+                    onChange={(event) => set("target", event.target.value)}
+                  >
+                    <option value="headshot">Headshot</option>
+                    <option value="slides">Slides</option>
+                    <option value="document">Document</option>
+                  </Select>
+                </Field>
+              ) : null}
+              {editor.kind === "form" ? (
+                <Field>
+                  <FieldLabel htmlFor="task-prompt">Response prompt</FieldLabel>
+                  <Input
+                    id="task-prompt"
+                    value={editor.responsePrompt}
+                    onChange={(event) => set("responsePrompt", event.target.value)}
+                    placeholder="Anything we should know about your setup?"
+                  />
+                  <FieldDescription>Speakers answer this in a long-text field.</FieldDescription>
+                </Field>
+              ) : null}
               <Field>
-                <FieldLabel htmlFor="task-target">Destination URL</FieldLabel>
-                <Input id="task-target" type="url" value={editor.target} onChange={(event) => set("target", event.target.value)} placeholder="https://…" required />
+                <FieldLabel htmlFor="task-due">Due date</FieldLabel>
+                <Input
+                  id="task-due"
+                  type="datetime-local"
+                  value={editor.dueAt}
+                  onChange={(event) => set("dueAt", event.target.value)}
+                />
               </Field>
-            ) : null}
-            {editor.kind === "upload" ? (
-              <Field>
-                <FieldLabel htmlFor="task-file-kind">Required file</FieldLabel>
-                <Select id="task-file-kind" value={editor.target || "document"} onChange={(event) => set("target", event.target.value)}>
-                  <option value="headshot">Headshot</option>
-                  <option value="slides">Slides</option>
-                  <option value="document">Document</option>
-                </Select>
-              </Field>
-            ) : null}
-            {editor.kind === "form" ? (
-              <Field>
-                <FieldLabel htmlFor="task-prompt">Response prompt</FieldLabel>
-                <Input id="task-prompt" value={editor.responsePrompt} onChange={(event) => set("responsePrompt", event.target.value)} placeholder="Anything we should know about your setup?" />
-                <FieldDescription>Speakers answer this in a long-text field.</FieldDescription>
-              </Field>
-            ) : null}
-            <Field>
-              <FieldLabel htmlFor="task-due">Due date</FieldLabel>
-              <Input id="task-due" type="datetime-local" value={editor.dueAt} onChange={(event) => set("dueAt", event.target.value)} />
-            </Field>
-          </FieldGroup>
-          <DialogFooter className="mt-6">
-            <Button type="button" variant="outline" onClick={() => onChange(null)}>Cancel</Button>
-            <Button type="submit" disabled={saving || !editor.title.trim()}>{saving ? "Saving…" : "Save task"}</Button>
-          </DialogFooter>
+            </FieldGroup>
+          </ResponsiveFormOverlay.Body>
+          <ResponsiveFormOverlay.Footer>
+            <Button type="button" variant="outline" onClick={() => onChange(null)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={saving || !editor.title.trim()}>
+              {saving ? "Saving…" : "Save task"}
+            </Button>
+          </ResponsiveFormOverlay.Footer>
         </form>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveFormOverlay.Content>
+    </ResponsiveFormOverlay.Root>
   );
 }
 

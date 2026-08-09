@@ -52,7 +52,7 @@ export default function LandingPage({ auth }: PageProps) {
           <div className="mt-7 flex items-center justify-center gap-3">
             <Link
               href={primaryHref}
-              className="inline-flex h-10 items-center rounded-full bg-orange-600 px-5 text-[14px] font-medium text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] transition-colors hover:bg-orange-700"
+              className="inline-flex h-10 items-center rounded-full bg-zinc-900 px-5 text-[14px] font-medium text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition-colors hover:bg-zinc-700"
             >
               {signedIn ? "Open dashboard" : "Get started free"}
             </Link>
@@ -126,7 +126,7 @@ export default function LandingPage({ auth }: PageProps) {
   https://smolboard.smallware.run/api/fn/mcp \\
   --header "Authorization: Bearer pk...."`}</p>
             <p className="mt-3 text-zinc-500"># then</p>
-            <p className="mt-1 text-emerald-400">
+            <p className="mt-1 text-lime-300">
               &gt; accept the top 5 submissions by score and email the speakers
             </p>
           </div>
@@ -146,7 +146,7 @@ export default function LandingPage({ auth }: PageProps) {
           <div className="mt-6 flex items-center justify-center gap-3">
             <Link
               href={primaryHref}
-              className="inline-flex h-10 items-center rounded-full bg-orange-600 px-5 text-[14px] font-medium text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] transition-colors hover:bg-orange-700"
+              className="inline-flex h-10 items-center rounded-full bg-zinc-900 px-5 text-[14px] font-medium text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition-colors hover:bg-zinc-700"
             >
               {signedIn ? "Open dashboard" : "Create your event"}
             </Link>

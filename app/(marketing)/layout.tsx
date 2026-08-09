@@ -134,7 +134,7 @@ function MobileNav({ signedIn }: { signedIn: boolean }) {
           </div>
           <div className="flex flex-col gap-2 border-t border-zinc-100 pt-5">
             {signedIn ? (
-              <a href="/dashboard" className="inline-flex h-10 items-center justify-center rounded-full bg-orange-600 text-[14px] font-medium text-white transition-colors hover:bg-orange-700">
+              <a href="/dashboard" className="inline-flex h-10 items-center justify-center rounded-full bg-zinc-900 text-[14px] font-medium text-white transition-colors hover:bg-zinc-700">
                 Open dashboard
               </a>
             ) : (
@@ -142,7 +142,7 @@ function MobileNav({ signedIn }: { signedIn: boolean }) {
                 <a href="/login" className="inline-flex h-10 items-center justify-center rounded-full border border-zinc-300 text-[14px] font-medium text-zinc-900 transition-colors hover:bg-zinc-50">
                   Log in
                 </a>
-                <a href="/signup" className="inline-flex h-10 items-center justify-center rounded-full bg-orange-600 text-[14px] font-medium text-white transition-colors hover:bg-orange-700">
+                <a href="/signup" className="inline-flex h-10 items-center justify-center rounded-full bg-zinc-900 text-[14px] font-medium text-white transition-colors hover:bg-zinc-700">
                   Get started
                 </a>
               </>
@@ -220,7 +220,7 @@ export default function MarketingLayout({ children, auth }: LayoutProps) {
             {signedIn ? (
               <Link
                 href="/dashboard"
-                className="inline-flex items-center rounded-full bg-orange-600 px-3.5 py-1.5 text-[13px] font-medium text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] transition-colors hover:bg-orange-700"
+                className="inline-flex items-center rounded-full bg-zinc-900 px-3.5 py-1.5 text-[13px] font-medium text-white transition-colors hover:bg-zinc-700"
               >
                 Dashboard
               </Link>
@@ -234,7 +234,7 @@ export default function MarketingLayout({ children, auth }: LayoutProps) {
                 </Link>
                 <Link
                   href="/signup"
-                  className="inline-flex items-center rounded-full bg-orange-600 px-3.5 py-1.5 text-[13px] font-medium text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] transition-colors hover:bg-orange-700"
+                  className="inline-flex items-center rounded-full bg-zinc-900 px-3.5 py-1.5 text-[13px] font-medium text-white transition-colors hover:bg-zinc-700"
                 >
                   Get started
                 </Link>
