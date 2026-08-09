@@ -381,49 +381,6 @@ export function EventOverview({
         )}
       </DashboardPanel>
 
-      {submissions.length > 0 ? (
-        <div className="grid items-start gap-8 md:grid-cols-2">
-          <DashboardPanel title="Submission mix" variant="subtle">
-            <div className="flex flex-col gap-3">
-              {Object.entries(categoryCounts(submissions))
-                .sort((a, b) => b[1] - a[1])
-                .map(([category, count]) => (
-                  <div key={category} className="flex items-center justify-between gap-4 text-sm">
-                    <span className="truncate text-muted-foreground">{category}</span>
-                    <span className="font-medium tabular-nums">{count}</span>
-                  </div>
-                ))}
-            </div>
-          </DashboardPanel>
-
-          {rounds.length > 0 ? (
-            <DashboardPanel title="Review progress" description="Scores submitted per round" variant="subtle">
-              <div className="flex flex-col gap-4">
-                {rounds
-                  .slice()
-                  .sort((a, b) => a.roundNumber - b.roundNumber)
-                  .map((round) => {
-                    const progress = assignmentProgress(
-                      assignments.filter((assignment) => assignment.roundId === round.id),
-                    );
-                    return (
-                      <div key={round.id}>
-                        <div className="flex items-center justify-between gap-3 text-sm">
-                          <span>{round.name}</span>
-                          <span className="tabular-nums text-muted-foreground">
-                            {progress.complete} of {progress.total}
-                          </span>
-                        </div>
-                        <Progress value={progress.percent} className="mt-2" />
-                      </div>
-                    );
-                  })}
-              </div>
-            </DashboardPanel>
-          ) : null}
-        </div>
-      ) : null}
-
       {onboarding.length > 0 ? (
         <DashboardPanel
           title="Speaker onboarding"

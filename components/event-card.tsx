@@ -28,6 +28,7 @@ interface EventCardProps {
   event: EventRow;
   submissionCount: number;
   dateLabel?: string;
+  orgSlug?: string | null;
 }
 
 function cfpLabel(status: string): string {
@@ -68,6 +69,7 @@ function EventDetail({
 
 export function EventCard({
   event,
+  orgSlug,
   submissionCount,
   dateLabel,
 }: EventCardProps): React.ReactElement {
@@ -81,7 +83,7 @@ export function EventCard({
           <div className="min-w-0">
             <CardTitle className="truncate text-base">{event.name}</CardTitle>
             <CardDescription className="mt-1 truncate text-pretty">
-              /cfp/{event.slug}
+              /{orgSlug ?? "…"}/{event.slug}
             </CardDescription>
           </div>
           <DashboardStatusBadge status={event.cfpStatus}>

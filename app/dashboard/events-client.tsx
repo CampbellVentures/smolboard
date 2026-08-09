@@ -8,6 +8,7 @@ import {
   DashboardToolbar,
 } from "@/components/dashboard";
 import { EventCard } from "@/components/event-card";
+import { useOrgSlug } from "@/components/use-org-slug";
 import { ResponsiveFormOverlay } from "@/components/responsive-overlay";
 import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
@@ -34,6 +35,7 @@ export function EventsList({
   useEffect(() => setHydrated(true), []);
   const { data, loading } = db.useQuery<EventRow>("Event");
   const rows = !hydrated || loading ? initial : data.filter((e) => e.orgId === tenantId);
+  const orgSlug = useOrgSlug(tenantId);
   const events = rows.slice().sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 
   const [creating, setCreating] = useState(false);
@@ -187,6 +189,7 @@ export function EventsList({
             <li key={ev.id}>
               <EventCard
                 event={ev}
+                orgSlug={orgSlug}
                 submissionCount={submissionCounts[ev.id] ?? 0}
                 dateLabel={ev.startDate ? fmtDate(ev.startDate) : undefined}
               />

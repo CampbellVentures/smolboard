@@ -258,8 +258,8 @@ export function SpeakersTable({
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell><DashboardStatusBadge status={profile.status}>{label(profile.status)}</DashboardStatusBadge></TableCell>
-                    <TableCell><DashboardStatusBadge status={profile.claimStatus}>{label(profile.claimStatus)}</DashboardStatusBadge></TableCell>
+                    <TableCell><DashboardStatusBadge status={profile.status || "invited"}>{label(profile.status || "invited")}</DashboardStatusBadge></TableCell>
+                    <TableCell><DashboardStatusBadge status={profile.claimStatus || "unclaimed"}>{label(profile.claimStatus || "unclaimed")}</DashboardStatusBadge></TableCell>
                     <TableCell>{speakerSubmissions.length}</TableCell>
                     <TableCell>{speakerTasks.filter((task) => task.status === "done").length}/{speakerTasks.length}</TableCell>
                   </TableRow>

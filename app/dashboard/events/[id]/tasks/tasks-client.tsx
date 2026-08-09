@@ -1,13 +1,12 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { callFn, db } from "@pylonsync/react";
-import { AlertTriangle, CheckCircle2, ClipboardList, Plus, Trash2, Users } from "lucide-react";
+import { callFn, db, Link } from "@pylonsync/react";
+import { ClipboardList, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   DashboardEmptyState,
   DashboardPage,
-  DashboardStatStrip,
   DashboardStatusBadge,
   DashboardToolbar,
 } from "@/components/dashboard";
@@ -43,22 +42,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import { fieldsOf } from "@/lib/types";
 import { taskDueState } from "@/lib/tasks";
-import {
-  filterDeliverableTasks,
-  latestVersion,
-  taskSlot,
-  versionsForSlot,
-  type DeliverableProgressFilter,
-} from "@/lib/deliverables";
 import type {
-  DeliverableCommentRow,
-  DeliverableSlotRow,
-  DeliverableVersionRow,
   EventRow,
   SpeakerProfileRow,
   SpeakerTaskRow,
   SubmissionRow,
-  SessionRow,
   TaskTemplateRow,
 } from "@/lib/types";
 
@@ -91,47 +79,26 @@ export function TasksClient({
   initialTasks,
   profiles,
   submissions,
-  initialDeliverableSlots,
-  initialDeliverableVersions,
-  initialDeliverableComments,
-  sessions,
 }: {
   event: EventRow;
   initialTemplates: TaskTemplateRow[];
   initialTasks: SpeakerTaskRow[];
   profiles: SpeakerProfileRow[];
   submissions: SubmissionRow[];
-  initialDeliverableSlots: DeliverableSlotRow[];
-  initialDeliverableVersions: DeliverableVersionRow[];
-  initialDeliverableComments: DeliverableCommentRow[];
-  sessions: SessionRow[];
 }) {
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => setHydrated(true), []);
   const templateQuery = db.useQuery<TaskTemplateRow>("TaskTemplate");
   const taskQuery = db.useQuery<SpeakerTaskRow>("SpeakerTask");
-  const slotQuery = db.useQuery<DeliverableSlotRow>("DeliverableSlot");
-  const versionQuery = db.useQuery<DeliverableVersionRow>("DeliverableVersion");
-  const commentQuery = db.useQuery<DeliverableCommentRow>("DeliverableComment");
   const templates = (!hydrated || templateQuery.loading ? initialTemplates : templateQuery.data).filter(
     (row) => row.eventId === event.id,
   );
   const tasks = (!hydrated || taskQuery.loading ? initialTasks : taskQuery.data).filter(
     (row) => row.eventId === event.id,
   );
-  const deliverableSlots = (!hydrated || slotQuery.loading ? initialDeliverableSlots : slotQuery.data).filter(
-    (row) => row.eventId === event.id,
-  );
-  const deliverableVersions = (!hydrated || versionQuery.loading ? initialDeliverableVersions : versionQuery.data).filter(
-    (row) => row.eventId === event.id,
-  );
-  const deliverableComments = (!hydrated || commentQuery.loading ? initialDeliverableComments : commentQuery.data).filter(
-    (row) => row.eventId === event.id,
-  );
   const [editor, setEditor] = useState<EditorState | null>(null);
   const [saving, setSaving] = useState(false);
   const [progressFilter, setProgressFilter] = useState<"all" | "pending" | "done">("all");
-  const [deliverableFilter, setDeliverableFilter] = useState<DeliverableProgressFilter>("all");
   const acceptedSpeakers = new Set(
     submissions.filter((row) => row.status === "accepted").map((row) => row.speakerUserId),
   );
@@ -240,21 +207,14 @@ export function TasksClient({
         </DashboardEmptyState>
       ) : (
         <>
-          <DashboardStatStrip
-            items={[
-              { icon: ClipboardList, label: "Templates", value: templates.length },
-              { icon: Users, label: "Accepted speakers", value: acceptedSpeakers.size },
-              {
-                icon: CheckCircle2,
-                label: "Completed",
-                value: completed,
-                hint: `${tasks.length} assigned`,
-              },
-              { icon: AlertTriangle, label: "Overdue", value: overdue.length },
-            ]}
-          />
-
-          <DashboardToolbar className="justify-end">
+          <DashboardToolbar>
+            <p className="text-[13px] text-muted-foreground">
+              <span className="font-medium tabular-nums text-foreground">{completed}</span> of{" "}
+              <span className="tabular-nums">{tasks.length}</span> assignments complete
+              {overdue.length > 0 ? (
+                <span className="text-destructive"> · {overdue.length} overdue</span>
+              ) : null}
+            </p>
             <div className="flex gap-2">
               {overdue.length > 0 ? (
                 <Button type="button" variant="outline" onClick={nudgeOverdue}>
@@ -400,208 +360,22 @@ export function TasksClient({
         </section>
       ) : null}
 
-      <DeliverablesLibrary
-        tasks={tasks.filter((task) => templateById.get(task.taskTemplateId)?.kind === "upload")}
-        templates={templates}
-        profiles={profiles}
-        sessions={sessions}
-        slots={deliverableSlots}
-        versions={deliverableVersions}
-        comments={deliverableComments}
-        filter={deliverableFilter}
-        onFilter={setDeliverableFilter}
-        onRemind={async (speakerUserIds) => {
-          const result = await callFn<{ queued: number }>("nudgeSpeakers", { eventId: event.id, speakerUserIds });
-          toast.success(`Queued ${result.queued} reminder${result.queued === 1 ? "" : "s"}`);
-        }}
-      />
+      {templates.some((template) => template.kind === "upload") ? (
+        <p className="text-[13px] text-muted-foreground">
+          Files speakers upload against these tasks land in{" "}
+          <Link
+            href={`/dashboard/events/${event.id}/content`}
+            className="font-medium text-foreground underline underline-offset-2"
+          >
+            Content
+          </Link>{" "}
+          for review and approval.
+        </p>
+      ) : null}
 
       <TaskEditor editor={editor} onChange={setEditor} saving={saving} onSubmit={save} profiles={profiles} />
     </DashboardPage>
   );
-}
-
-export function DeliverablesLibrary({
-  tasks,
-  templates,
-  profiles,
-  sessions,
-  slots,
-  versions,
-  comments,
-  filter,
-  onFilter,
-  onRemind,
-}: {
-  tasks: SpeakerTaskRow[];
-  templates: TaskTemplateRow[];
-  profiles: SpeakerProfileRow[];
-  sessions: SessionRow[];
-  slots: DeliverableSlotRow[];
-  versions: DeliverableVersionRow[];
-  comments: DeliverableCommentRow[];
-  filter: DeliverableProgressFilter;
-  onFilter: (filter: DeliverableProgressFilter) => void;
-  onRemind: (speakerUserIds: string[]) => Promise<void>;
-}) {
-  const visible = filterDeliverableTasks(tasks, templates, slots, versions, filter);
-  const templateById = new Map(templates.map((template) => [template.id, template]));
-  const profileByUser = new Map(profiles.map((profile) => [profile.userId, profile]));
-  const sessionById = new Map(sessions.map((session) => [session.id, session]));
-  const outstanding = [...new Set(visible.filter((task) => !latestVersion(versions, taskSlot(slots, task.id)?.id ?? "")).map((task) => task.speakerUserId))];
-
-  if (tasks.length === 0) return null;
-  return (
-    <section className="space-y-3" aria-label="Deliverables library">
-      <DashboardToolbar>
-        <div>
-          <h2 className="text-sm font-semibold">Deliverables library</h2>
-          <p className="text-xs text-muted-foreground">Version metadata and comments across file-request tasks. File bytes remain available only to the uploader.</p>
-        </div>
-        <div className="flex gap-2">
-          <Select
-            aria-label="Filter deliverables"
-            value={filter}
-            onChange={(event) => onFilter(event.target.value as DeliverableProgressFilter)}
-            className="w-36"
-          >
-            <option value="all">All deliverables</option>
-            <option value="pending">Incomplete</option>
-            <option value="uploaded">Uploaded</option>
-            <option value="overdue">Overdue</option>
-          </Select>
-          <Button
-            type="button"
-            variant="outline"
-            disabled={outstanding.length === 0}
-            onClick={() => void onRemind(outstanding)}
-          >
-            Remind outstanding ({outstanding.length})
-          </Button>
-        </div>
-      </DashboardToolbar>
-      <div className="overflow-x-auto rounded-xl border bg-card">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Speaker / session</TableHead>
-              <TableHead>Task / due</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Latest file</TableHead>
-              <TableHead>Versions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {visible.map((task) => {
-              const template = templateById.get(task.taskTemplateId);
-              const profile = profileByUser.get(task.speakerUserId);
-              const slot = taskSlot(slots, task.id);
-              const taskVersions = slot ? versionsForSlot(versions, slot.id) : [];
-              const latest = taskVersions[0];
-              const session = slot?.sessionId ? sessionById.get(slot.sessionId) : undefined;
-              const thread = slot ? comments.filter((comment) => comment.slotId === slot.id) : [];
-              return (
-                <React.Fragment key={task.id}>
-                  <TableRow>
-                    <TableCell>
-                      <div className="font-medium">{profile?.name ?? "Unknown speaker"}</div>
-                      <div className="text-xs text-muted-foreground">{session?.title ?? "No single session association"}</div>
-                    </TableCell>
-                    <TableCell>
-                      <div>{template?.title ?? "Unknown task"}</div>
-                      <div className="text-xs text-muted-foreground">{formatDue(template?.dueAt)}</div>
-                    </TableCell>
-                    <TableCell>
-                      <DashboardStatusBadge status={latest ? "done" : "pending"}>
-                        {latest ? "Uploaded" : "Incomplete"}
-                      </DashboardStatusBadge>
-                    </TableCell>
-                    <TableCell>
-                      {latest ? (
-                        <div>
-                          <div className="font-medium">{latest.filename}</div>
-                          <div className="text-xs text-muted-foreground">{new Date(latest.createdAt).toLocaleString()} · {formatBytes(latest.size)}</div>
-                        </div>
-                      ) : <span className="text-muted-foreground">—</span>}
-                    </TableCell>
-                    <TableCell>{taskVersions.length}</TableCell>
-                  </TableRow>
-                  {slot && (taskVersions.length > 0 || thread.length > 0) ? (
-                    <TableRow>
-                      <TableCell colSpan={5} className="bg-muted/30">
-                        <DeliverableThread slot={slot} versions={taskVersions} comments={thread} />
-                      </TableCell>
-                    </TableRow>
-                  ) : null}
-                </React.Fragment>
-              );
-            })}
-            {visible.length === 0 ? (
-              <TableRow><TableCell colSpan={5} className="h-24 text-center text-muted-foreground">No deliverables match this filter.</TableCell></TableRow>
-            ) : null}
-          </TableBody>
-        </Table>
-      </div>
-    </section>
-  );
-}
-
-function DeliverableThread({
-  slot,
-  versions,
-  comments,
-}: {
-  slot: DeliverableSlotRow;
-  versions: DeliverableVersionRow[];
-  comments: DeliverableCommentRow[];
-}) {
-  const [reply, setReply] = useState("");
-  const [busy, setBusy] = useState(false);
-  async function submit(event: React.FormEvent) {
-    event.preventDefault();
-    if (!reply.trim()) return;
-    setBusy(true);
-    try {
-      await callFn("addDeliverableComment", { slotId: slot.id, versionId: versions[0]?.id, body: reply.trim() });
-      setReply("");
-      toast.success("Comment added");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not add the comment.");
-    } finally {
-      setBusy(false);
-    }
-  }
-  return (
-    <div className="grid gap-4 lg:grid-cols-2">
-      <div>
-        <p className="text-xs font-medium">Version history</p>
-        <ul className="mt-1 space-y-1 text-xs text-muted-foreground">
-          {versions.map((version, index) => (
-            <li key={version.id}>v{version.versionNumber} · {version.filename} · {new Date(version.createdAt).toLocaleString()}{index === 0 ? " · latest" : ""}</li>
-          ))}
-        </ul>
-        <p className="mt-2 text-[11px] text-muted-foreground">Download unavailable to organizers: Pylon file ownership remains with the uploading speaker.</p>
-      </div>
-      <div>
-        <p className="text-xs font-medium">Comments</p>
-        <ul className="mt-1 space-y-1 text-xs">
-          {comments.slice().sort((a, b) => a.createdAt.localeCompare(b.createdAt)).map((comment) => (
-            <li key={comment.id}><span className="font-medium">{comment.authorName}</span> <span className="text-muted-foreground">· {new Date(comment.createdAt).toLocaleString()}</span><div>{comment.body}</div></li>
-          ))}
-        </ul>
-        <form onSubmit={submit} className="mt-2 flex gap-2">
-          <Input aria-label={`Reply to ${slot.title}`} value={reply} maxLength={2000} onChange={(event) => setReply(event.target.value)} placeholder="Reply…" />
-          <Button type="submit" size="sm" variant="outline" disabled={busy || !reply.trim()}>{busy ? "Adding…" : "Reply"}</Button>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-function formatBytes(size: number) {
-  if (size < 1024) return `${size} B`;
-  if (size < 1024 * 1024) return `${Math.round(size / 1024)} KB`;
-  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function TaskEditor({
