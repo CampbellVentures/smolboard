@@ -726,19 +726,26 @@ function TracksView({
 // Flips Event.schedulePublished — the gate on the public schedule and
 // speakers feeds at /<org-slug>/<event-slug>/…. Off = both pages show "not
 // published yet".
-function PublishToggle({ event }: { event: EventRow }) {
+export function PublishToggle({ event }: { event: EventRow }) {
   const orgSlug = useOrgSlug(event.orgId);
   const scheduleUrl = orgSlug ? `/${orgSlug}/${event.slug}#schedule` : null;
+  const [published, setPublished] = useState(event.schedulePublished);
   const [busy, setBusy] = useState(false);
+  useEffect(() => setPublished(event.schedulePublished), [event.id, event.schedulePublished]);
+
   async function toggle() {
+    const nextPublished = !published;
     setBusy(true);
     try {
-      await db.update("Event", event.id, { schedulePublished: !event.schedulePublished });
+      await db.update("Event", event.id, { schedulePublished: nextPublished });
+      setPublished(nextPublished);
       toast.success(
-        event.schedulePublished
-          ? "Schedule unpublished."
-          : `Schedule is live${scheduleUrl ? ` at ${scheduleUrl}` : ""}`,
+        nextPublished
+          ? `Schedule is live${scheduleUrl ? ` at ${scheduleUrl}` : ""}`
+          : "Schedule unpublished.",
       );
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not update schedule publication.");
     } finally {
       setBusy(false);
     }
@@ -748,13 +755,13 @@ function PublishToggle({ event }: { event: EventRow }) {
       <Button
         type="button"
         size="sm"
-        variant={event.schedulePublished ? "outline" : "default"}
+        variant={published ? "outline" : "default"}
         onClick={toggle}
         disabled={busy}
       >
-        {event.schedulePublished ? "Unpublish" : "Publish schedule"}
+        {published ? "Unpublish" : "Publish schedule"}
       </Button>
-      {event.schedulePublished && scheduleUrl && (
+      {published && scheduleUrl && (
         <a
           href={scheduleUrl}
           target="_blank"
