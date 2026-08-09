@@ -25,6 +25,13 @@ import {
 import { parseJson } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useOrgSlug } from "@/components/use-org-slug";
+import { utcToZonedInput, zonedInputToUtc } from "@/lib/cfp-window";
+import {
+  mappingSourceValues,
+  parseHandoffConfig,
+  type SubmissionHandoffConfig,
+} from "@/lib/submission-handoff";
+import type { SubmissionRow, TrackRow } from "@/lib/types";
 import {
   ArrowDown,
   ArrowUp,
@@ -67,8 +74,10 @@ const OPS: { value: ShowIfOp; label: string }[] = [
 export function FormBuilder({
   event,
   form,
+  tracks,
+  submissions,
 }: {
-  event: { id: string; slug: string; orgId: string };
+  event: { id: string; slug: string; orgId: string; timezone: string };
   form: {
     id: string;
     name: string;
@@ -78,13 +87,28 @@ export function FormBuilder({
     fieldsJson?: unknown;
     routingJson?: unknown;
     confirmationMessage?: string;
+    opensAt?: string;
+    closesAt?: string;
+    handoffMappingsJson?: unknown;
   };
+  tracks: TrackRow[];
+  submissions: SubmissionRow[];
 }) {
   const orgSlug = useOrgSlug(event.orgId);
   const [name, setName] = useState(form.name);
   const [description, setDescription] = useState(form.description ?? "");
   const [confirmation, setConfirmation] = useState(form.confirmationMessage ?? "");
   const [status, setStatus] = useState(form.status);
+  const [opensAt, setOpensAt] = useState(() => utcToZonedInput(form.opensAt, event.timezone));
+  const [closesAt, setClosesAt] = useState(() => utcToZonedInput(form.closesAt, event.timezone));
+  const [handoff, setHandoff] = useState<SubmissionHandoffConfig>(() =>
+    parseHandoffConfig(parseJson(form.handoffMappingsJson)) ?? {
+      formatFieldKey: null,
+      formatValues: {},
+      trackFieldKey: null,
+      trackValues: {},
+    }
+  );
   const [fields, setFields] = useState<FormField[]>(() => {
     try {
       return parseFields(parseJson(form.fieldsJson) ?? []);
@@ -162,8 +186,11 @@ export function FormBuilder({
         description: description.trim() || undefined,
         confirmationMessage: confirmation.trim() || undefined,
         status,
+        opensAt: zonedInputToUtc(opensAt, event.timezone),
+        closesAt: zonedInputToUtc(closesAt, event.timezone),
         fieldsJson: fields,
         routingJson: routing,
+        handoffMappingsJson: handoff,
       });
       setSavedAt(Date.now());
     } finally {
@@ -202,6 +229,10 @@ export function FormBuilder({
             className="mt-3 resize-none"
             aria-label="Form description"
           />
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <label className="text-xs font-medium text-zinc-600">Opens ({event.timezone})<Input type="datetime-local" className="mt-1" value={opensAt} onChange={(event) => setOpensAt(event.target.value)} /></label>
+            <label className="text-xs font-medium text-zinc-600">Closes ({event.timezone})<Input type="datetime-local" className="mt-1" value={closesAt} onChange={(event) => setClosesAt(event.target.value)} /></label>
+          </div>
           <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <span className="break-all text-xs text-zinc-400">
               Public URL: /{orgSlug ?? "…"}/{event.slug}/cfp/{slugify(name) || form.slug}
@@ -301,6 +332,20 @@ export function FormBuilder({
             aria-label="Confirmation message"
           />
         </CollapsiblePanel>
+
+        <CollapsiblePanel
+          title="Agenda handoff mappings"
+          hint="Explicit format and track mapping"
+          defaultOpen={Boolean(form.handoffMappingsJson)}
+        >
+          <HandoffMappingEditor
+            fields={fields}
+            tracks={tracks}
+            submissions={submissions}
+            value={handoff}
+            onChange={setHandoff}
+          />
+        </CollapsiblePanel>
       </div>
 
       {/* ---------------- Right: live preview ---------------- */}
@@ -340,6 +385,65 @@ export function FormBuilder({
 }
 
 /* ------------------------- Collapsed side sections ------------------------- */
+
+function HandoffMappingEditor({
+  fields,
+  tracks,
+  submissions,
+  value,
+  onChange,
+}: {
+  fields: FormField[];
+  tracks: TrackRow[];
+  submissions: SubmissionRow[];
+  value: SubmissionHandoffConfig;
+  onChange: (value: SubmissionHandoffConfig) => void;
+}) {
+  const sourceFields = fields.filter((field) => field.type !== "section");
+  const valuesFor = (fieldKey: string | null) => {
+    const field = fields.find((candidate) => candidate.key === fieldKey);
+    return [...new Set([...(field?.options ?? []), ...mappingSourceValues(submissions, fieldKey)])].sort();
+  };
+  const formatValues = valuesFor(value.formatFieldKey);
+  const trackValues = valuesFor(value.trackFieldKey);
+  return (
+    <div className="space-y-5">
+      <p className="text-xs text-zinc-500">Choose the exact source field and map every observed value. “No source field” is an explicit choice; legacy values are never inferred.</p>
+      <div>
+        <label className="text-xs font-medium">Format source field</label>
+        <Select className="mt-1" value={value.formatFieldKey ?? ""} onChange={(event) => onChange({ ...value, formatFieldKey: event.target.value || null })}>
+          <option value="">No source field — default to talk</option>
+          {sourceFields.map((field) => <option key={field.key} value={field.key}>{field.label}</option>)}
+        </Select>
+        {formatValues.map((source) => (
+          <label key={source} className="mt-2 grid grid-cols-[1fr_12rem] items-center gap-3 text-xs">
+            <span className={!value.formatValues[source] ? "font-medium text-amber-700" : ""}>{source}{!value.formatValues[source] ? " · unresolved" : ""}</span>
+            <Select value={value.formatValues[source] ?? ""} onChange={(event) => onChange({ ...value, formatValues: { ...value.formatValues, [source]: event.target.value } })}>
+              <option value="">Unresolved</option>
+              {['talk', 'workshop', 'panel', 'keynote'].map((kind) => <option key={kind} value={kind}>{kind}</option>)}
+            </Select>
+          </label>
+        ))}
+      </div>
+      <div>
+        <label className="text-xs font-medium">Track source field</label>
+        <Select className="mt-1" value={value.trackFieldKey ?? ""} onChange={(event) => onChange({ ...value, trackFieldKey: event.target.value || null })}>
+          <option value="">No source field — no track</option>
+          {sourceFields.map((field) => <option key={field.key} value={field.key}>{field.label}</option>)}
+        </Select>
+        {trackValues.map((source) => (
+          <label key={source} className="mt-2 grid grid-cols-[1fr_12rem] items-center gap-3 text-xs">
+            <span className={!value.trackValues[source] ? "font-medium text-amber-700" : ""}>{source}{!value.trackValues[source] ? " · unresolved" : ""}</span>
+            <Select value={value.trackValues[source] ?? ""} onChange={(event) => onChange({ ...value, trackValues: { ...value.trackValues, [source]: event.target.value } })}>
+              <option value="">Unresolved</option>
+              {tracks.map((track) => <option key={track.id} value={track.id}>{track.name}</option>)}
+            </Select>
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 // Routing and the confirmation message are set-once options; keeping them
 // folded keeps the builder to two working surfaces (fields + preview).

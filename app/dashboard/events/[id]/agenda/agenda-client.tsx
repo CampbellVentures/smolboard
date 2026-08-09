@@ -161,18 +161,19 @@ export function AgendaBuilder({
       const sub = submissions.find((s) => s.id === payload.submissionId);
       if (!sub) return;
       const end = isoAt(day, minutes + DEFAULT_DURATION_MIN, tz);
-      await callFn("saveSession", {
+      const result = await callFn<{
+        materialized: boolean;
+        unresolved: Array<{ value?: string; reason: string }>;
+      }>("materializeSubmissionSession", {
         eventId: event.id,
-        data: {
-          submissionId: sub.id,
-          title: sub.title,
-          roomId,
-          startTime: start,
-          endTime: end,
-          speakerUserIdsJson: [sub.speakerUserId],
-          kind: "talk",
-        },
+        submissionId: sub.id,
+        roomId,
+        startTime: start,
+        endTime: end,
       });
+      if (!result.materialized) {
+        toast.error(`Resolve CFP handoff mapping: ${result.unresolved.map((issue) => issue.value ? `${issue.value}: ${issue.reason}` : issue.reason).join(" ")}`);
+      }
     } else if (payload.sessionId) {
       const ses = sessions.find((s) => s.id === payload.sessionId);
       if (!ses) return;

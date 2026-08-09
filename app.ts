@@ -131,11 +131,15 @@ const SubmissionForm = entity(
     // "draft" | "open" | "closed" — open forms are publicly readable (the
     // public CFP page renders fieldsJson directly).
     status: field.string().default("draft"),
+    opensAt: field.datetime().optional(),
+    closesAt: field.datetime().optional(),
     // Ordered FormField[] — see lib/forms.ts for the shape (type, key, label,
     // required, options, showIf).
     fieldsJson: field.json().optional(),
     // RoutingRule[] — first matching rule assigns the submission's category.
     routingJson: field.json().optional(),
+    // Explicit organizer-owned source field/value mappings for agenda handoff.
+    handoffMappingsJson: field.json().optional(),
     confirmationMessage: field.string().optional(),
     createdAt: field.datetime().defaultNow(),
   },
@@ -159,6 +163,8 @@ const Submission = entity(
     // Answers keyed by field key, validated against the form's fieldsJson at
     // submit time (lib/forms.ts validateAnswers).
     answersJson: field.json().optional(),
+    // Immutable snapshot stamped only when an authenticated draft finalizes.
+    participantSnapshotJson: field.json().readonly().optional(),
     // Stamped by routing rules at submit; organizers can override.
     category: field.string().optional(),
     // "submitted" | "in_review" | "accepted" | "rejected" | "waitlisted" |
@@ -167,12 +173,66 @@ const Submission = entity(
     currentRound: field.int().default(1),
     submittedAt: field.datetime().defaultNow(),
     updatedAt: field.datetime().optional(),
+    finalizedAt: field.datetime().optional(),
   },
   {
     indexes: [
       { name: "by_event", fields: ["eventId"], unique: false },
       { name: "by_speaker", fields: ["speakerUserId"], unique: false },
       { name: "by_form", fields: ["formId"], unique: false },
+    ],
+  },
+);
+
+const SubmissionDraft = entity(
+  "SubmissionDraft",
+  {
+    orgId: field.id("Org").readonly(),
+    eventId: field.id("Event").readonly(),
+    formId: field.id("SubmissionForm").readonly(),
+    ownerUserId: field.id("User").readonly(),
+    name: field.string(),
+    title: field.string(),
+    abstract: field.string().optional(),
+    answersJson: field.json().optional(),
+    lifecycle: field.string().default("draft"),
+    finalizedSubmissionId: field.id("Submission").optional(),
+    createdAt: field.datetime().defaultNow(),
+    updatedAt: field.datetime().defaultNow(),
+    finalizedAt: field.datetime().optional(),
+  },
+  {
+    indexes: [
+      { name: "by_owner_form", fields: ["ownerUserId", "formId"], unique: false },
+      { name: "by_owner", fields: ["ownerUserId"], unique: false },
+      { name: "by_event", fields: ["eventId"], unique: false },
+    ],
+  },
+);
+
+const SubmissionParticipantInvite = entity(
+  "SubmissionParticipantInvite",
+  {
+    orgId: field.id("Org").readonly(),
+    eventId: field.id("Event").readonly(),
+    formId: field.id("SubmissionForm").readonly(),
+    draftId: field.id("SubmissionDraft").readonly(),
+    ownerUserId: field.id("User").readonly(),
+    provisionalUserId: field.id("User").readonly(),
+    email: field.string().readonly(),
+    name: field.string(),
+    roleLabel: field.string(),
+    tokenHash: field.string().serverOnly(),
+    status: field.string().default("pending"),
+    expiresAt: field.datetime(),
+    consumedAt: field.datetime().optional(),
+    createdAt: field.datetime().defaultNow(),
+  },
+  {
+    indexes: [
+      { name: "by_draft_email", fields: ["draftId", "email"], unique: true },
+      { name: "by_participant", fields: ["provisionalUserId"], unique: false },
+      { name: "by_draft", fields: ["draftId"], unique: false },
     ],
   },
 );
@@ -597,7 +657,25 @@ const eventPolicy = policy({
 const formPolicy = policy({
   name: "form_access",
   entity: "SubmissionForm",
-  allowRead: 'auth.tenantId == data.orgId || data.status == "open"',
+  allowRead: 'auth.tenantId == data.orgId || data.status != "draft"',
+  allowInsert: "false",
+  allowUpdate: "false",
+  allowDelete: "false",
+});
+
+const submissionDraftPolicy = policy({
+  name: "submission_draft_owner",
+  entity: "SubmissionDraft",
+  allowRead: "auth.userId == data.ownerUserId",
+  allowInsert: "false",
+  allowUpdate: "false",
+  allowDelete: "false",
+});
+
+const submissionParticipantInvitePolicy = policy({
+  name: "submission_participant_invite_access",
+  entity: "SubmissionParticipantInvite",
+  allowRead: "auth.userId == data.ownerUserId || auth.userId == data.provisionalUserId",
   allowInsert: "false",
   allowUpdate: "false",
   allowDelete: "false",
@@ -788,6 +866,8 @@ const manifest = buildManifest({
     Event,
     SubmissionForm,
     Submission,
+    SubmissionDraft,
+    SubmissionParticipantInvite,
     SpeakerProfile,
     SpeakerFile,
     ReviewerMembership,
@@ -816,6 +896,8 @@ const manifest = buildManifest({
     eventPolicy,
     formPolicy,
     submissionPolicy,
+    submissionDraftPolicy,
+    submissionParticipantInvitePolicy,
     speakerProfilePolicy,
     speakerFilePolicy,
     reviewerMembershipPolicy,

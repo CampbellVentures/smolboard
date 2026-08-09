@@ -1,7 +1,7 @@
 import React, { use } from "react";
 import { type Metadata, type PageProps } from "@pylonsync/react";
 import { FormBuilder } from "./builder-client";
-import type { EventRow, SubmissionFormRow } from "@/lib/types";
+import type { EventRow, SubmissionFormRow, SubmissionRow, TrackRow } from "@/lib/types";
 
 export const metadata: Metadata = {
   title: "Form builder — smolboard",
@@ -28,5 +28,9 @@ export default function FormBuilderPage({
     response.notFound();
     return null;
   }
-  return <FormBuilder event={event} form={form} />;
+  const tracks = use(serverData.list<TrackRow>("Track")).filter((track) => track.eventId === event.id);
+  const submissions = use(serverData.list<SubmissionRow>("Submission")).filter(
+    (submission) => submission.formId === form.id && submission.eventId === event.id,
+  );
+  return <FormBuilder event={event} form={form} tracks={tracks} submissions={submissions} />;
 }

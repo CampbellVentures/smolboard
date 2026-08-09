@@ -23,7 +23,7 @@ afterAll(async () => {
   await server?.stop();
 }, 10_000);
 
-test("anonymous CFP submission is rejected while closed and accepted while open", async () => {
+test("CFP finalization requires a verified authenticated speaker and an open window", async () => {
   const fixture = await createTwoOrgFixture(server.baseUrl, "cfp-gate");
   expect(fixture.a.id).not.toBe(fixture.b.id);
   expect(fixture.a.speakers[0].userId).not.toBe(fixture.b.speakers[0].userId);
@@ -54,15 +54,24 @@ test("anonymous CFP submission is rejected while closed and accepted while open"
     status: "open",
     fieldsJson: [],
   });
-  const opened = await jsonRequest<{ submissionId: string }>(anon, "/api/fn/submitCfp", "POST", {
+  const anonymousOpen = await jsonRequest<{ submissionId: string }>(anon, "/api/fn/submitCfp", "POST", {
     formId: fixture.a.formId,
     name: "Anonymous Speaker",
     email: "cfp-gate-anonymous@example.test",
     title: "Open Gate Talk",
     answers: {},
   });
-  expect(opened.response.status).toBe(200);
-  expect(opened.body.submissionId).toBeTruthy();
+  expect(anonymousOpen.response.status).toBe(401);
+
+  const speaker = fixture.a.speakers[0];
+  const authenticated = await callFn<{ submissionId: string }>(speaker, "submitCfp", {
+    formId: fixture.a.formId,
+    name: "Verified Speaker",
+    email: speaker.email,
+    title: "Authenticated Open Gate Talk",
+    answers: {},
+  });
+  expect(authenticated.submissionId).toBeTruthy();
 }, 30_000);
 
 test("speakers see their own submissions and tasks but not another speaker's rows", async () => {

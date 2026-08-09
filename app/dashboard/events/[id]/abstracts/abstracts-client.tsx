@@ -35,6 +35,7 @@ import {
 import { cn } from "@/lib/utils";
 import { fieldsOf, parseJson } from "@/lib/types";
 import { aggregateSubmissionScore, reviewRoundForNumber } from "@/lib/reviews";
+import { parseParticipantSnapshot } from "@/lib/submission-participants";
 import type {
   EventRow,
   ReviewRoundRow,
@@ -480,6 +481,7 @@ function DetailDrawer({
   onClose: () => void;
 }) {
   const answers = parseJson<Record<string, unknown>>(submission.answersJson) ?? {};
+  const participants = parseParticipantSnapshot(submission.participantSnapshotJson);
   const fields = form ? fieldsOf(form) : [];
   const [busy, setBusy] = useState<string | null>(null);
   const [confirmStatus, setConfirmStatus] = useState<string | null>(null);
@@ -560,6 +562,23 @@ function DetailDrawer({
                   {profile.bio}
                 </p>
               )}
+            </section>
+          )}
+
+          {participants.length > 1 && (
+            <section>
+              <h4 className="text-[11px] font-medium uppercase tracking-wide text-zinc-400">
+                Participants
+              </h4>
+              <ul className="mt-1.5 space-y-1.5">
+                {participants.map((participant) => (
+                  <li key={participant.userId} className="text-sm text-zinc-800">
+                    <span className="font-medium">{participant.name}</span>
+                    <span className="text-zinc-500"> — {participant.roleLabel}</span>
+                    <span className="block text-xs text-zinc-400">{participant.email}</span>
+                  </li>
+                ))}
+              </ul>
             </section>
           )}
 

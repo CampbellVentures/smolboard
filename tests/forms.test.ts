@@ -4,6 +4,7 @@ import {
   type RoutingConfig,
   evaluateShowIf,
   keyFromLabel,
+  mergeLegacyAnswers,
   parseFields,
   parseRouting,
   pruneAnswers,
@@ -107,6 +108,15 @@ describe("pruneAnswers", () => {
   test("drops unknown keys", () => {
     const pruned = pruneAnswers(FIELDS, { format: "Talk", evil: "x", contact: "a@b.co" });
     expect(pruned.evil).toBeUndefined();
+  });
+  test("preserves only previously stored unknown legacy answers", () => {
+    const pruned = pruneAnswers(FIELDS, { format: "Talk", crafted: "drop", contact: "a@b.co" });
+    expect(mergeLegacyAnswers(FIELDS, { legacy_question: { original: true } }, pruned)).toEqual({
+      legacy_question: { original: true },
+      format: "Talk",
+      contact: "a@b.co",
+    });
+    expect(mergeLegacyAnswers(FIELDS, {}, pruned).crafted).toBeUndefined();
   });
 });
 

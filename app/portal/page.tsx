@@ -3,10 +3,12 @@ import { type Metadata, type PageProps } from "@pylonsync/react";
 import { PortalLogin, PortalHome } from "./portal-client";
 import type {
   EventRow,
+  OrgRow,
   SpeakerFileRow,
   SpeakerProfileRow,
   SpeakerTaskRow,
   SubmissionFormRow,
+  SubmissionDraftRow,
   SubmissionRow,
   TaskTemplateRow,
 } from "@/lib/types";
@@ -21,7 +23,7 @@ export const metadata: Metadata = {
 // a CFP). Signed-in speakers see every event they've submitted to: profile,
 // submissions, and (soon) tasks + files. All reads are policy-scoped to the
 // caller's own rows.
-export default function PortalPage({ auth, serverData }: PageProps) {
+export default function PortalPage({ auth, serverData, searchParams }: PageProps) {
   if (!auth.user_id) {
     return <PortalLogin />;
   }
@@ -34,6 +36,9 @@ export default function PortalPage({ auth, serverData }: PageProps) {
   const submissions = use(serverData.list<SubmissionRow>("Submission")).filter(
     (s) => s.speakerUserId === auth.user_id,
   );
+  const drafts = use(serverData.list<SubmissionDraftRow>("SubmissionDraft")).filter(
+    (draft) => draft.ownerUserId === auth.user_id,
+  );
   // Non-draft events are publicly readable; used for names/dates.
   const events = use(serverData.list<EventRow>("Event"));
   const tasks = use(serverData.list<SpeakerTaskRow>("SpeakerTask")).filter(
@@ -44,6 +49,7 @@ export default function PortalPage({ auth, serverData }: PageProps) {
     (file) => file.userId === auth.user_id,
   );
   const forms = use(serverData.list<SubmissionFormRow>("SubmissionForm"));
+  const orgs = use(serverData.list<OrgRow>("Org"));
 
   return (
     <PortalHome
@@ -51,11 +57,18 @@ export default function PortalPage({ auth, serverData }: PageProps) {
       email={me?.email ?? ""}
       initialProfiles={profiles}
       initialSubmissions={submissions}
+      initialDrafts={drafts}
       initialTasks={tasks}
       initialTemplates={templates}
       initialFiles={files}
       initialForms={forms}
       events={events}
+      orgs={orgs}
+      participantClaim={
+        typeof searchParams.participantInvite === "string" && typeof searchParams.token === "string"
+          ? { inviteId: searchParams.participantInvite, token: searchParams.token }
+          : undefined
+      }
     />
   );
 }

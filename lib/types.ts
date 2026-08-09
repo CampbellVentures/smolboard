@@ -57,8 +57,11 @@ export interface SubmissionFormRow {
   slug: string;
   description?: string;
   status: string;
+  opensAt?: string;
+  closesAt?: string;
   fieldsJson?: FormField[];
   routingJson?: RoutingConfig;
+  handoffMappingsJson?: import("./submission-handoff").SubmissionHandoffConfig;
   confirmationMessage?: string;
   createdAt: string;
 }
@@ -72,11 +75,47 @@ export interface SubmissionRow {
   title: string;
   abstract?: string;
   answersJson?: Answers;
+  participantSnapshotJson?: import("./submission-participants").SubmissionParticipantSnapshot[];
   category?: string;
   status: string;
   currentRound: number;
   submittedAt: string;
   updatedAt?: string;
+  finalizedAt?: string;
+}
+
+export interface SubmissionDraftRow {
+  id: string;
+  orgId: string;
+  eventId: string;
+  formId: string;
+  ownerUserId: string;
+  name: string;
+  title: string;
+  abstract?: string;
+  answersJson?: Answers;
+  lifecycle: "draft" | "finalized";
+  finalizedSubmissionId?: string;
+  createdAt: string;
+  updatedAt: string;
+  finalizedAt?: string;
+}
+
+export interface SubmissionParticipantInviteRow {
+  id: string;
+  orgId: string;
+  eventId: string;
+  formId: string;
+  draftId: string;
+  ownerUserId: string;
+  provisionalUserId: string;
+  email: string;
+  name: string;
+  roleLabel: string;
+  status: "pending" | "claimed";
+  expiresAt: string;
+  consumedAt?: string;
+  createdAt: string;
 }
 
 export interface SpeakerProfileRow {
@@ -209,6 +248,12 @@ export interface ReviewerQueueItem {
     abstract?: string;
     category?: string;
     answers?: Record<string, unknown>;
+    participants?: Array<{
+      userId?: string;
+      name?: string;
+      email?: string;
+      roleLabel: string;
+    }>;
   };
   author?: {
     name: string;

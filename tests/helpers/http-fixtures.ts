@@ -38,6 +38,7 @@ export interface TwoOrgFixture {
 interface AuthResponse {
   token: string;
   user_id: string;
+  dev_code?: string;
 }
 
 function client(baseUrl: string, token?: string): HttpClient {
@@ -88,7 +89,7 @@ async function okJson<T>(actor: HttpClient, path: string, method = "GET", body?:
   if (!result.response.ok) {
     const error = result.body as { error?: { code?: string; message?: string } } | null;
     throw new Error(
-      `${method} ${path} failed with ${result.response.status}: ${error?.error?.code ?? "unknown error"}`,
+      `${method} ${path} failed with ${result.response.status}: ${error?.error?.code ?? "unknown error"}${error?.error?.message ? ` (${error.error.message})` : ""}`,
     );
   }
   return result.body;
@@ -100,7 +101,12 @@ async function register(baseUrl: string, email: string, displayName: string): Pr
     password: PASSWORD,
     displayName,
   });
-  return { ...client(baseUrl, auth.token), email, userId: auth.user_id };
+  const identity = { ...client(baseUrl, auth.token), email, userId: auth.user_id };
+  if (!auth.dev_code) {
+    throw new Error("Disposable dev auth did not expose an email verification code.");
+  }
+  await okJson(identity, "/api/auth/email/verify", "POST", { code: auth.dev_code });
+  return identity;
 }
 
 async function selectOrg(actor: TestIdentity, orgId: string): Promise<void> {

@@ -1,5 +1,6 @@
 import { query, v } from "@pylonsync/functions";
 import { normalizeCriteria } from "../lib/reviews";
+import { parseParticipantSnapshot } from "../lib/submission-participants";
 import { requireActiveReviewer } from "./_reviewAccess";
 
 export default query({
@@ -57,6 +58,11 @@ export default query({
           abstract: submission.abstract,
           category: submission.category,
           ...(round.anonymized === false ? { answers: submission.answersJson } : {}),
+          participants: parseParticipantSnapshot(submission.participantSnapshotJson).map((participant) =>
+            round.anonymized === false
+              ? participant
+              : { roleLabel: participant.roleLabel }
+          ),
         },
         review: ownReviews[0]
           ? {

@@ -75,6 +75,11 @@ function ReviewCard({ item, onSaved }: { item: ReviewerQueueItem; onSaved: () =>
           <p className="text-xs text-muted-foreground">{item.event.name} · {item.round.name}</p>
           <h2 className="mt-1 text-base font-semibold">{item.submission.title}</h2>
           {item.author ? <p className="text-xs text-muted-foreground">{item.author.name} · {item.author.email}</p> : <p className="text-xs text-muted-foreground">Blind review</p>}
+          {item.submission.participants?.length ? (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Participants: {item.submission.participants.map((participant) => participant.name ? `${participant.name} (${participant.roleLabel})` : participant.roleLabel).join(", ")}
+            </p>
+          ) : null}
         </div>
         <span className="text-xs capitalize text-muted-foreground">{item.assignmentStatus}</span>
       </div>

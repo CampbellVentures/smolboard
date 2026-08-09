@@ -2,11 +2,13 @@ import { mutation, v } from "@pylonsync/functions";
 import {
   parseFields,
   parseRouting,
+  mergeLegacyAnswers,
   pruneAnswers,
   routeSubmission,
   validateAnswers,
   type Answers,
 } from "../lib/forms";
+import { cfpWindowState } from "../lib/cfp-window";
 
 export default mutation({
   args: {
@@ -24,7 +26,15 @@ export default mutation({
       ctx.db.unsafe.get("SubmissionForm", submission.formId as string),
       ctx.db.unsafe.get("Event", submission.eventId as string),
     ]);
-    if (!form || !event || form.status !== "open" || event.cfpStatus !== "open") {
+    if (
+      !form || !event || form.eventId !== event.id || form.orgId !== event.orgId ||
+      cfpWindowState({
+        eventStatus: String(event.cfpStatus),
+        formStatus: String(form.status),
+        opensAt: form.opensAt as string | undefined,
+        closesAt: form.closesAt as string | undefined,
+      }) !== "open"
+    ) {
       throw ctx.error("FORBIDDEN", "This submission can no longer be edited.");
     }
 
@@ -34,7 +44,11 @@ export default mutation({
       throw ctx.error("INVALID_ARGS", "Keep the title under 200 characters.");
     }
     const fields = parseFields(safeParse(form.fieldsJson));
-    const answers = pruneAnswers(fields, (args.answers ?? {}) as Answers);
+    const answers = mergeLegacyAnswers(
+      fields,
+      submission.answersJson,
+      pruneAnswers(fields, (args.answers ?? {}) as Answers),
+    );
     const errors = validateAnswers(fields, answers);
     if (errors.length > 0) {
       throw ctx.error("INVALID_ARGS", errors.map((error) => error.message).join(" "));

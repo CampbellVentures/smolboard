@@ -1,5 +1,7 @@
 import { mutation, v } from "@pylonsync/functions";
 import { findConflicts, type AgendaSession } from "../lib/agenda";
+import { canonicalSessionForSubmission } from "./_submissionHandoff";
+import type { MaterializedSessionData } from "../lib/submission-handoff";
 
 // Agent tool: conflict-checked scheduling. Unlike the drag-and-drop grid
 // (which paints conflicts after the fact so a human can decide), the agent
@@ -43,6 +45,7 @@ export default mutation({
     let title: string;
     let speakerUserIds: string[] = [];
     let existingSessionId: string | undefined;
+    let canonicalData: MaterializedSessionData | undefined;
     if (args.sessionId) {
       const ses = await ctx.db.unsafe.get("Session", args.sessionId);
       if (!ses || ses.eventId !== args.eventId || ses.orgId !== event.orgId) {
@@ -52,13 +55,9 @@ export default mutation({
       speakerUserIds = Array.isArray(ses.speakerUserIdsJson) ? (ses.speakerUserIdsJson as string[]) : [];
       existingSessionId = args.sessionId;
     } else if (args.submissionId) {
-      const sub = await ctx.db.unsafe.get("Submission", args.submissionId);
-      if (!sub || sub.eventId !== args.eventId || sub.orgId !== event.orgId) {
-        throw ctx.error("NOT_FOUND", "Submission not found.");
-      }
-      if (sub.status !== "accepted") {
-        return { scheduled: false, error: `"${sub.title}" is ${sub.status}, not accepted — accept it first.` };
-      }
+      const { submission: sub, result } = await canonicalSessionForSubmission(ctx, event, args.submissionId);
+      if (!result.data) return { scheduled: false, unresolved: result.unresolved, error: "Resolve CFP format/track mappings before scheduling." };
+      canonicalData = result.data;
       const prior = (
         await ctx.db.unsafe.query("Session", {
           eventId: args.eventId,
@@ -66,8 +65,8 @@ export default mutation({
         })
       ).filter((row) => row.orgId === event.orgId);
       if (prior[0]) existingSessionId = prior[0].id as string;
-      title = sub.title as string;
-      speakerUserIds = [sub.speakerUserId as string];
+      title = canonicalData.title;
+      speakerUserIds = canonicalData.speakerUserIdsJson;
     } else {
       throw ctx.error("INVALID_ARGS", "Pass submissionId or sessionId.");
     }
@@ -110,6 +109,7 @@ export default mutation({
 
     if (existingSessionId) {
       await ctx.db.unsafe.update("Session", existingSessionId, {
+        ...(canonicalData ?? {}),
         roomId: room.id as string,
         startTime: start.toISOString(),
         endTime: end.toISOString(),
@@ -119,13 +119,10 @@ export default mutation({
     const id = await ctx.db.unsafe.insert("Session", {
       orgId: event.orgId as string,
       eventId: args.eventId,
-      submissionId: args.submissionId,
-      title,
+      ...canonicalData!,
       roomId: room.id as string,
       startTime: start.toISOString(),
       endTime: end.toISOString(),
-      speakerUserIdsJson: speakerUserIds,
-      kind: "talk",
     });
     return { scheduled: true, sessionId: id, title, room: room.name, start: start.toISOString(), end: end.toISOString() };
   },

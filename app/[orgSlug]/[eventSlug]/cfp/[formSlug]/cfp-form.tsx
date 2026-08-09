@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { callFn } from "@pylonsync/react";
+import { sendMagicLink, verifyMagicLink } from "@pylonsync/client";
 import { Button } from "@/components/ui/button";
 import { FormRenderer } from "@/components/form-renderer";
 import {
@@ -26,10 +27,14 @@ export function CfpForm({
   formId,
   fieldsJson,
   confirmationMessage,
+  signedIn,
+  windowState,
 }: {
   formId: string;
   fieldsJson: unknown;
   confirmationMessage?: string;
+  signedIn: boolean;
+  windowState: "upcoming" | "open" | "closed";
 }) {
   const fields = useMemo(() => {
     try {
@@ -49,6 +54,53 @@ export function CfpForm({
   const [needsLogin, setNeedsLogin] = useState(false);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
+  const [draftId, setDraftId] = useState<string | null>(null);
+  const [authStage, setAuthStage] = useState<"idle" | "code">("idle");
+  const [code, setCode] = useState("");
+  const [participants, setParticipants] = useState<Array<{ id: string; name: string; email: string; roleLabel: string; status: string }>>([]);
+  const [participantName, setParticipantName] = useState("");
+  const [participantEmail, setParticipantEmail] = useState("");
+  const [participantRole, setParticipantRole] = useState("Co-presenter");
+  const [authenticated, setAuthenticated] = useState(signedIn);
+
+  useEffect(() => {
+    if (!authenticated) return;
+    void callFn<Array<{ id: string; name: string; title: string; abstract?: string; answersJson?: Answers; lifecycle: string }>>(
+      "listMyCfpDrafts",
+      { formId },
+    ).then((drafts) => {
+      const draft = drafts.find((candidate) => candidate.lifecycle === "draft");
+      if (!draft) return;
+      setDraftId(draft.id);
+      setName(draft.name);
+      setTitle(draft.title);
+      setAbstract(draft.abstract ?? "");
+      setAnswers(draft.answersJson ?? {});
+      void loadParticipants(draft.id);
+    }).catch(() => {});
+  }, [authenticated, formId]);
+
+  async function loadParticipants(id: string) {
+    const rows = await callFn<typeof participants>("listDraftParticipants", { draftId: id });
+    setParticipants(rows);
+  }
+
+  async function persistDraft(finalize: boolean) {
+    const result = await callFn<{ id: string }>("saveCfpDraft", {
+      formId,
+      draftId: draftId || undefined,
+      name: name.trim(),
+      title: title.trim(),
+      abstract: abstract.trim() || undefined,
+      answers: pruneAnswers(fields, answers),
+    });
+    setDraftId(result.id);
+    if (finalize) {
+      await callFn("finalizeCfpDraft", { draftId: result.id });
+      setDone(true);
+    }
+    return result.id;
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -56,7 +108,7 @@ export function CfpForm({
     setNeedsLogin(false);
     const missing: ValidationError[] = [];
     if (!name.trim()) missing.push({ field: "speaker_name", message: "Your name is required." });
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+    if (!authenticated && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       missing.push({ field: "speaker_email", message: "Enter a valid email." });
     }
     if (!title.trim()) missing.push({ field: "title", message: "A talk title is required." });
@@ -70,19 +122,67 @@ export function CfpForm({
     }
     setBusy(true);
     try {
-      await callFn("submitCfp", {
-        formId,
-        name: name.trim(),
-        email: email.trim(),
-        title: title.trim(),
-        abstract: abstract.trim() || undefined,
-        answers: pruned,
-      });
-      setDone(true);
+      if (!authenticated && authStage === "idle") {
+        await sendMagicLink(email.trim().toLowerCase());
+        setAuthStage("code");
+        setTopError("Enter the emailed code to verify ownership and save your draft.");
+        setBusy(false);
+      } else if (authenticated) {
+        await persistDraft(true);
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Submission failed — try again.";
       setTopError(message);
       setNeedsLogin(message.includes("speaker account"));
+      setBusy(false);
+    }
+  }
+
+  async function verifyAndSave(event: React.FormEvent) {
+    event.preventDefault();
+    setBusy(true);
+    setTopError(null);
+    try {
+      await verifyMagicLink(email.trim().toLowerCase(), code.trim());
+      setAuthenticated(true);
+      await persistDraft(false);
+      setAuthStage("idle");
+      setTopError("Email verified. Your draft is saved; invite any co-presenters, then finalize when ready.");
+    } catch (error) {
+      setTopError(error instanceof Error ? error.message : "Could not verify and finalize the submission.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function saveDraft() {
+    setBusy(true);
+    setTopError(null);
+    try {
+      await persistDraft(false);
+    } catch (error) {
+      setTopError(error instanceof Error ? error.message : "Could not save this draft.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function inviteParticipant() {
+    if (!draftId) return;
+    setBusy(true);
+    try {
+      await callFn("inviteSubmissionParticipant", {
+        draftId,
+        name: participantName,
+        email: participantEmail,
+        roleLabel: participantRole,
+      });
+      setParticipantName("");
+      setParticipantEmail("");
+      await loadParticipants(draftId);
+    } catch (error) {
+      setTopError(error instanceof Error ? error.message : "Could not invite this participant.");
+    } finally {
       setBusy(false);
     }
   }
@@ -107,6 +207,10 @@ export function CfpForm({
   }
 
   const errFor = (key: string) => errors.find((er) => er.field === key)?.message;
+
+  if (windowState !== "open") {
+    return <p className="py-8 text-center text-sm text-zinc-500">This CFP is {windowState === "upcoming" ? "not open yet" : "closed"}. Existing submissions remain available in the speaker portal.</p>;
+  }
 
   return (
     <form onSubmit={submit} className="space-y-5">
@@ -175,9 +279,34 @@ export function CfpForm({
           ) : null}
         </div>
       )}
-      <Button type="submit" disabled={busy} className="w-full sm:w-auto">
-        {busy ? "Submitting…" : "Submit talk"}
-      </Button>
+      {authStage === "code" && !authenticated ? (
+        <div className="rounded-lg border p-4">
+          <label className="block text-sm font-medium">Verification code</label>
+          <input value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, ""))} maxLength={6} className={inputCls + " mt-2"} />
+          <Button type="button" disabled={busy || code.length !== 6} onClick={(event) => void verifyAndSave(event)} className="mt-3">Verify and continue</Button>
+        </div>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {authenticated ? <Button type="button" variant="outline" disabled={busy || !title.trim()} onClick={() => void saveDraft()}>Save draft</Button> : null}
+          <Button type="submit" disabled={busy}>
+            {busy ? "Working…" : authenticated ? "Finalize submission" : "Verify email to continue"}
+          </Button>
+        </div>
+      )}
+
+      {authenticated && draftId ? (
+        <section className="rounded-lg border p-4">
+          <h3 className="text-sm font-semibold">Co-presenters</h3>
+          <p className="mt-1 text-xs text-zinc-500">Every invited participant must verify the exact invited email before finalization.</p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-3">
+            <input value={participantName} onChange={(event) => setParticipantName(event.target.value)} placeholder="Name" className={inputCls} />
+            <input type="email" value={participantEmail} onChange={(event) => setParticipantEmail(event.target.value)} placeholder="Email" className={inputCls} />
+            <input value={participantRole} onChange={(event) => setParticipantRole(event.target.value)} placeholder="Role" className={inputCls} />
+          </div>
+          <Button type="button" size="sm" variant="outline" className="mt-2" disabled={busy || !participantName || !participantEmail || !participantRole} onClick={() => void inviteParticipant()}>Invite participant</Button>
+          {participants.length > 0 ? <ul className="mt-3 text-xs text-zinc-600">{participants.map((participant) => <li key={participant.id}>{participant.name} · {participant.roleLabel} · {participant.status}</li>)}</ul> : null}
+        </section>
+      ) : null}
     </form>
   );
 }

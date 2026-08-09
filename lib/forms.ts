@@ -101,6 +101,23 @@ export function pruneAnswers(fields: FormField[], answers: Answers): Answers {
   return out;
 }
 
+// When a saved draft/submission predates the current form definition, retain
+// answers for removed fields. New/crafted unknown keys still never enter via
+// this path because only values already present in `previous` are copied.
+export function mergeLegacyAnswers(
+  fields: FormField[],
+  previous: unknown,
+  current: Answers,
+): Answers {
+  if (!previous || typeof previous !== "object" || Array.isArray(previous)) return current;
+  const currentKeys = new Set(fields.map((field) => field.key));
+  const legacy = Object.fromEntries(
+    Object.entries(previous as Record<string, unknown>)
+      .filter(([key, value]) => !currentKeys.has(key) && value !== undefined),
+  ) as Answers;
+  return { ...legacy, ...current };
+}
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const URL_RE = /^https?:\/\/[^\s]+$/i;
 

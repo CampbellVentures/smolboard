@@ -27,12 +27,15 @@ import { taskCompletion, taskDueState } from "@/lib/tasks";
 import { formatSessionTime } from "@/lib/ics";
 import type { PortalSession } from "@/lib/portal";
 import { pruneAnswers, validateAnswers, type Answers } from "@/lib/forms";
+import { cfpWindowState } from "@/lib/cfp-window";
 import type {
   EventRow,
+  OrgRow,
   SpeakerFileRow,
   SpeakerProfileRow,
   SpeakerTaskRow,
   SubmissionFormRow,
+  SubmissionDraftRow,
   SubmissionRow,
   TaskTemplateRow,
 } from "@/lib/types";
@@ -175,26 +178,33 @@ export function PortalHome({
   email,
   initialProfiles,
   initialSubmissions,
+  initialDrafts,
   initialTasks,
   initialTemplates,
   initialFiles,
   initialForms,
   events,
+  orgs,
+  participantClaim,
 }: {
   userId: string;
   email: string;
   initialProfiles: SpeakerProfileRow[];
   initialSubmissions: SubmissionRow[];
+  initialDrafts: SubmissionDraftRow[];
   initialTasks: SpeakerTaskRow[];
   initialTemplates: TaskTemplateRow[];
   initialFiles: SpeakerFileRow[];
   initialForms: SubmissionFormRow[];
   events: EventRow[];
+  orgs: OrgRow[];
+  participantClaim?: { inviteId: string; token: string };
 }) {
   const { signOut } = useAuth();
   const [hydrated, setHydrated] = useState(false);
   const [sessions, setSessions] = useState<PortalSession[]>([]);
   const [scheduleLoading, setScheduleLoading] = useState(true);
+  const [claimNotice, setClaimNotice] = useState<string | null>(null);
   useEffect(() => {
     setHydrated(true);
     for (const profile of initialProfiles) {
@@ -204,6 +214,14 @@ export function PortalHome({
           expectedProvisionalUserId: userId,
         });
       }
+    }
+    if (participantClaim) {
+      void callFn("claimSubmissionParticipant", {
+        inviteId: participantClaim.inviteId,
+        token: participantClaim.token,
+        expectedProvisionalUserId: userId,
+      }).then(() => setClaimNotice("Participant invitation claimed. The primary presenter can now finalize the submission."))
+        .catch((error) => setClaimNotice(error instanceof Error ? error.message : "Could not claim this participant invitation."));
     }
     let active = true;
     callFn("getMySchedule", {})
@@ -222,6 +240,7 @@ export function PortalHome({
   }, []);
   // Live: status flips (accepted!) appear without a refresh.
   const subsQ = db.useQuery<SubmissionRow>("Submission");
+  const draftQ = db.useQuery<SubmissionDraftRow>("SubmissionDraft");
   const profQ = db.useQuery<SpeakerProfileRow>("SpeakerProfile");
   const taskQ = db.useQuery<SpeakerTaskRow>("SpeakerTask");
   const templateQ = db.useQuery<TaskTemplateRow>("TaskTemplate");
@@ -231,6 +250,9 @@ export function PortalHome({
     !hydrated || subsQ.loading
       ? initialSubmissions
       : subsQ.data.filter((s) => s.speakerUserId === userId);
+  const drafts = !hydrated || draftQ.loading
+    ? initialDrafts
+    : draftQ.data.filter((draft) => draft.ownerUserId === userId);
   const profiles =
     !hydrated || profQ.loading
       ? initialProfiles
@@ -274,7 +296,23 @@ export function PortalHome({
       </header>
 
       <main className="mx-auto max-w-3xl space-y-8 px-6 py-10">
+        {claimNotice ? <p className="rounded-lg border bg-white p-4 text-sm">{claimNotice}</p> : null}
         <ScheduleSection sessions={sessions} loading={scheduleLoading} />
+
+        {drafts.some((draft) => draft.lifecycle === "draft") ? (
+          <section>
+            <h2 className="text-sm font-semibold text-zinc-900">Your CFP drafts</h2>
+            <ul className="mt-3 divide-y rounded-xl border bg-white">
+              {drafts.filter((draft) => draft.lifecycle === "draft").map((draft) => {
+                const form = forms.find((candidate) => candidate.id === draft.formId);
+                const event = events.find((candidate) => candidate.id === draft.eventId);
+                const org = event ? orgs.find((candidate) => candidate.id === event.orgId) : undefined;
+                const href = form && event && org?.slug ? `/${org.slug}/${event.slug}/cfp/${form.slug}` : "/portal";
+                return <li key={draft.id} className="flex items-center justify-between gap-4 px-5 py-4"><span className="truncate text-sm font-medium">{draft.title}</span><Button asChild size="sm" variant="outline"><a href={href}>Resume</a></Button></li>;
+              })}
+            </ul>
+          </section>
+        ) : null}
 
         {submissions.length === 0 ? (
           <div className="rounded-xl border border-dashed border-zinc-300 bg-white px-6 py-14 text-center">
@@ -293,7 +331,12 @@ export function PortalHome({
                 .map((s) => {
                   const form = forms.find((candidate) => candidate.id === s.formId);
                   const event = events.find((candidate) => candidate.id === s.eventId);
-                  const editable = form?.status === "open" && event?.cfpStatus === "open";
+                  const editable = Boolean(form && event && cfpWindowState({
+                    eventStatus: event.cfpStatus,
+                    formStatus: form.status,
+                    opensAt: form.opensAt,
+                    closesAt: form.closesAt,
+                  }) === "open");
                   return (
                     <li key={s.id} className="flex items-center gap-3 px-5 py-4">
                       <div className="min-w-0 flex-1">
