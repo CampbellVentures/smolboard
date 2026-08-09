@@ -291,6 +291,73 @@ const SpeakerFile = entity(
   },
 );
 
+// Task/session-bound deliverables are additive to SpeakerFile. SpeakerFile is
+// retained for existing profile/headshot rows; it never satisfies a bounded
+// upload task.
+const DeliverableSlot = entity(
+  "DeliverableSlot",
+  {
+    orgId: field.id("Org").readonly(),
+    eventId: field.id("Event").readonly(),
+    speakerUserId: field.id("User").readonly(),
+    taskId: field.id("SpeakerTask").readonly().optional(),
+    sessionId: field.id("Session").readonly().optional(),
+    kind: field.string(),
+    title: field.string(),
+    createdAt: field.datetime().defaultNow(),
+  },
+  {
+    indexes: [
+      { name: "by_task", fields: ["taskId"], unique: true },
+      { name: "by_session_speaker", fields: ["sessionId", "speakerUserId"], unique: false },
+      { name: "by_event_speaker", fields: ["eventId", "speakerUserId"], unique: false },
+    ],
+  },
+);
+
+const DeliverableVersion = entity(
+  "DeliverableVersion",
+  {
+    orgId: field.id("Org").readonly(),
+    eventId: field.id("Event").readonly(),
+    slotId: field.id("DeliverableSlot").readonly(),
+    speakerUserId: field.id("User").readonly(),
+    uploaderUserId: field.id("User").readonly(),
+    fileId: field.string().readonly(),
+    // Confirmation URLs can be provider-specific or short-lived; never expose
+    // them through entity reads. Speakers download through /api/files/<id>.
+    fileUrl: field.string().readonly().serverOnly(),
+    filename: field.string().readonly(),
+    mimeType: field.string().readonly(),
+    size: field.int().readonly(),
+    versionNumber: field.int().readonly(),
+    createdAt: field.datetime().defaultNow(),
+  },
+  {
+    indexes: [
+      { name: "by_slot_version", fields: ["slotId", "versionNumber"], unique: true },
+      { name: "by_event", fields: ["eventId"], unique: false },
+    ],
+  },
+);
+
+const DeliverableComment = entity(
+  "DeliverableComment",
+  {
+    orgId: field.id("Org").readonly(),
+    eventId: field.id("Event").readonly(),
+    slotId: field.id("DeliverableSlot").readonly(),
+    versionId: field.id("DeliverableVersion").readonly().optional(),
+    speakerUserId: field.id("User").readonly(),
+    authorUserId: field.id("User").readonly(),
+    authorName: field.string().readonly(),
+    authorRole: field.string().readonly(),
+    body: field.string().readonly(),
+    createdAt: field.datetime().defaultNow(),
+  },
+  { indexes: [{ name: "by_slot", fields: ["slotId"], unique: false }] },
+);
+
 const ReviewerMembership = entity(
   "ReviewerMembership",
   {
@@ -451,8 +518,37 @@ const Session = entity(
     speakerUserIdsJson: field.json().optional(),
     // "talk" | "keynote" | "break" | "workshop"
     kind: field.string().default("talk"),
+    // Content approval is independent from schedule publication.
+    contentStatus: field.string().default("draft"),
+    currentRevisionId: field.id("SessionContentRevision").optional(),
+    approvedRevisionId: field.id("SessionContentRevision").optional(),
+    approvedAt: field.datetime().optional(),
+    approvedByUserId: field.id("User").optional(),
   },
   { indexes: [{ name: "by_event", fields: ["eventId"], unique: false }] },
+);
+
+const SessionContentRevision = entity(
+  "SessionContentRevision",
+  {
+    orgId: field.id("Org").readonly(),
+    eventId: field.id("Event").readonly(),
+    sessionId: field.id("Session").readonly(),
+    revisionNumber: field.int().readonly(),
+    title: field.string().readonly(),
+    description: field.string().readonly().optional(),
+    speakerUserIdsJson: field.json().readonly().optional(),
+    editorUserId: field.id("User").readonly(),
+    editorName: field.string().readonly(),
+    restoredFromRevisionId: field.id("SessionContentRevision").readonly().optional(),
+    createdAt: field.datetime().defaultNow(),
+  },
+  {
+    indexes: [
+      { name: "by_session_revision", fields: ["sessionId", "revisionNumber"], unique: true },
+      { name: "by_event", fields: ["eventId"], unique: false },
+    ],
+  },
 );
 
 const TaskTemplate = entity(
@@ -718,6 +814,36 @@ const speakerFilePolicy = policy({
     'auth.userId == data.userId || (auth.tenantId == data.orgId && auth.hasAnyRole("owner", "admin"))',
 });
 
+const deliverableSlotPolicy = policy({
+  name: "deliverable_slot_access",
+  entity: "DeliverableSlot",
+  allowRead:
+    'auth.userId == data.speakerUserId || (auth.tenantId == data.orgId && auth.hasAnyRole("owner", "admin"))',
+  allowInsert: "false",
+  allowUpdate: "false",
+  allowDelete: "false",
+});
+
+const deliverableVersionPolicy = policy({
+  name: "deliverable_version_access",
+  entity: "DeliverableVersion",
+  allowRead:
+    'auth.userId == data.speakerUserId || (auth.tenantId == data.orgId && auth.hasAnyRole("owner", "admin"))',
+  allowInsert: "false",
+  allowUpdate: "false",
+  allowDelete: "false",
+});
+
+const deliverableCommentPolicy = policy({
+  name: "deliverable_comment_access",
+  entity: "DeliverableComment",
+  allowRead:
+    'auth.userId == data.speakerUserId || (auth.tenantId == data.orgId && auth.hasAnyRole("owner", "admin"))',
+  allowInsert: "false",
+  allowUpdate: "false",
+  allowDelete: "false",
+});
+
 const reviewRoundPolicy = policy({
   name: "review_round_access",
   entity: "ReviewRound",
@@ -785,6 +911,14 @@ const trackPolicy = policy({
 const sessionPolicy = policy({
   name: "session_access",
   entity: "Session",
+  allowRead: 'auth.tenantId == data.orgId && auth.hasAnyRole("owner", "admin")',
+  allowInsert: "false",
+  allowUpdate: "false",
+  allowDelete: "false",
+});
+const sessionContentRevisionPolicy = policy({
+  name: "session_content_revision_access",
+  entity: "SessionContentRevision",
   allowRead: 'auth.tenantId == data.orgId && auth.hasAnyRole("owner", "admin")',
   allowInsert: "false",
   allowUpdate: "false",
@@ -870,6 +1004,9 @@ const manifest = buildManifest({
     SubmissionParticipantInvite,
     SpeakerProfile,
     SpeakerFile,
+    DeliverableSlot,
+    DeliverableVersion,
+    DeliverableComment,
     ReviewerMembership,
     ReviewRound,
     ReviewRoundReviewer,
@@ -878,6 +1015,7 @@ const manifest = buildManifest({
     Room,
     Track,
     Session,
+    SessionContentRevision,
     TaskTemplate,
     SpeakerTask,
     EmailTemplate,
@@ -900,6 +1038,9 @@ const manifest = buildManifest({
     submissionParticipantInvitePolicy,
     speakerProfilePolicy,
     speakerFilePolicy,
+    deliverableSlotPolicy,
+    deliverableVersionPolicy,
+    deliverableCommentPolicy,
     reviewerMembershipPolicy,
     reviewRoundPolicy,
     reviewRoundReviewerPolicy,
@@ -908,6 +1049,7 @@ const manifest = buildManifest({
     roomPolicy,
     trackPolicy,
     sessionPolicy,
+    sessionContentRevisionPolicy,
     taskTemplatePolicy,
     speakerTaskPolicy,
     emailTemplatePolicy,

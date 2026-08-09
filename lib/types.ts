@@ -154,6 +154,47 @@ export interface SpeakerFileRow {
   createdAt: string;
 }
 
+export interface DeliverableSlotRow {
+  id: string;
+  orgId: string;
+  eventId: string;
+  speakerUserId: string;
+  taskId?: string;
+  sessionId?: string;
+  kind: string;
+  title: string;
+  createdAt: string;
+}
+
+export interface DeliverableVersionRow {
+  id: string;
+  orgId: string;
+  eventId: string;
+  slotId: string;
+  speakerUserId: string;
+  uploaderUserId: string;
+  fileId: string;
+  filename: string;
+  mimeType: string;
+  size: number;
+  versionNumber: number;
+  createdAt: string;
+}
+
+export interface DeliverableCommentRow {
+  id: string;
+  orgId: string;
+  eventId: string;
+  slotId: string;
+  versionId?: string;
+  speakerUserId: string;
+  authorUserId: string;
+  authorName: string;
+  authorRole: "speaker" | "organizer";
+  body: string;
+  createdAt: string;
+}
+
 export type ReviewCriterionType = "numeric" | "select" | "text";
 
 export interface ReviewCriterion {
@@ -299,6 +340,26 @@ export interface SessionRow {
   endTime?: string;
   speakerUserIdsJson?: string[];
   kind: string;
+  contentStatus: "draft" | "approved";
+  currentRevisionId?: string;
+  approvedRevisionId?: string;
+  approvedAt?: string;
+  approvedByUserId?: string;
+}
+
+export interface SessionContentRevisionRow {
+  id: string;
+  orgId: string;
+  eventId: string;
+  sessionId: string;
+  revisionNumber: number;
+  title: string;
+  description?: string;
+  speakerUserIdsJson?: string[];
+  editorUserId: string;
+  editorName: string;
+  restoredFromRevisionId?: string;
+  createdAt: string;
 }
 
 export interface TaskTemplateRow {

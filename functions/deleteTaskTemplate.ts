@@ -12,6 +12,12 @@ export default mutation({
     const tasks = (await ctx.db.unsafe.query("SpeakerTask", { taskTemplateId: args.templateId })).filter(
       (task) => matchesEventAnchor(task, template.eventId as string, template.orgId as string),
     );
+    for (const task of tasks) {
+      const slots = await ctx.db.unsafe.query("DeliverableSlot", { taskId: task.id as string });
+      if (slots.some((slot) => matchesEventAnchor(slot, template.eventId as string, template.orgId as string))) {
+        throw ctx.error("INVALID_ARGS", "A task with deliverable history cannot be deleted.");
+      }
+    }
     for (const task of tasks) await ctx.db.unsafe.delete("SpeakerTask", task.id as string);
     await ctx.db.unsafe.delete("TaskTemplate", args.templateId);
     return { deleted: true, tasksDeleted: tasks.length };

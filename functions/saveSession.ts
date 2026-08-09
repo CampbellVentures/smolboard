@@ -41,8 +41,32 @@ export default mutation({
       throw ctx.error("INVALID_ARGS", "Session title is required.");
     }
     const payload = cleanPayload(data);
+    const contentChanged = ["title", "description", "speakerUserIdsJson"].some((key) => key in data);
     if (args.sessionId) {
-      await ctx.db.unsafe.update("Session", args.sessionId, payload);
+      await ctx.db.unsafe.update("Session", args.sessionId, {
+        ...payload,
+        ...(contentChanged
+          ? {
+              contentStatus: "draft",
+              approvedRevisionId: undefined,
+              approvedAt: undefined,
+              approvedByUserId: undefined,
+            }
+          : {}),
+      });
+      if (contentChanged) {
+        const revisionId = await appendRevision(ctx, {
+          orgId: event.orgId as string,
+          eventId: args.eventId,
+          sessionId: args.sessionId,
+          title: String(payload.title ?? existing!.title),
+          description: ("description" in data ? payload.description : existing!.description) as string | undefined,
+          speakerUserIdsJson: ("speakerUserIdsJson" in data
+            ? payload.speakerUserIdsJson
+            : existing!.speakerUserIdsJson) as string[] | undefined,
+        });
+        await ctx.db.unsafe.update("Session", args.sessionId, { currentRevisionId: revisionId });
+      }
       return { id: args.sessionId };
     }
     const title = data.title?.trim();
@@ -54,6 +78,15 @@ export default mutation({
       title,
       kind: data.kind || "talk",
     });
+    const revisionId = await appendRevision(ctx, {
+      orgId: event.orgId as string,
+      eventId: args.eventId,
+      sessionId: id,
+      title,
+      description: payload.description as string | undefined,
+      speakerUserIdsJson: payload.speakerUserIdsJson as string[] | undefined,
+    });
+    await ctx.db.unsafe.update("Session", id, { currentRevisionId: revisionId });
     return { id };
   },
 });
@@ -112,7 +145,48 @@ function validateData(ctx: MutationCtx<"required">, raw: unknown): SessionData {
   ) {
     throw ctx.error("INVALID_ARGS", "Session speakers must be user ids.");
   }
+  if (typeof data.title === "string" && data.title.trim().length > 200) {
+    throw ctx.error("INVALID_ARGS", "Session title must be 200 characters or fewer.");
+  }
+  if (typeof data.description === "string" && data.description.trim().length > 10_000) {
+    throw ctx.error("INVALID_ARGS", "Session description must be 10,000 characters or fewer.");
+  }
+  if (Array.isArray(data.speakerUserIdsJson) && data.speakerUserIdsJson.length > 20) {
+    throw ctx.error("INVALID_ARGS", "A session can have at most 20 speakers.");
+  }
   return data as SessionData;
+}
+
+async function appendRevision(
+  ctx: MutationCtx<"required">,
+  content: {
+    orgId: string;
+    eventId: string;
+    sessionId: string;
+    title: string;
+    description?: string;
+    speakerUserIdsJson?: string[];
+  },
+) {
+  const revisions = (await ctx.db.unsafe.query("SessionContentRevision", { sessionId: content.sessionId })).filter(
+    (revision) => revision.orgId === content.orgId && revision.eventId === content.eventId,
+  );
+  const revisionNumber = revisions.reduce(
+    (highest, revision) => Math.max(highest, Number(revision.revisionNumber) || 0),
+    0,
+  ) + 1;
+  const user = await ctx.db.unsafe.get("User", ctx.auth.userId);
+  return ctx.db.unsafe.insert("SessionContentRevision", {
+    orgId: content.orgId,
+    eventId: content.eventId,
+    sessionId: content.sessionId,
+    revisionNumber,
+    title: content.title.trim(),
+    description: content.description?.trim() || undefined,
+    speakerUserIdsJson: content.speakerUserIdsJson ?? [],
+    editorUserId: ctx.auth.userId,
+    editorName: String(user?.displayName || user?.email || "Organizer").slice(0, 200),
+  });
 }
 
 async function validateRelations(

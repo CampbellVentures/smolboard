@@ -111,6 +111,10 @@ export default mutation({
     if (args.appliesTo === "selected") {
       for (const task of assigned) {
         if (!eligible.has(task.speakerUserId as string)) {
+          const slots = await ctx.db.unsafe.query("DeliverableSlot", { taskId: task.id as string });
+          if (slots.some((slot) => matchesEventAnchor(slot, args.eventId, event.orgId as string))) {
+            throw ctx.error("INVALID_ARGS", "A speaker with deliverable history cannot be removed from this task.");
+          }
           await ctx.db.unsafe.delete("SpeakerTask", task.id as string);
           alreadyAssigned.delete(task.speakerUserId as string);
         }

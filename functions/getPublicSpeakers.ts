@@ -1,7 +1,9 @@
 import { query, v } from "@pylonsync/functions";
+import { approvedContent } from "../lib/session-content";
+import type { SessionContentRevisionRow, SessionRow } from "../lib/types";
 
 // Public speaker gallery for /<org-slug>/<event-slug>/speakers. Anonymous;
-// lists ONLY speakers with an accepted submission, ONLY safe profile fields
+// lists ONLY speakers attached to approved session content, ONLY safe profile fields
 // (no email). Gated on the published schedule like getPublicSchedule.
 export default query<
   { orgSlug: string; eventSlug: string },
@@ -40,12 +42,20 @@ export default query<
       return { event: safeEvent, published: false, speakers: [] };
     }
     const eventId = event.id as string;
-    const submissions = await ctx.db.unsafe.query("Submission", { eventId, status: "accepted" });
-    const profiles = await ctx.db.unsafe.query("SpeakerProfile", { eventId });
+    const sessions = await ctx.db.unsafe.query("Session", { eventId });
+    const revisions = (await ctx.db.unsafe.query("SessionContentRevision", { eventId })).filter(
+      (revision) => revision.orgId === event.orgId && revision.eventId === eventId,
+    ) as unknown as SessionContentRevisionRow[];
+    const profiles = (await ctx.db.unsafe.query("SpeakerProfile", { eventId })).filter(
+      (profile) => profile.orgId === event.orgId && profile.eventId === eventId,
+    );
     const bySpeaker = new Map<string, string[]>();
-    for (const s of submissions) {
-      const uid = s.speakerUserId as string;
-      bySpeaker.set(uid, [...(bySpeaker.get(uid) ?? []), s.title as string]);
+    for (const session of sessions.filter((row) => row.orgId === event.orgId && row.eventId === eventId)) {
+      const content = approvedContent(session as unknown as SessionRow, revisions);
+      if (!content) continue;
+      for (const uid of Array.isArray(content.speakerUserIdsJson) ? content.speakerUserIdsJson : []) {
+        bySpeaker.set(uid, [...(bySpeaker.get(uid) ?? []), content.title]);
+      }
     }
     return {
       event: safeEvent,

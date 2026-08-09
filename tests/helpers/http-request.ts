@@ -9,7 +9,14 @@ export function loopbackRequest(url: string, init: RequestInit = {}): Promise<Re
     throw new Error(`HTTP tests refuse non-loopback target: ${target.origin}`);
   }
   const headers = new Headers(init.headers);
-  const body = typeof init.body === "string" ? init.body : undefined;
+  const body =
+    typeof init.body === "string"
+      ? init.body
+      : init.body instanceof ArrayBuffer
+        ? Buffer.from(init.body)
+        : ArrayBuffer.isView(init.body)
+          ? Buffer.from(init.body.buffer, init.body.byteOffset, init.body.byteLength)
+          : undefined;
 
   return new Promise((resolve, reject) => {
     const request = nodeRequest(
