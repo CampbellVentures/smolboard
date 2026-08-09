@@ -18,6 +18,7 @@ interface LayoutProps {
 
 const WORKSPACE_TITLES: { key: WorkspaceNavKey; href: string; title: string }[] = [
   { key: "reviews", href: "/dashboard/reviews", title: "Review queue" },
+  { key: "speakers", href: "/dashboard/speakers", title: "Speakers" },
   { key: "settings", href: "/dashboard/settings", title: "Settings" },
   { key: "members", href: "/dashboard/members", title: "Team" },
   { key: "events", href: "/dashboard/events", title: "Events" },

@@ -13,6 +13,7 @@ import {
   Mic2,
   ListChecks,
   FileStack,
+  BookUser,
   Mail,
   Settings as SettingsIcon,
   LogOut,
@@ -46,7 +47,7 @@ import { useEnsureOrgSlug } from "@/components/use-org-slug";
 // label, and the account card pinned to the sidebar's base (menu opens
 // upward). The copilot preview opens from the top bar until M3.5 connects it.
 
-export type WorkspaceNavKey = "events" | "members" | "settings" | "reviews";
+export type WorkspaceNavKey = "events" | "speakers" | "members" | "settings" | "reviews";
 export type EventNavKey =
   | "overview"
   | "forms"
@@ -173,6 +174,7 @@ const WORKSPACE_NAV: NavEntry<WorkspaceNavKey>[] = [
     Icon: CalendarDays,
     group: "Events",
   },
+  { key: "speakers", label: "Speakers", href: "/dashboard/speakers", Icon: BookUser, group: "Events" },
   { key: "members", label: "Team", href: "/dashboard/members", Icon: Users, group: "Workspace" },
   { key: "settings", label: "Settings", href: "/dashboard/settings", Icon: SettingsIcon, group: "Workspace" },
 ];

@@ -36,6 +36,7 @@ export interface SpeakersFeed {
     bio: string | null;
     company: string | null;
     jobTitle: string | null;
+    headshotUrl: string | null;
     talks: string[];
   }[];
 }
@@ -295,7 +296,16 @@ function SpeakersSection({ feed }: { feed: SpeakersFeed | null }) {
             className="rounded-xl bg-white p-5 shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.04)]"
           >
             <div className="flex items-center gap-3">
-              <InitialsAvatar name={sp.name} className="size-11 text-[13px]" />
+              {sp.headshotUrl ? (
+                <img
+                  src={sp.headshotUrl}
+                  alt=""
+                  loading="lazy"
+                  className="size-11 shrink-0 rounded-full object-cover outline outline-1 -outline-offset-1 outline-black/10"
+                />
+              ) : (
+                <InitialsAvatar name={sp.name} className="size-11 text-[13px]" />
+              )}
               <div className="min-w-0">
                 <h3 className="truncate text-[15px] font-semibold text-zinc-900">{sp.name}</h3>
                 <p className="truncate text-xs text-zinc-500">

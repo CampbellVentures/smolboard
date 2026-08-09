@@ -1,0 +1,365 @@
+"use client";
+
+import React, { useEffect, useMemo, useState } from "react";
+import { db, Link } from "@pylonsync/react";
+import { BookUser, ExternalLink } from "lucide-react";
+import {
+  DashboardEmptyState,
+  DashboardPage,
+  DashboardStatusBadge,
+  DashboardToolbar,
+} from "@/components/dashboard";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import type { EventRow, SpeakerProfileRow, SubmissionRow } from "@/lib/types";
+
+// Workspace-wide speaker CRM: one row per person across every event, built
+// from the per-event profiles (identity = email). Read-mostly by design —
+// edits happen on the event-level speaker profile, linked from the drawer.
+
+export interface SpeakerPerson {
+  email: string;
+  name: string;
+  company?: string;
+  jobTitle?: string;
+  headshotUrl?: string;
+  tags: string[];
+  profiles: SpeakerProfileRow[];
+  submissions: SubmissionRow[];
+  accepted: number;
+  lastActivity: string;
+}
+
+export function aggregateSpeakers(
+  profiles: SpeakerProfileRow[],
+  submissions: SubmissionRow[],
+): SpeakerPerson[] {
+  const byEmail = new Map<string, SpeakerPerson>();
+  const sorted = profiles
+    .slice()
+    .sort((a, b) => (a.updatedAt ?? a.createdAt).localeCompare(b.updatedAt ?? b.createdAt));
+  for (const profile of sorted) {
+    const email = profile.email.toLowerCase();
+    const existing = byEmail.get(email);
+    const person: SpeakerPerson = existing ?? {
+      email,
+      name: profile.name,
+      tags: [],
+      profiles: [],
+      submissions: [],
+      accepted: 0,
+      lastActivity: profile.createdAt,
+    };
+    // Later profiles win for identity fields (sorted oldest → newest).
+    person.name = profile.name || person.name;
+    person.company = profile.company || person.company;
+    person.jobTitle = profile.jobTitle || person.jobTitle;
+    person.headshotUrl = profile.headshotUrl || person.headshotUrl;
+    person.tags = [...new Set([...person.tags, ...(profile.tagsJson ?? [])])];
+    person.profiles.push(profile);
+    person.lastActivity = [person.lastActivity, profile.updatedAt ?? profile.createdAt]
+      .sort()
+      .at(-1)!;
+    byEmail.set(email, person);
+  }
+  for (const person of byEmail.values()) {
+    const userIds = new Set(person.profiles.map((profile) => profile.userId));
+    person.submissions = submissions.filter((row) => userIds.has(row.speakerUserId));
+    person.accepted = person.submissions.filter((row) => row.status === "accepted").length;
+    person.lastActivity = [
+      person.lastActivity,
+      ...person.submissions.map((row) => row.updatedAt ?? row.submittedAt),
+    ]
+      .sort()
+      .at(-1)!;
+  }
+  return [...byEmail.values()].sort((a, b) => b.lastActivity.localeCompare(a.lastActivity));
+}
+
+function fmtDate(iso: string): string {
+  return new Date(iso).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function Avatar({ person }: { person: SpeakerPerson }) {
+  if (person.headshotUrl) {
+    return (
+      <img
+        src={person.headshotUrl}
+        alt=""
+        loading="lazy"
+        className="size-8 shrink-0 rounded-full object-cover outline outline-1 -outline-offset-1 outline-black/10"
+      />
+    );
+  }
+  const initial = (person.name.trim()[0] || "?").toUpperCase();
+  return (
+    <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-[12px] font-semibold text-zinc-600">
+      {initial}
+    </span>
+  );
+}
+
+export function SpeakerDirectory({
+  initialProfiles,
+  initialEvents,
+  initialSubmissions,
+}: {
+  initialProfiles: SpeakerProfileRow[];
+  initialEvents: EventRow[];
+  initialSubmissions: SubmissionRow[];
+}) {
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
+  const profileQ = db.useQuery<SpeakerProfileRow>("SpeakerProfile");
+  const eventQ = db.useQuery<EventRow>("Event");
+  const submissionQ = db.useQuery<SubmissionRow>("Submission");
+  const profiles = !hydrated || profileQ.loading ? initialProfiles : profileQ.data;
+  const events = !hydrated || eventQ.loading ? initialEvents : eventQ.data;
+  const submissions = !hydrated || submissionQ.loading ? initialSubmissions : submissionQ.data;
+  const eventById = useMemo(() => new Map(events.map((row) => [row.id, row])), [events]);
+
+  const people = useMemo(() => aggregateSpeakers(profiles, submissions), [profiles, submissions]);
+  const allTags = useMemo(
+    () => [...new Set(people.flatMap((person) => person.tags))].sort(),
+    [people],
+  );
+
+  const [q, setQ] = useState("");
+  const [tag, setTag] = useState("all");
+  const [selected, setSelected] = useState<SpeakerPerson | null>(null);
+
+  let rows = people;
+  if (tag !== "all") rows = rows.filter((person) => person.tags.includes(tag));
+  if (q.trim()) {
+    const needle = q.trim().toLowerCase();
+    rows = rows.filter(
+      (person) =>
+        person.name.toLowerCase().includes(needle) ||
+        person.email.includes(needle) ||
+        (person.company ?? "").toLowerCase().includes(needle),
+    );
+  }
+
+  if (people.length === 0) {
+    return (
+      <DashboardPage>
+        <DashboardEmptyState
+          icon={BookUser}
+          title="No speakers yet"
+          description="Everyone who submits to any of your events builds a history here."
+        />
+      </DashboardPage>
+    );
+  }
+
+  return (
+    <DashboardPage>
+      <DashboardToolbar>
+        <div className="flex flex-wrap items-center gap-2">
+          <Input
+            value={q}
+            onChange={(event) => setQ(event.target.value)}
+            placeholder="Search name, email, company…"
+            className="w-64"
+            aria-label="Search speakers"
+            autoComplete="off"
+          />
+          {allTags.length > 0 ? (
+            <Select
+              aria-label="Filter by tag"
+              value={tag}
+              onChange={(event) => setTag(event.target.value)}
+              className="w-40"
+            >
+              <option value="all">All tags</option>
+              {allTags.map((value) => (
+                <option key={value} value={value}>
+                  {value}
+                </option>
+              ))}
+            </Select>
+          ) : null}
+        </div>
+        <span className="text-xs tabular-nums text-muted-foreground">
+          {rows.length} of {people.length} speakers
+        </span>
+      </DashboardToolbar>
+
+      <div className="overflow-x-auto rounded-xl border border-border bg-card">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Speaker</TableHead>
+              <TableHead>Events</TableHead>
+              <TableHead>Submissions</TableHead>
+              <TableHead>Tags</TableHead>
+              <TableHead>Last activity</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.map((person) => (
+              <TableRow
+                key={person.email}
+                className="cursor-pointer"
+                tabIndex={0}
+                onClick={() => setSelected(person)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    setSelected(person);
+                  }
+                }}
+              >
+                <TableCell>
+                  <div className="flex items-center gap-3">
+                    <Avatar person={person} />
+                    <div className="min-w-0">
+                      <div className="truncate font-medium">{person.name}</div>
+                      <div className="truncate text-xs text-muted-foreground">
+                        {[person.jobTitle, person.company].filter(Boolean).join(" · ") ||
+                          person.email}
+                      </div>
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="flex flex-wrap gap-1">
+                    {person.profiles.slice(0, 3).map((profile) => (
+                      <Badge key={profile.id} variant="outline" className="max-w-36 truncate">
+                        {eventById.get(profile.eventId)?.name ?? "Event"}
+                      </Badge>
+                    ))}
+                    {person.profiles.length > 3 ? (
+                      <span className="text-xs text-muted-foreground">
+                        +{person.profiles.length - 3}
+                      </span>
+                    ) : null}
+                  </div>
+                </TableCell>
+                <TableCell className="tabular-nums">
+                  {person.submissions.length}
+                  {person.accepted > 0 ? (
+                    <span className="ml-1.5 text-xs text-emerald-600">
+                      {person.accepted} accepted
+                    </span>
+                  ) : null}
+                </TableCell>
+                <TableCell>
+                  <div className="flex flex-wrap gap-1">
+                    {person.tags.slice(0, 3).map((value) => (
+                      <Badge key={value} variant="secondary">
+                        {value}
+                      </Badge>
+                    ))}
+                  </div>
+                </TableCell>
+                <TableCell className="whitespace-nowrap text-sm tabular-nums text-muted-foreground">
+                  {fmtDate(person.lastActivity)}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+
+      <Sheet open={selected !== null} onOpenChange={(open) => !open && setSelected(null)}>
+        <SheetContent className="overflow-y-auto sm:max-w-lg">
+          {selected ? (
+            <>
+              <SheetHeader>
+                <div className="flex items-center gap-3">
+                  <Avatar person={selected} />
+                  <div className="min-w-0">
+                    <SheetTitle className="truncate">{selected.name}</SheetTitle>
+                    <SheetDescription className="truncate">
+                      {selected.email}
+                      {selected.company ? ` · ${selected.company}` : ""}
+                    </SheetDescription>
+                  </div>
+                </div>
+              </SheetHeader>
+              <div className="space-y-5 px-4 pb-6">
+                {selected.tags.length > 0 ? (
+                  <div className="flex flex-wrap gap-1">
+                    {selected.tags.map((value) => (
+                      <Badge key={value} variant="secondary">
+                        {value}
+                      </Badge>
+                    ))}
+                  </div>
+                ) : null}
+                {selected.profiles
+                  .slice()
+                  .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+                  .map((profile) => {
+                    const event = eventById.get(profile.eventId);
+                    const eventSubmissions = selected.submissions.filter(
+                      (row) => row.eventId === profile.eventId,
+                    );
+                    return (
+                      <div key={profile.id} className="rounded-xl border border-border p-4">
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="min-w-0 truncate text-sm font-semibold">
+                            {event?.name ?? "Event"}
+                          </span>
+                          <div className="flex shrink-0 items-center gap-2">
+                            <DashboardStatusBadge status={profile.status || "invited"}>
+                              {(profile.status || "invited").replace(/_/g, " ")}
+                            </DashboardStatusBadge>
+                            <Link
+                              href={`/dashboard/events/${profile.eventId}/speakers`}
+                              className="text-muted-foreground transition-colors hover:text-foreground"
+                              title="Open in event"
+                            >
+                              <ExternalLink className="size-3.5" />
+                            </Link>
+                          </div>
+                        </div>
+                        {eventSubmissions.length > 0 ? (
+                          <ul className="mt-3 space-y-1.5">
+                            {eventSubmissions.map((submission) => (
+                              <li
+                                key={submission.id}
+                                className="flex items-center justify-between gap-3 text-[13px]"
+                              >
+                                <span className="min-w-0 truncate">{submission.title}</span>
+                                <DashboardStatusBadge status={submission.status}>
+                                  {submission.status.replace(/_/g, " ")}
+                                </DashboardStatusBadge>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="mt-2 text-xs text-muted-foreground">No submissions.</p>
+                        )}
+                      </div>
+                    );
+                  })}
+              </div>
+            </>
+          ) : null}
+        </SheetContent>
+      </Sheet>
+    </DashboardPage>
+  );
+}
