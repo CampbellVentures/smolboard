@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { db } from "@pylonsync/react";
+import { db, useSearchParams } from "@pylonsync/react";
 import {
   passwordLogin,
   passwordRegister,
@@ -25,6 +25,11 @@ import {
 // the server prefers it over the cookie — so `selectOrg` would 401 with
 // "anonymous session" even though the cookie was a valid user.
 export function AuthForm({ mode }: { mode: "login" | "signup" }) {
+  // Post-auth destination: honor ?next=<in-app path> (e.g. the invite-accept
+  // page) but never an absolute/protocol-relative URL — no open redirects.
+  const searchParams = useSearchParams();
+  const rawNext = searchParams.get("next") ?? "";
+  const next = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/dashboard";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -61,7 +66,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         // leftover guest token shadows this session on the sync engine's calls.
         persistSession(session);
         // Full navigation: the SSR dashboard re-renders with the new cookie.
-        window.location.assign("/dashboard");
+        window.location.assign(next);
       } else {
         const session = await passwordRegister({ email, password });
         persistSession(session);
@@ -76,7 +81,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         } catch {
           // Swallowed — the dashboard provisions on load if there's still no org.
         }
-        window.location.assign("/dashboard");
+        window.location.assign(next);
       }
     } catch (err) {
       setError(messageFor(err));
@@ -148,7 +153,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
 
           {providers.includes("google") ? (
             <a
-              href="/api/auth/login/google?callback=/dashboard&redirect=1"
+              href={`/api/auth/login/google?callback=${encodeURIComponent(next)}&redirect=1`}
               className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-zinc-300 bg-white text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-50"
             >
               <GoogleIcon />
@@ -157,7 +162,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
           ) : null}
           {providers.includes("github") ? (
             <a
-              href="/api/auth/login/github?callback=/dashboard&redirect=1"
+              href={`/api/auth/login/github?callback=${encodeURIComponent(next)}&redirect=1`}
               className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-zinc-300 bg-white text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-50"
             >
               <GitHubIcon />
