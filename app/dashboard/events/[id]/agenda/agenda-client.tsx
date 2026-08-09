@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import {
   DashboardEmptyState,
   DashboardPage,
+  DashboardStatusBadge,
   DashboardToolbar,
   DashboardWidePage,
 } from "@/components/dashboard";
@@ -22,9 +23,11 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Table,
   TableBody,
@@ -47,11 +50,13 @@ import {
   type AgendaSession,
 } from "@/lib/agenda";
 import { parseJson } from "@/lib/types";
+import { revisionsForSession } from "@/lib/session-content";
 import { useOrgSlug } from "@/components/use-org-slug";
 import type {
   EventRow,
   RoomRow,
   SessionRow,
+  SessionContentRevisionRow,
   SpeakerProfileRow,
   SubmissionRow,
   TrackRow,
@@ -105,6 +110,7 @@ export function AgendaBuilder({
   initialTracks,
   submissions,
   profiles,
+  initialRevisions,
 }: {
   event: EventRow;
   initialSessions: SessionRow[];
@@ -112,6 +118,7 @@ export function AgendaBuilder({
   initialTracks: TrackRow[];
   submissions: SubmissionRow[];
   profiles: SpeakerProfileRow[];
+  initialRevisions: SessionContentRevisionRow[];
 }) {
   const tz = event.timezone || "UTC";
   const [hydrated, setHydrated] = useState(false);
@@ -119,6 +126,7 @@ export function AgendaBuilder({
   const sesQ = db.useQuery<SessionRow>("Session");
   const roomQ = db.useQuery<RoomRow>("Room");
   const trackQ = db.useQuery<TrackRow>("Track");
+  const revisionQ = db.useQuery<SessionContentRevisionRow>("SessionContentRevision");
   const live = <T extends { eventId: string }>(
     q: { data: T[]; loading: boolean },
     initial: T[],
@@ -126,6 +134,7 @@ export function AgendaBuilder({
   const sessions = live(sesQ, initialSessions);
   const rooms = live(roomQ, initialRooms).slice().sort((a, b) => a.sortOrder - b.sortOrder);
   const tracks = live(trackQ, initialTracks).slice().sort((a, b) => a.sortOrder - b.sortOrder);
+  const revisions = live(revisionQ, initialRevisions);
 
   const days = useMemo(
     () => eventDays(event.startDate, event.endDate, sessions.map(toAgenda), tz),
@@ -394,6 +403,7 @@ export function AgendaBuilder({
           session={openSession}
           tracks={tracks}
           tz={tz}
+          revisions={revisionsForSession(revisions, openSession.id)}
           onClose={() => setOpenSessionId(null)}
         />
       )}
@@ -902,15 +912,25 @@ function SessionPopover({
   session,
   tracks,
   tz,
+  revisions,
   onClose,
 }: {
   session: SessionRow;
   tracks: TrackRow[];
   tz: string;
+  revisions: SessionContentRevisionRow[];
   onClose: () => void;
 }) {
   const [title, setTitle] = useState(session.title);
+  const [description, setDescription] = useState(session.description ?? "");
   const [inviteBusy, setInviteBusy] = useState(false);
+  const [contentBusy, setContentBusy] = useState(false);
+  useEffect(() => {
+    setTitle(session.title);
+    setDescription(session.description ?? "");
+  }, [session.id, session.title, session.description]);
+  const contentDirty = title.trim() !== session.title || description.trim() !== (session.description ?? "");
+  const needsInitialRevision = !session.currentRevisionId;
   const duration =
     session.startTime && session.endTime
       ? Math.round((Date.parse(session.endTime) - Date.parse(session.startTime)) / 60000)
@@ -940,6 +960,47 @@ function SessionPopover({
     }
   }
 
+  async function setApproval(approved: boolean) {
+    setContentBusy(true);
+    try {
+      await callFn("approveSessionContent", { sessionId: session.id, approved });
+      toast.success(approved ? "Session content approved" : "Session content returned to draft");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not update content approval.");
+    } finally {
+      setContentBusy(false);
+    }
+  }
+
+  async function saveContent() {
+    if (!title.trim() || (!contentDirty && !needsInitialRevision)) return;
+    setContentBusy(true);
+    try {
+      await callFn("saveSession", {
+        eventId: session.eventId,
+        sessionId: session.id,
+        data: { title: title.trim(), description: description.trim() || null },
+      });
+      toast.success("Session content saved as a new draft revision");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not save session content.");
+    } finally {
+      setContentBusy(false);
+    }
+  }
+
+  async function restore(revisionId: string) {
+    setContentBusy(true);
+    try {
+      await callFn("restoreSessionContent", { sessionId: session.id, revisionId });
+      toast.success("Session content restored as a new draft revision");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not restore this revision.");
+    } finally {
+      setContentBusy(false);
+    }
+  }
+
   const timeLabel = session.startTime
     ? `${fmtTime(minutesInDay(session.startTime, tz))}${
         session.endTime ? `–${fmtTime(minutesInDay(session.endTime, tz))}` : ""
@@ -961,11 +1022,55 @@ function SessionPopover({
                 id={`session-title-${session.id}`}
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                onBlur={() =>
-                  title.trim() && title !== session.title && patch({ title: title.trim() })
-                }
                 className="font-medium"
               />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor={`session-description-${session.id}`}>Abstract / description</FieldLabel>
+              <Textarea
+                id={`session-description-${session.id}`}
+                value={description}
+                rows={5}
+                maxLength={10_000}
+                onChange={(event) => setDescription(event.target.value)}
+              />
+              <Button type="button" size="sm" variant="outline" disabled={contentBusy || (!contentDirty && !needsInitialRevision) || !title.trim()} onClick={() => void saveContent()}>
+                {contentBusy ? "Saving…" : "Save content revision"}
+              </Button>
+            </Field>
+            <Field>
+              <FieldLabel>Content approval</FieldLabel>
+              <div className="flex items-center gap-2">
+                <DashboardStatusBadge status={session.contentStatus}>{session.contentStatus === "approved" ? "Approved" : "Draft"}</DashboardStatusBadge>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={session.contentStatus === "approved" ? "outline" : "default"}
+                  disabled={contentBusy || contentDirty || needsInitialRevision}
+                  onClick={() => void setApproval(session.contentStatus !== "approved")}
+                >
+                  {session.contentStatus === "approved" ? "Return to draft" : "Approve current revision"}
+                </Button>
+              </div>
+              {contentDirty || needsInitialRevision ? <p className="mt-1 text-xs text-amber-700">Save this revision before changing approval.</p> : null}
+              <p className="mt-1 text-xs text-muted-foreground">Only the explicitly approved revision can appear on the published public schedule and speaker feed.</p>
+            </Field>
+            <Field>
+              <FieldLabel>Content history</FieldLabel>
+              <div className="max-h-48 divide-y overflow-y-auto rounded-lg border">
+                {revisions.map((revision, index) => (
+                  <div key={revision.id} className="flex items-start justify-between gap-3 p-3 text-xs">
+                    <div className="min-w-0">
+                      <div className="font-medium">v{revision.revisionNumber} · {revision.title}</div>
+                      <div className="text-muted-foreground">{revision.editorName} · {new Date(revision.createdAt).toLocaleString()}{revision.restoredFromRevisionId ? " · restored" : ""}</div>
+                      {revision.description ? <p className="mt-1 line-clamp-2 text-muted-foreground">{revision.description}</p> : null}
+                    </div>
+                    {index > 0 ? (
+                      <Button type="button" size="sm" variant="ghost" disabled={contentBusy} onClick={() => void restore(revision.id)}>Restore</Button>
+                    ) : <Badge>Current</Badge>}
+                  </div>
+                ))}
+              </div>
             </Field>
             <FieldGroup className="grid grid-cols-2 gap-3">
               <Field>

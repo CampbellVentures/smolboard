@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { callFn, db } from "@pylonsync/react";
-import { FileUpload, sendMagicLink, verifyMagicLink, useAuth } from "@pylonsync/client";
+import { sendMagicLink, verifyMagicLink, useAuth } from "@pylonsync/client";
 import { Button } from "@/components/ui/button";
 import { BrandMark } from "@/components/brand";
 import { Badge } from "@/components/ui/badge";
@@ -17,18 +17,22 @@ import {
   CalendarDays,
   CheckCircle2,
   ExternalLink,
-  FileUp,
   LogOut,
   Loader2,
   Pencil,
 } from "lucide-react";
 import { fieldsOf, parseJson } from "@/lib/types";
 import { taskCompletion, taskDueState } from "@/lib/tasks";
+import { latestVersion, taskSlot, versionsForSlot } from "@/lib/deliverables";
+import { uploadFileDirect } from "@/lib/direct-upload";
 import { formatSessionTime } from "@/lib/ics";
 import type { PortalSession } from "@/lib/portal";
 import { pruneAnswers, validateAnswers, type Answers } from "@/lib/forms";
 import type {
   EventRow,
+  DeliverableCommentRow,
+  DeliverableSlotRow,
+  DeliverableVersionRow,
   SpeakerFileRow,
   SpeakerProfileRow,
   SpeakerTaskRow,
@@ -179,6 +183,9 @@ export function PortalHome({
   initialTemplates,
   initialFiles,
   initialForms,
+  initialDeliverableSlots,
+  initialDeliverableVersions,
+  initialDeliverableComments,
   events,
 }: {
   userId: string;
@@ -189,6 +196,9 @@ export function PortalHome({
   initialTemplates: TaskTemplateRow[];
   initialFiles: SpeakerFileRow[];
   initialForms: SubmissionFormRow[];
+  initialDeliverableSlots: DeliverableSlotRow[];
+  initialDeliverableVersions: DeliverableVersionRow[];
+  initialDeliverableComments: DeliverableCommentRow[];
   events: EventRow[];
 }) {
   const { signOut } = useAuth();
@@ -227,6 +237,9 @@ export function PortalHome({
   const templateQ = db.useQuery<TaskTemplateRow>("TaskTemplate");
   const fileQ = db.useQuery<SpeakerFileRow>("SpeakerFile");
   const formQ = db.useQuery<SubmissionFormRow>("SubmissionForm");
+  const slotQ = db.useQuery<DeliverableSlotRow>("DeliverableSlot");
+  const versionQ = db.useQuery<DeliverableVersionRow>("DeliverableVersion");
+  const commentQ = db.useQuery<DeliverableCommentRow>("DeliverableComment");
   const submissions =
     !hydrated || subsQ.loading
       ? initialSubmissions
@@ -245,6 +258,15 @@ export function PortalHome({
       ? initialFiles
       : fileQ.data.filter((file) => file.userId === userId);
   const forms = !hydrated || formQ.loading ? initialForms : formQ.data;
+  const deliverableSlots = (!hydrated || slotQ.loading ? initialDeliverableSlots : slotQ.data).filter(
+    (slot) => slot.speakerUserId === userId,
+  );
+  const deliverableVersions = (!hydrated || versionQ.loading ? initialDeliverableVersions : versionQ.data).filter(
+    (version) => version.speakerUserId === userId,
+  );
+  const deliverableComments = (!hydrated || commentQ.loading ? initialDeliverableComments : commentQ.data).filter(
+    (comment) => comment.speakerUserId === userId,
+  );
 
   const eventName = (id: string) => events.find((e) => e.id === id)?.name ?? "Event";
 
@@ -329,6 +351,9 @@ export function PortalHome({
               tasks={tasks.filter((task) => task.eventId === p.eventId)}
               templates={templates.filter((template) => template.eventId === p.eventId)}
               files={files.filter((file) => file.eventId === p.eventId)}
+              slots={deliverableSlots.filter((slot) => slot.eventId === p.eventId)}
+              versions={deliverableVersions.filter((version) => version.eventId === p.eventId)}
+              comments={deliverableComments.filter((comment) => comment.eventId === p.eventId)}
             />
             <ProfileEditor profile={p} eventName={eventName(p.eventId)} />
             <SpeakerFiles profile={p} files={files.filter((file) => file.eventId === p.eventId)} />
@@ -523,11 +548,17 @@ function TaskChecklist({
   tasks,
   templates,
   files,
+  slots,
+  versions,
+  comments,
 }: {
   eventName: string;
   tasks: SpeakerTaskRow[];
   templates: TaskTemplateRow[];
   files: SpeakerFileRow[];
+  slots: DeliverableSlotRow[];
+  versions: DeliverableVersionRow[];
+  comments: DeliverableCommentRow[];
 }) {
   if (tasks.length === 0) return null;
   const completion = taskCompletion(tasks);
@@ -552,7 +583,17 @@ function TaskChecklist({
           })
           .map((task) => {
             const template = templateById.get(task.taskTemplateId);
-            return template ? <SpeakerTaskItem key={task.id} task={task} template={template} files={files} /> : null;
+            return template ? (
+              <SpeakerTaskItem
+                key={task.id}
+                task={task}
+                template={template}
+                files={files}
+                slots={slots}
+                versions={versions}
+                comments={comments}
+              />
+            ) : null;
           })}
       </div>
     </section>
@@ -563,10 +604,16 @@ function SpeakerTaskItem({
   task,
   template,
   files,
+  slots,
+  versions,
+  comments,
 }: {
   task: SpeakerTaskRow;
   template: TaskTemplateRow;
   files: SpeakerFileRow[];
+  slots: DeliverableSlotRow[];
+  versions: DeliverableVersionRow[];
+  comments: DeliverableCommentRow[];
 }) {
   const [answers, setAnswers] = useState<Answers>(() => parseJson<Answers>(task.responseJson) ?? {});
   const [busy, setBusy] = useState(false);
@@ -574,7 +621,9 @@ function SpeakerTaskItem({
   const complete = task.status === "done";
   const due = taskDueState(task, template);
   const neededFileKind = template.target || "document";
-  const hasUpload = files.some((file) => file.kind === neededFileKind);
+  const slot = taskSlot(slots, task.id);
+  const taskVersions = slot ? versionsForSlot(versions, slot.id) : [];
+  const hasUpload = Boolean(slot && latestVersion(versions, slot.id));
 
   async function setComplete(completed: boolean) {
     setBusy(true);
@@ -616,8 +665,14 @@ function SpeakerTaskItem({
               </a>
             </Button>
           ) : null}
-          {!complete && template.kind === "upload" && !hasUpload ? (
-            <p className="mt-4 text-xs text-zinc-500">Upload a {neededFileKind} in the files section below, then return here to complete this task.</p>
+          {template.kind === "upload" ? (
+            <DeliverableUploader
+              task={task}
+              slot={slot}
+              versions={taskVersions}
+              comments={slot ? comments.filter((comment) => comment.slotId === slot.id) : []}
+              fileKind={neededFileKind}
+            />
           ) : null}
           {error ? <p className="mt-3 text-xs text-red-600">{error}</p> : null}
           <Button
@@ -636,53 +691,162 @@ function SpeakerTaskItem({
   );
 }
 
-function SpeakerFiles({ profile, files }: { profile: SpeakerProfileRow; files: SpeakerFileRow[] }) {
-  const [kind, setKind] = useState("slides");
+function DeliverableUploader({
+  task,
+  slot,
+  versions,
+  comments,
+  fileKind,
+}: {
+  task: SpeakerTaskRow;
+  slot?: DeliverableSlotRow;
+  versions: DeliverableVersionRow[];
+  comments: DeliverableCommentRow[];
+  fileKind: string;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const [comment, setComment] = useState("");
+  const [commenting, setCommenting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  async function onUploaded(uploaded: { id: string }, source: File) {
+
+  async function upload(file: File) {
+    setUploading(true);
+    setError(null);
     try {
-      await callFn("attachSpeakerFile", {
-        profileId: profile.id,
-        kind,
-        fileId: uploaded.id,
-        label: source.name,
+      const ensured = slot ?? await callFn<{ id: string }>("ensureDeliverableSlot", { taskId: task.id });
+      const stored = await uploadFileDirect(file);
+      await callFn("recordDeliverableVersion", {
+        slotId: ensured.id,
+        fileId: stored.id,
+        fileUrl: stored.url,
+        filename: file.name,
+        mimeType: file.type || "application/octet-stream",
+        size: stored.size,
       });
-      setError(null);
+      await callFn("completeTask", { taskId: task.id, completed: true });
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "The file uploaded, but could not be attached to your profile.");
+      setError(caught instanceof Error ? caught.message : "Could not upload this deliverable.");
+    } finally {
+      setUploading(false);
     }
   }
+
+  async function addComment(event: React.FormEvent) {
+    event.preventDefault();
+    if (!slot || !comment.trim()) return;
+    setCommenting(true);
+    setError(null);
+    try {
+      await callFn("addDeliverableComment", {
+        slotId: slot.id,
+        versionId: versions[0]?.id,
+        body: comment.trim(),
+      });
+      setComment("");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not add the comment.");
+    } finally {
+      setCommenting(false);
+    }
+  }
+
   return (
-    <section>
-      <div className="flex items-baseline justify-between">
-        <h2 className="text-sm font-semibold text-zinc-900">Files</h2>
-        <span className="text-xs text-zinc-400">{files.length} uploaded</span>
-      </div>
-      <div className="mt-3 rounded-xl border border-zinc-200 bg-white p-5">
-        <div className="mb-4 max-w-xs">
-          <Select aria-label="File type" value={kind} onChange={(event) => setKind(event.target.value)}>
-            <option value="slides">Slides</option>
-            <option value="headshot">Headshot</option>
-            <option value="document">Document</option>
-          </Select>
-        </div>
-        <FileUpload
-          label={<span className="flex items-center gap-2"><FileUp className="size-4" /> Drop a file here</span>}
-          helperText="PDF, slides, images, or documents up to 25 MB"
-          maxSizeBytes={25 * 1024 * 1024}
-          onUploaded={(uploaded, source) => void onUploaded(uploaded, source)}
+    <div className="mt-4 space-y-3 rounded-lg border border-zinc-200 bg-zinc-50 p-3">
+      <label className="block text-xs font-medium text-zinc-700">
+        {versions.length > 0 ? `Upload a new ${fileKind} version` : `Upload ${fileKind}`}
+        <input
+          type="file"
+          className="mt-2 block w-full text-xs file:mr-3 file:rounded-md file:border-0 file:bg-zinc-900 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-white"
+          accept={fileKind === "headshot" ? "image/*" : fileKind === "slides" ? ".pdf,.ppt,.pptx,application/pdf" : undefined}
+          disabled={uploading}
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            if (file) void upload(file);
+            event.currentTarget.value = "";
+          }}
         />
-        {error ? <p className="mt-3 text-xs text-red-600">{error}</p> : null}
-        {files.length > 0 ? (
-          <ul className="mt-4 divide-y divide-zinc-100 rounded-lg border border-zinc-200">
-            {files.map((file) => (
-              <li key={file.id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
-                <span className="truncate">{file.label || file.fileId}</span>
-                <Badge variant="outline" className="capitalize">{file.kind}</Badge>
+      </label>
+      <p className="text-[11px] text-zinc-500">
+        {fileKind === "slides" ? "PDF or PowerPoint" : fileKind === "headshot" ? "Image files" : "Documents"}; maximum 25 MB. Re-uploading creates a retained version.
+      </p>
+      {uploading ? <p className="text-xs text-zinc-500">Uploading and confirming…</p> : null}
+      {error ? <p className="text-xs text-red-600">{error}</p> : null}
+      {versions.length > 0 ? (
+        <div>
+          <p className="text-xs font-medium text-zinc-700">Versions</p>
+          <ul className="mt-1 divide-y divide-zinc-200 rounded-md border border-zinc-200 bg-white">
+            {versions.map((version, index) => (
+              <li key={version.id} className="flex items-center justify-between gap-3 px-2.5 py-2 text-xs">
+                <span className="min-w-0 truncate">
+                  v{version.versionNumber} · {version.filename} · {new Date(version.createdAt).toLocaleString()}
+                </span>
+                <span className="flex shrink-0 items-center gap-2">
+                  {index === 0 ? <Badge>Latest</Badge> : null}
+                  <a
+                    href={`/api/files/${encodeURIComponent(version.fileId)}`}
+                    className="font-medium text-zinc-700 underline underline-offset-2"
+                  >
+                    Download
+                  </a>
+                </span>
               </li>
             ))}
           </ul>
-        ) : null}
+        </div>
+      ) : null}
+      {slot ? (
+        <div>
+          <p className="text-xs font-medium text-zinc-700">Comments</p>
+          {comments.length > 0 ? (
+            <ul className="mt-1 space-y-1.5">
+              {comments
+                .slice()
+                .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+                .map((item) => (
+                  <li key={item.id} className="rounded-md bg-white px-2.5 py-2 text-xs">
+                    <span className="font-medium">{item.authorName}</span>
+                    <span className="ml-1 text-zinc-400">· {new Date(item.createdAt).toLocaleString()}</span>
+                    <p className="mt-0.5 whitespace-pre-wrap text-zinc-600">{item.body}</p>
+                  </li>
+                ))}
+            </ul>
+          ) : null}
+          <form className="mt-2 flex gap-2" onSubmit={addComment}>
+            <Input
+              aria-label={`Comment on ${task.id}`}
+              value={comment}
+              maxLength={2000}
+              onChange={(event) => setComment(event.target.value)}
+              placeholder="Add a comment…"
+            />
+            <Button type="submit" size="sm" variant="outline" disabled={commenting || !comment.trim()}>
+              {commenting ? "Adding…" : "Comment"}
+            </Button>
+          </form>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function SpeakerFiles({ profile, files }: { profile: SpeakerProfileRow; files: SpeakerFileRow[] }) {
+  if (files.length === 0) return null;
+  return (
+    <section>
+      <div className="flex items-baseline justify-between">
+        <h2 className="text-sm font-semibold text-zinc-900">Legacy profile files</h2>
+        <span className="text-xs text-zinc-400">{files.length} retained</span>
+      </div>
+      <div className="mt-3 rounded-xl border border-zinc-200 bg-white p-5">
+        <p className="text-xs text-zinc-500">These pre-versioning files are preserved. New uploads belong to a specific task above.</p>
+        <ul className="mt-4 divide-y divide-zinc-100 rounded-lg border border-zinc-200">
+          {files.map((file) => (
+            <li key={file.id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+              <span className="truncate">{file.label || file.fileId}</span>
+              <Badge variant="outline" className="capitalize">{file.kind}</Badge>
+            </li>
+          ))}
+        </ul>
       </div>
     </section>
   );

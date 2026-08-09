@@ -243,6 +243,7 @@ test("public schedule hides rows until publication and exposes them after public
   expect(hidden.body.sessions).toEqual([]);
 
   expect((await entityUpdate(fixture.a.owner, "Event", fixture.a.eventId, { schedulePublished: true })).status).toBe(200);
+  await callFn(fixture.a.owner, "approveSessionContent", { sessionId: fixture.a.sessionId, approved: true });
   const published = await publicFn<{ published: boolean; sessions: { id: string; title: string }[] }>(
     server.baseUrl,
     "getPublicSchedule",

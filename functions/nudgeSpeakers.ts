@@ -20,7 +20,13 @@ export default mutation({
     const templates = (await ctx.db.unsafe.query("TaskTemplate", {
       eventId: args.eventId,
     })) as unknown as TaskTemplateRow[];
-    const recipients = profiles.filter((profile) => wanted.has(profile.userId as string));
+    const recipients = profiles.filter(
+      (profile) => profile.orgId === event.orgId && wanted.has(profile.userId as string),
+    );
+    const safeTasks = tasks.filter((task) => task.orgId === event.orgId && task.eventId === args.eventId);
+    const safeTemplates = templates.filter(
+      (template) => template.orgId === event.orgId && template.eventId === args.eventId,
+    );
 
     await ctx.auth.elevate({
       admin: true,
@@ -28,7 +34,7 @@ export default mutation({
     });
     let queued = 0;
     for (const profile of recipients) {
-      const speakerTasks = tasks.filter(
+      const speakerTasks = safeTasks.filter(
         (task) => task.speakerUserId === profile.userId && task.status !== "done",
       );
       if (speakerTasks.length === 0) continue;
@@ -38,7 +44,7 @@ export default mutation({
         toEmail: profile.email as string,
         vars: {
           speaker_name: (profile.name as string) ?? "",
-          task_list: taskReminderList(speakerTasks, templates),
+          task_list: taskReminderList(speakerTasks, safeTemplates),
         },
       });
       queued++;

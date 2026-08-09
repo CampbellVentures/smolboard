@@ -2,10 +2,14 @@ import React, { use } from "react";
 import { type Metadata, type PageProps } from "@pylonsync/react";
 import { TasksClient } from "./tasks-client";
 import type {
+  DeliverableCommentRow,
+  DeliverableSlotRow,
+  DeliverableVersionRow,
   EventRow,
   SpeakerProfileRow,
   SpeakerTaskRow,
   SubmissionRow,
+  SessionRow,
   TaskTemplateRow,
 } from "@/lib/types";
 
@@ -40,6 +44,16 @@ export default function TasksPage({ auth, params, response, serverData }: PagePr
       initialTasks={tasks}
       profiles={profiles}
       submissions={submissions}
+      initialDeliverableSlots={use(serverData.list<DeliverableSlotRow>("DeliverableSlot")).filter(
+        (row) => row.eventId === event.id,
+      )}
+      initialDeliverableVersions={use(serverData.list<DeliverableVersionRow>("DeliverableVersion")).filter(
+        (row) => row.eventId === event.id,
+      )}
+      initialDeliverableComments={use(serverData.list<DeliverableCommentRow>("DeliverableComment")).filter(
+        (row) => row.eventId === event.id,
+      )}
+      sessions={use(serverData.list<SessionRow>("Session")).filter((row) => row.eventId === event.id)}
     />
   );
 }

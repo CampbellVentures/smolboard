@@ -2,6 +2,9 @@ import React, { use } from "react";
 import { type Metadata, type PageProps } from "@pylonsync/react";
 import { PortalLogin, PortalHome } from "./portal-client";
 import type {
+  DeliverableCommentRow,
+  DeliverableSlotRow,
+  DeliverableVersionRow,
   EventRow,
   SpeakerFileRow,
   SpeakerProfileRow,
@@ -44,6 +47,15 @@ export default function PortalPage({ auth, serverData }: PageProps) {
     (file) => file.userId === auth.user_id,
   );
   const forms = use(serverData.list<SubmissionFormRow>("SubmissionForm"));
+  const deliverableSlots = use(serverData.list<DeliverableSlotRow>("DeliverableSlot")).filter(
+    (slot) => slot.speakerUserId === auth.user_id,
+  );
+  const deliverableVersions = use(serverData.list<DeliverableVersionRow>("DeliverableVersion")).filter(
+    (version) => version.speakerUserId === auth.user_id,
+  );
+  const deliverableComments = use(serverData.list<DeliverableCommentRow>("DeliverableComment")).filter(
+    (comment) => comment.speakerUserId === auth.user_id,
+  );
 
   return (
     <PortalHome
@@ -55,6 +67,9 @@ export default function PortalPage({ auth, serverData }: PageProps) {
       initialTemplates={templates}
       initialFiles={files}
       initialForms={forms}
+      initialDeliverableSlots={deliverableSlots}
+      initialDeliverableVersions={deliverableVersions}
+      initialDeliverableComments={deliverableComments}
       events={events}
     />
   );

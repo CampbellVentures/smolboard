@@ -40,13 +40,26 @@ export default mutation({
       responseJson = answers;
     }
     if (args.completed && template.kind === "upload") {
-      const files = await ctx.db.unsafe.query("SpeakerFile", {
-        eventId: task.eventId as string,
-        userId: ctx.auth.userId,
-      });
-      const target = (template.target as string | undefined) || "document";
-      if (!files.some((file) => file.kind === target && file.orgId === task.orgId)) {
-        throw ctx.error("INVALID_ARGS", `Upload a ${target} file before completing this task.`);
+      const slots = await ctx.db.unsafe.query("DeliverableSlot", { taskId: args.taskId });
+      const slot = slots.find(
+        (candidate) =>
+          candidate.orgId === task.orgId &&
+          candidate.eventId === task.eventId &&
+          candidate.speakerUserId === ctx.auth.userId,
+      );
+      const versions = slot
+        ? await ctx.db.unsafe.query("DeliverableVersion", { slotId: slot.id as string })
+        : [];
+      if (
+        !slot ||
+        !versions.some(
+          (version) =>
+            version.orgId === task.orgId &&
+            version.eventId === task.eventId &&
+            version.speakerUserId === ctx.auth.userId,
+        )
+      ) {
+        throw ctx.error("INVALID_ARGS", "Upload a file to this task before completing it.");
       }
     }
 

@@ -5,6 +5,7 @@ import type {
   EventRow,
   RoomRow,
   SessionRow,
+  SessionContentRevisionRow,
   SpeakerProfileRow,
   SubmissionRow,
   TrackRow,
@@ -37,6 +38,7 @@ export default function AgendaPage({ auth, params, response, serverData }: PageP
       initialTracks={byEvent(use(serverData.list<TrackRow>("Track")))}
       submissions={byEvent(use(serverData.list<SubmissionRow>("Submission")))}
       profiles={byEvent(use(serverData.list<SpeakerProfileRow>("SpeakerProfile")))}
+      initialRevisions={byEvent(use(serverData.list<SessionContentRevisionRow>("SessionContentRevision")))}
     />
   );
 }
