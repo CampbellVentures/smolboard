@@ -673,30 +673,33 @@ function ScorePanel({
       let roundId = round?.id;
       if (!roundId) {
         // Create the exact round the submission is currently in.
-        roundId = await db.insert("ReviewRound", {
-          orgId: event.orgId,
+        const result = await callFn<{ id: string }>("saveReviewRound", {
           eventId: event.id,
           roundNumber: submission.currentRound,
           name: `Round ${submission.currentRound}`,
           criteriaJson: DEFAULT_CRITERIA,
           status: "open",
         });
+        roundId = result.id;
       }
       const payload = {
         scoresJson: scores,
         comment: comment.trim() || undefined,
         recommendation: recommendation || undefined,
-        updatedAt: new Date().toISOString(),
       };
       if (mine) {
-        await db.update("Review", mine.id, payload);
+        await callFn("saveReview", {
+          eventId: event.id,
+          reviewId: mine.id,
+          submissionId: submission.id,
+          roundId,
+          ...payload,
+        });
       } else {
-        await db.insert("Review", {
-          orgId: event.orgId,
+        await callFn("saveReview", {
           eventId: event.id,
           submissionId: submission.id,
           roundId,
-          reviewerUserId: currentUserId,
           ...payload,
         });
       }
@@ -818,8 +821,7 @@ function ScorePanel({
 export function AddRoundButton({ event, rounds }: { event: EventRow; rounds: ReviewRoundRow[] }) {
   const next = (rounds[rounds.length - 1]?.roundNumber ?? 0) + 1;
   async function add() {
-    await db.insert("ReviewRound", {
-      orgId: event.orgId,
+    await callFn("saveReviewRound", {
       eventId: event.id,
       roundNumber: next,
       name: `Round ${next}`,

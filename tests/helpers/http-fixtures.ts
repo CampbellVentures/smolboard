@@ -104,7 +104,7 @@ async function createEntity(
   return result.id;
 }
 
-async function callFn<T>(actor: HttpClient, name: string, args: Record<string, unknown>): Promise<T> {
+export async function callFn<T>(actor: HttpClient, name: string, args: Record<string, unknown>): Promise<T> {
   return okJson<T>(actor, `/api/fn/${name}`, "POST", args);
 }
 
@@ -143,14 +143,14 @@ async function createOrgFixture(baseUrl: string, scope: string, label: "a" | "b"
     startDate: "2027-05-12T00:00:00.000Z",
     endDate: "2027-05-14T00:00:00.000Z",
   });
-  const formId = await createEntity(owner, "SubmissionForm", {
-    orgId: org.id,
+  const form = await callFn<{ id: string }>(owner, "saveSubmissionForm", {
     eventId,
     name: "Test CFP",
     slug: "test-cfp",
     status: "open",
     fieldsJson: [],
   });
+  const formId = form.id;
 
   const submissionOne = await callFn<{ submissionId: string }>(speakerOne, "submitCfp", {
     formId,
@@ -178,60 +178,60 @@ async function createOrgFixture(baseUrl: string, scope: string, label: "a" | "b"
   expect(profileOne).toBeDefined();
   expect(profileTwo).toBeDefined();
 
-  const templateId = await createEntity(owner, "TaskTemplate", {
-    orgId: org.id,
+  const template = await callFn<{ id: string }>(owner, "saveTaskTemplate", {
     eventId,
     title: "Confirm participation",
     kind: "confirm",
     appliesTo: "all",
   });
-  const taskOne = await createEntity(owner, "SpeakerTask", {
-    orgId: org.id,
-    eventId,
-    taskTemplateId: templateId,
-    speakerUserId: speakerOne.userId,
-    status: "pending",
-  });
-  const taskTwo = await createEntity(owner, "SpeakerTask", {
-    orgId: org.id,
-    eventId,
-    taskTemplateId: templateId,
-    speakerUserId: speakerTwo.userId,
-    status: "pending",
-  });
-  const roundId = await createEntity(owner, "ReviewRound", {
-    orgId: org.id,
+  const templateId = template.id;
+  const tasks = await okJson<{ data: { id: string; speakerUserId: string; taskTemplateId: string }[] }>(
+    owner,
+    "/api/entities/SpeakerTask",
+  );
+  const taskOne = tasks.data.find(
+    (row) => row.taskTemplateId === templateId && row.speakerUserId === speakerOne.userId,
+  )?.id;
+  const taskTwo = tasks.data.find(
+    (row) => row.taskTemplateId === templateId && row.speakerUserId === speakerTwo.userId,
+  )?.id;
+  expect(taskOne).toBeDefined();
+  expect(taskTwo).toBeDefined();
+  const round = await callFn<{ id: string }>(owner, "saveReviewRound", {
     eventId,
     roundNumber: 1,
     name: "Initial Review",
     criteriaJson: [{ key: "quality", label: "Quality", max: 5 }],
     status: "open",
   });
+  const roundId = round.id;
 
-  const roomId = await createEntity(owner, "Room", {
-    orgId: org.id,
+  const room = await callFn<{ id: string }>(owner, "saveRoom", {
     eventId,
     name: "Main Room",
     sortOrder: 0,
   });
-  const trackId = await createEntity(owner, "Track", {
-    orgId: org.id,
+  const roomId = room.id;
+  const track = await callFn<{ id: string }>(owner, "saveTrack", {
     eventId,
     name: "Platform",
     sortOrder: 0,
   });
-  const sessionId = await createEntity(owner, "Session", {
-    orgId: org.id,
+  const trackId = track.id;
+  const session = await callFn<{ id: string }>(owner, "saveSession", {
     eventId,
-    submissionId: submissionOne.submissionId,
-    title: `${label.toUpperCase()} Published Session`,
-    roomId,
-    trackId,
-    startTime: "2027-05-12T17:00:00.000Z",
-    endTime: "2027-05-12T17:30:00.000Z",
-    speakerUserIdsJson: [speakerOne.userId],
-    kind: "talk",
+    data: {
+      submissionId: submissionOne.submissionId,
+      title: `${label.toUpperCase()} Published Session`,
+      roomId,
+      trackId,
+      startTime: "2027-05-12T17:00:00.000Z",
+      endTime: "2027-05-12T17:30:00.000Z",
+      speakerUserIdsJson: [speakerOne.userId],
+      kind: "talk",
+    },
   });
+  const sessionId = session.id;
 
   return {
     id: org.id,
@@ -244,7 +244,7 @@ async function createOrgFixture(baseUrl: string, scope: string, label: "a" | "b"
     formId,
     submissionIds: [submissionOne.submissionId, submissionTwo.submissionId],
     profileIds: [profileOne!.id, profileTwo!.id],
-    taskIds: [taskOne, taskTwo],
+    taskIds: [taskOne!, taskTwo!],
     roundId,
     sessionId,
   };

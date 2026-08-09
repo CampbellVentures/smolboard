@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { db, Link, useRouter } from "@pylonsync/react";
+import { callFn, db, Link, useRouter } from "@pylonsync/react";
 import {
   DashboardEmptyState,
   DashboardPage,
@@ -73,15 +73,14 @@ export function FormsList({ event, initial }: { event: EventRow; initial: Submis
     setBusy(true);
     setError(null);
     try {
-      const id = await db.insert("SubmissionForm", {
-        orgId: event.orgId,
+      const result = await callFn<{ id: string }>("saveSubmissionForm", {
         eventId: event.id,
         name: n,
         slug: slugify(n),
         status: "draft",
         fieldsJson: STARTER_FIELDS,
       });
-      router.push(`/dashboard/events/${event.id}/forms/${id}`);
+      router.push(`/dashboard/events/${event.id}/forms/${result.id}`);
     } catch {
       setError("Couldn't create the form — a form with that name may already exist.");
       setBusy(false);

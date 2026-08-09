@@ -27,7 +27,9 @@ export default mutation({
     const end = new Date(start.getTime() + duration * 60_000);
 
     // ctx.db.unsafe (all below): membership verified above; org's own rows.
-    const rooms = await ctx.db.unsafe.query("Room", { eventId: args.eventId });
+    const rooms = (await ctx.db.unsafe.query("Room", { eventId: args.eventId })).filter(
+      (row) => row.orgId === event.orgId,
+    );
     const room = rooms.find(
       (r) => (r.name as string).toLowerCase() === args.roomName.trim().toLowerCase(),
     );
@@ -43,17 +45,26 @@ export default mutation({
     let existingSessionId: string | undefined;
     if (args.sessionId) {
       const ses = await ctx.db.unsafe.get("Session", args.sessionId);
-      if (!ses || ses.eventId !== args.eventId) throw ctx.error("NOT_FOUND", "Session not found.");
+      if (!ses || ses.eventId !== args.eventId || ses.orgId !== event.orgId) {
+        throw ctx.error("NOT_FOUND", "Session not found.");
+      }
       title = ses.title as string;
       speakerUserIds = Array.isArray(ses.speakerUserIdsJson) ? (ses.speakerUserIdsJson as string[]) : [];
       existingSessionId = args.sessionId;
     } else if (args.submissionId) {
       const sub = await ctx.db.unsafe.get("Submission", args.submissionId);
-      if (!sub || sub.eventId !== args.eventId) throw ctx.error("NOT_FOUND", "Submission not found.");
+      if (!sub || sub.eventId !== args.eventId || sub.orgId !== event.orgId) {
+        throw ctx.error("NOT_FOUND", "Submission not found.");
+      }
       if (sub.status !== "accepted") {
         return { scheduled: false, error: `"${sub.title}" is ${sub.status}, not accepted — accept it first.` };
       }
-      const prior = await ctx.db.unsafe.query("Session", { eventId: args.eventId, submissionId: args.submissionId });
+      const prior = (
+        await ctx.db.unsafe.query("Session", {
+          eventId: args.eventId,
+          submissionId: args.submissionId,
+        })
+      ).filter((row) => row.orgId === event.orgId);
       if (prior[0]) existingSessionId = prior[0].id as string;
       title = sub.title as string;
       speakerUserIds = [sub.speakerUserId as string];
@@ -62,7 +73,9 @@ export default mutation({
     }
 
     // Dry-run the placement against the current agenda.
-    const sessions = await ctx.db.unsafe.query("Session", { eventId: args.eventId });
+    const sessions = (await ctx.db.unsafe.query("Session", { eventId: args.eventId })).filter(
+      (row) => row.orgId === event.orgId,
+    );
     const candidate: AgendaSession = {
       id: existingSessionId ?? "candidate",
       title,

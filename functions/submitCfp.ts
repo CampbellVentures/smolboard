@@ -55,7 +55,7 @@ export default mutation<
       throw ctx.error("NOT_FOUND", "This form is not accepting submissions.");
     }
     const event = await ctx.db.unsafe.get("Event", form.eventId as string);
-    if (!event || event.cfpStatus !== "open") {
+    if (!event || event.orgId !== form.orgId || event.cfpStatus !== "open") {
       throw ctx.error("NOT_FOUND", "The call for speakers is closed.");
     }
 

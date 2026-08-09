@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { db } from "@pylonsync/react";
+import { callFn } from "@pylonsync/react";
 import { DashboardPanel, DashboardWidePage } from "@/components/dashboard";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -154,7 +154,9 @@ export function FormBuilder({
   async function save() {
     setSaving(true);
     try {
-      await db.update("SubmissionForm", form.id, {
+      await callFn("saveSubmissionForm", {
+        eventId: event.id,
+        formId: form.id,
         name: name.trim() || form.name,
         slug: slugify(name.trim() || form.name),
         description: description.trim() || undefined,

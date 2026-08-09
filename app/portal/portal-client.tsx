@@ -633,17 +633,12 @@ function SpeakerFiles({ profile, files }: { profile: SpeakerProfileRow; files: S
   const [error, setError] = useState<string | null>(null);
   async function onUploaded(uploaded: { id: string }, source: File) {
     try {
-      await db.insert("SpeakerFile", {
-        orgId: profile.orgId,
-        eventId: profile.eventId,
-        userId: profile.userId,
+      await callFn("attachSpeakerFile", {
+        profileId: profile.id,
         kind,
         fileId: uploaded.id,
         label: source.name,
       });
-      if (kind === "headshot") {
-        await db.update("SpeakerProfile", profile.id, { headshotFileId: uploaded.id });
-      }
       setError(null);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "The file uploaded, but could not be attached to your profile.");

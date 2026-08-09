@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import {
   anonymousClient,
+  callFn,
   createTwoOrgFixture,
   entityList,
   entityUpdate,
@@ -27,7 +28,14 @@ test("anonymous CFP submission is rejected while closed and accepted while open"
   expect(fixture.a.id).not.toBe(fixture.b.id);
   expect(fixture.a.speakers[0].userId).not.toBe(fixture.b.speakers[0].userId);
 
-  expect((await entityUpdate(fixture.a.owner, "SubmissionForm", fixture.a.formId, { status: "closed" })).status).toBe(200);
+  await callFn(fixture.a.owner, "saveSubmissionForm", {
+    eventId: fixture.a.eventId,
+    formId: fixture.a.formId,
+    name: "Test CFP",
+    slug: "test-cfp",
+    status: "closed",
+    fieldsJson: [],
+  });
   const anon = anonymousClient(server.baseUrl);
   const closed = await jsonRequest(anon, "/api/fn/submitCfp", "POST", {
     formId: fixture.a.formId,
@@ -38,7 +46,14 @@ test("anonymous CFP submission is rejected while closed and accepted while open"
   });
   expect(closed.response.ok).toBe(false);
 
-  expect((await entityUpdate(fixture.a.owner, "SubmissionForm", fixture.a.formId, { status: "open" })).status).toBe(200);
+  await callFn(fixture.a.owner, "saveSubmissionForm", {
+    eventId: fixture.a.eventId,
+    formId: fixture.a.formId,
+    name: "Test CFP",
+    slug: "test-cfp",
+    status: "open",
+    fieldsJson: [],
+  });
   const opened = await jsonRequest<{ submissionId: string }>(anon, "/api/fn/submitCfp", "POST", {
     formId: fixture.a.formId,
     name: "Anonymous Speaker",
@@ -74,27 +89,30 @@ test("org members are tenant-scoped, while current reviewer permissions allow ow
   // Characterization vulnerability for plan 002: a generic reviewer/member can
   // administer review rounds in their workspace. Flip this expectation after
   // organizer/reviewer authorization is separated.
-  const ownWrite = await entityUpdate(fixture.a.reviewer, "ReviewRound", fixture.a.roundId, {
+  const ownWrite = await jsonRequest(fixture.a.reviewer, "/api/fn/saveReviewRound", "POST", {
+    eventId: fixture.a.eventId,
+    roundId: fixture.a.roundId,
+    roundNumber: 1,
     name: "Reviewer-mutated round",
+    criteriaJson: [{ key: "quality", label: "Quality", max: 5 }],
+    status: "open",
   });
-  expect(ownWrite.status).toBe(200);
+  expect(ownWrite.response.status).toBe(200);
 
   const foreignWrite = await entityUpdate(fixture.a.reviewer, "ReviewRound", fixture.b.roundId, {
     name: "Foreign mutation",
   });
   expect([403, 404]).toContain(foreignWrite.status);
 
-  const peerReview = await jsonRequest<{ id: string }>(fixture.a.owner, "/api/entities/Review", "POST", {
-    orgId: fixture.a.id,
+  const peerReview = await jsonRequest<{ id: string }>(fixture.a.owner, "/api/fn/saveReview", "POST", {
     eventId: fixture.a.eventId,
     submissionId: fixture.a.submissionIds[0],
     roundId: fixture.a.roundId,
-    reviewerUserId: fixture.a.owner.userId,
     scoresJson: { quality: 4 },
     comment: "Visible peer comment",
     recommendation: "accept",
   });
-  expect(peerReview.response.status).toBe(201);
+  expect(peerReview.response.status).toBe(200);
 
   // Characterization vulnerabilities for plan 002: the reviewer currently sees
   // every submission, speaker identity, and peer review in the workspace.
@@ -105,6 +123,92 @@ test("org members are tenant-scoped, while current reviewer permissions allow ow
   expect(visibleProfiles.map((row) => row.id)).toEqual(expect.arrayContaining(fixture.a.profileIds));
   expect(visibleProfiles.some((row) => row.email === fixture.a.speakers[0].email)).toBe(true);
   expect(visibleReviews.some((row) => row.comment === "Visible peer comment")).toBe(true);
+}, 30_000);
+
+test("cross-tenant child anchors are denied while derived same-tenant writes pass", async () => {
+  const fixture = await createTwoOrgFixture(server.baseUrl, "anchor-scope");
+
+  const forgedForm = await jsonRequest(fixture.a.owner, "/api/fn/saveSubmissionForm", "POST", {
+    eventId: fixture.b.eventId,
+    name: "Forged form",
+    slug: "forged-form",
+    status: "draft",
+    fieldsJson: [],
+  });
+  expect(forgedForm.response.ok).toBe(false);
+
+  const forgedFile = await jsonRequest(fixture.a.speakers[0], "/api/fn/attachSpeakerFile", "POST", {
+    profileId: fixture.b.profileIds[0],
+    kind: "slides",
+    fileId: "forged-file-id",
+    label: "forged.pdf",
+  });
+  expect(forgedFile.response.ok).toBe(false);
+
+  const forgedReview = await jsonRequest(fixture.a.owner, "/api/fn/saveReview", "POST", {
+    eventId: fixture.a.eventId,
+    submissionId: fixture.b.submissionIds[0],
+    roundId: fixture.a.roundId,
+    scoresJson: { quality: 1 },
+  });
+  expect(forgedReview.response.ok).toBe(false);
+
+  const [foreignRoom] = await entityList<{ id: string }>(fixture.b.owner, "Room");
+  const forgedSession = await jsonRequest(fixture.a.owner, "/api/fn/saveSession", "POST", {
+    eventId: fixture.a.eventId,
+    data: {
+      title: "Forged session",
+      submissionId: fixture.a.submissionIds[0],
+      roomId: foreignRoom.id,
+      speakerUserIdsJson: [fixture.a.speakers[0].userId],
+      kind: "talk",
+    },
+  });
+  expect(forgedSession.response.ok).toBe(false);
+
+  const forgedTemplate = await jsonRequest(fixture.a.owner, "/api/fn/saveTaskTemplate", "POST", {
+    eventId: fixture.b.eventId,
+    title: "Forged task",
+    kind: "confirm",
+    appliesTo: "all",
+  });
+  expect(forgedTemplate.response.ok).toBe(false);
+
+  const [foreignTemplate] = await entityList<{ id: string }>(fixture.b.owner, "TaskTemplate");
+  const forgedTask = await jsonRequest(fixture.a.owner, "/api/entities/SpeakerTask", "POST", {
+    orgId: fixture.a.id,
+    eventId: fixture.a.eventId,
+    taskTemplateId: foreignTemplate.id,
+    speakerUserId: fixture.a.speakers[0].userId,
+    status: "pending",
+  });
+  expect(forgedTask.response.status).toBe(403);
+
+  const directForm = await jsonRequest(fixture.a.owner, "/api/entities/SubmissionForm", "POST", {
+    orgId: fixture.a.id,
+    eventId: fixture.a.eventId,
+    name: "Direct form",
+    slug: "direct-form",
+    status: "draft",
+  });
+  expect(directForm.response.status).toBe(403);
+
+  const validForm = await callFn<{ id: string }>(fixture.a.owner, "saveSubmissionForm", {
+    eventId: fixture.a.eventId,
+    name: "Derived form",
+    slug: "derived-form",
+    status: "draft",
+    fieldsJson: [],
+  });
+  expect(validForm.id).toBeTruthy();
+
+  const validFile = await callFn<{ id: string }>(fixture.a.speakers[0], "attachSpeakerFile", {
+    profileId: fixture.a.profileIds[0],
+    kind: "slides",
+    fileId: "valid-file-id",
+    label: "valid.pdf",
+  });
+  expect(validFile.id).toBeTruthy();
 }, 30_000);
 
 test("public schedule hides rows until publication and exposes them after publication", async () => {

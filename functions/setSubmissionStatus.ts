@@ -1,4 +1,5 @@
 import { mutation, v } from "@pylonsync/functions";
+import { matchesEventAnchor } from "../lib/tenantAnchors";
 
 const STATUSES = ["submitted", "in_review", "accepted", "rejected", "waitlisted", "withdrawn"];
 
@@ -44,8 +45,12 @@ export default mutation<
         eventId: sub.eventId as string,
         speakerUserId: sub.speakerUserId as string,
       });
-      const have = new Set(existing.map((t) => t.taskTemplateId as string));
-      for (const t of templates) {
+      const have = new Set(
+        existing
+          .filter((task) => task.eventId === sub.eventId && task.orgId === sub.orgId)
+          .map((task) => task.taskTemplateId as string),
+      );
+      for (const t of templates.filter((template) => template.orgId === sub.orgId)) {
         if (t.appliesTo === "all" || t.appliesTo === "accepted") {
           if (!have.has(t.id as string)) {
             await ctx.db.unsafe.insert("SpeakerTask", {
@@ -68,7 +73,10 @@ export default mutation<
         eventId: sub.eventId as string,
         userId: sub.speakerUserId as string,
       });
-      const to = (profiles[0]?.email as string) ?? null;
+      const profile = profiles.find((candidate) =>
+        matchesEventAnchor(candidate, sub.eventId as string, sub.orgId as string),
+      );
+      const to = (profile?.email as string) ?? null;
       if (to) {
         // sendTemplatedEmail is internal:true; elevating covers this enqueue
         // (caller is already a verified org member for THIS submission's org).
@@ -81,7 +89,7 @@ export default mutation<
           templateKey: args.status,
           toEmail: to,
           vars: {
-            speaker_name: (profiles[0]?.name as string) ?? "",
+            speaker_name: (profile?.name as string) ?? "",
             talk_title: sub.title as string,
           },
         });

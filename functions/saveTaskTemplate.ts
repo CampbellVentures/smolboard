@@ -1,4 +1,5 @@
 import { mutation, v } from "@pylonsync/functions";
+import { matchesEventAnchor } from "../lib/tenantAnchors";
 
 const KINDS = ["confirm", "upload", "form", "link"];
 const APPLIES_TO = ["accepted", "all"];
@@ -58,7 +59,7 @@ export default mutation({
     let templateId = args.templateId;
     if (templateId) {
       const existing = await ctx.db.unsafe.get("TaskTemplate", templateId);
-      if (!existing || existing.eventId !== args.eventId) {
+      if (!existing || existing.eventId !== args.eventId || existing.orgId !== event.orgId) {
         throw ctx.error("NOT_FOUND", "Task template not found.");
       }
       await ctx.db.unsafe.update("TaskTemplate", templateId, payload);
@@ -68,7 +69,9 @@ export default mutation({
         orgId: event.orgId as string,
         eventId: args.eventId,
         ...payload,
-        sortOrder: existing.length,
+        sortOrder: existing.filter((template) =>
+          matchesEventAnchor(template, args.eventId, event.orgId as string),
+        ).length,
       });
     }
 
@@ -77,10 +80,16 @@ export default mutation({
     const submissions = await ctx.db.unsafe.query("Submission", { eventId: args.eventId });
     const eligible = new Set(
       submissions
-        .filter((submission) => args.appliesTo === "all" || submission.status === "accepted")
+        .filter(
+          (submission) =>
+            submission.orgId === event.orgId &&
+            (args.appliesTo === "all" || submission.status === "accepted"),
+        )
         .map((submission) => submission.speakerUserId as string),
     );
-    const assigned = await ctx.db.unsafe.query("SpeakerTask", { taskTemplateId: templateId });
+    const assigned = (await ctx.db.unsafe.query("SpeakerTask", { taskTemplateId: templateId })).filter(
+      (task) => task.eventId === args.eventId && task.orgId === event.orgId,
+    );
     const alreadyAssigned = new Set(assigned.map((task) => task.speakerUserId as string));
     let tasksCreated = 0;
     for (const speakerUserId of eligible) {

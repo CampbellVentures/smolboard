@@ -161,17 +161,17 @@ export function AgendaBuilder({
       const sub = submissions.find((s) => s.id === payload.submissionId);
       if (!sub) return;
       const end = isoAt(day, minutes + DEFAULT_DURATION_MIN, tz);
-      await db.insert("Session", {
-        orgId: event.orgId,
+      await callFn("saveSession", {
         eventId: event.id,
-        submissionId: sub.id,
-        title: sub.title,
-        roomId,
-        trackId: undefined,
-        startTime: start,
-        endTime: end,
-        speakerUserIdsJson: [sub.speakerUserId],
-        kind: "talk",
+        data: {
+          submissionId: sub.id,
+          title: sub.title,
+          roomId,
+          startTime: start,
+          endTime: end,
+          speakerUserIdsJson: [sub.speakerUserId],
+          kind: "talk",
+        },
       });
     } else if (payload.sessionId) {
       const ses = sessions.find((s) => s.id === payload.sessionId);
@@ -180,21 +180,18 @@ export function AgendaBuilder({
         ses.startTime && ses.endTime
           ? (Date.parse(ses.endTime) - Date.parse(ses.startTime)) / 60000
           : DEFAULT_DURATION_MIN;
-      await db.update("Session", ses.id, {
-        roomId,
-        startTime: start,
-        endTime: isoAt(day, minutes + dur, tz),
+      await callFn("saveSession", {
+        eventId: event.id,
+        sessionId: ses.id,
+        data: { roomId, startTime: start, endTime: isoAt(day, minutes + dur, tz) },
       });
     }
   }
 
   async function addBreak() {
-    await db.insert("Session", {
-      orgId: event.orgId,
+    await callFn("saveSession", {
       eventId: event.id,
-      title: "Break",
-      kind: "break",
-      speakerUserIdsJson: [],
+      data: { title: "Break", kind: "break", speakerUserIdsJson: [] },
     });
   }
 
@@ -261,7 +258,7 @@ export function AgendaBuilder({
         <PublishToggle event={event} />
         </div>
         <div>
-          <RoomsManager event={event} rooms={rooms} sessions={sessions} />
+          <RoomsManager event={event} rooms={rooms} />
         </div>
       </DashboardToolbar>
 
@@ -776,19 +773,16 @@ function PublishToggle({ event }: { event: EventRow }) {
 function RoomsManager({
   event,
   rooms,
-  sessions,
 }: {
   event: EventRow;
   rooms: RoomRow[];
-  sessions: SessionRow[];
 }) {
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState("");
   async function add(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) return;
-    await db.insert("Room", {
-      orgId: event.orgId,
+    await callFn("saveRoom", {
       eventId: event.id,
       name: name.trim(),
       sortOrder: rooms.length,
@@ -823,7 +817,7 @@ function RoomsManager({
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction variant="destructive" onClick={() => void removeRoom(r.id, sessions)}>
+                <AlertDialogAction variant="destructive" onClick={() => void callFn("deleteRoom", { roomId: r.id })}>
                   Remove room
                 </AlertDialogAction>
               </AlertDialogFooter>
@@ -858,21 +852,12 @@ function RoomsManager({
   );
 }
 
-async function removeRoom(roomId: string, sessions: SessionRow[]) {
-  // Sessions in this room become unscheduled rather than deleted.
-  for (const s of sessions.filter((x) => x.roomId === roomId)) {
-    await db.update("Session", s.id, { roomId: undefined, startTime: undefined, endTime: undefined });
-  }
-  await db.delete("Room", roomId);
-}
-
 function TracksManager({ event, tracks }: { event: EventRow; tracks: TrackRow[] }) {
   const [name, setName] = useState("");
   async function add(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) return;
-    await db.insert("Track", {
-      orgId: event.orgId,
+    await callFn("saveTrack", {
       eventId: event.id,
       name: name.trim(),
       color: TRACK_COLORS[tracks.length % TRACK_COLORS.length],
@@ -925,7 +910,13 @@ function SessionPopover({
       : DEFAULT_DURATION_MIN;
 
   async function patch(p: Partial<Record<string, unknown>>) {
-    await db.update("Session", session.id, p);
+    await callFn("saveSession", {
+      eventId: session.eventId,
+      sessionId: session.id,
+      data: Object.fromEntries(
+        Object.entries(p).map(([key, value]) => [key, value === undefined ? null : value]),
+      ),
+    });
   }
 
   async function sendInvites() {
@@ -1048,7 +1039,7 @@ function SessionPopover({
                   <AlertDialogAction
                     variant="destructive"
                     onClick={() => {
-                      void db.delete("Session", session.id);
+                      void callFn("deleteSession", { sessionId: session.id });
                       onClose();
                     }}
                   >

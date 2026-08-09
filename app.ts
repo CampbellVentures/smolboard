@@ -517,9 +517,9 @@ const formPolicy = policy({
   name: "form_access",
   entity: "SubmissionForm",
   allowRead: 'auth.tenantId == data.orgId || data.status == "open"',
-  allowInsert: "auth.tenantId == data.orgId",
-  allowUpdate: "auth.tenantId == data.orgId",
-  allowDelete: "auth.tenantId == data.orgId",
+  allowInsert: "false",
+  allowUpdate: "false",
+  allowDelete: "false",
 });
 
 // Speakers read their own rows (live portal queries); all speaker writes go
@@ -551,7 +551,7 @@ const speakerFilePolicy = policy({
   name: "speaker_file_access",
   entity: "SpeakerFile",
   allowRead: "auth.tenantId == data.orgId || auth.userId == data.userId",
-  allowInsert: "auth.userId == data.userId",
+  allowInsert: "false",
   allowUpdate: "false",
   allowDelete: "auth.tenantId == data.orgId || auth.userId == data.userId",
 });
@@ -560,45 +560,46 @@ const reviewRoundPolicy = policy({
   name: "review_round_access",
   entity: "ReviewRound",
   allowRead: "auth.tenantId == data.orgId",
-  allowInsert: "auth.tenantId == data.orgId",
-  allowUpdate: "auth.tenantId == data.orgId",
-  allowDelete: "auth.tenantId == data.orgId",
+  allowInsert: "false",
+  allowUpdate: "false",
+  allowDelete: "false",
 });
 
-// Any org member can read all reviews (scores are visible to the committee),
-// but a review row is only writable by its own reviewer.
+// Any org member can read all reviews (scores are visible to the committee).
+// Writes go through saveReview so reviewer identity and cross-entity anchors
+// are derived and validated server-side.
 const reviewPolicy = policy({
   name: "review_access",
   entity: "Review",
   allowRead: "auth.tenantId == data.orgId",
-  allowInsert: "auth.tenantId == data.orgId && auth.userId == data.reviewerUserId",
-  allowUpdate: "auth.tenantId == data.orgId && auth.userId == data.reviewerUserId",
-  allowDelete: "auth.tenantId == data.orgId && auth.userId == data.reviewerUserId",
+  allowInsert: "false",
+  allowUpdate: "false",
+  allowDelete: "false",
 });
 
 const roomPolicy = policy({
   name: "room_access",
   entity: "Room",
   allowRead: "auth.tenantId == data.orgId",
-  allowInsert: "auth.tenantId == data.orgId",
-  allowUpdate: "auth.tenantId == data.orgId",
-  allowDelete: "auth.tenantId == data.orgId",
+  allowInsert: "false",
+  allowUpdate: "false",
+  allowDelete: "false",
 });
 const trackPolicy = policy({
   name: "track_access",
   entity: "Track",
   allowRead: "auth.tenantId == data.orgId",
-  allowInsert: "auth.tenantId == data.orgId",
-  allowUpdate: "auth.tenantId == data.orgId",
-  allowDelete: "auth.tenantId == data.orgId",
+  allowInsert: "false",
+  allowUpdate: "false",
+  allowDelete: "false",
 });
 const sessionPolicy = policy({
   name: "session_access",
   entity: "Session",
   allowRead: "auth.tenantId == data.orgId",
-  allowInsert: "auth.tenantId == data.orgId",
-  allowUpdate: "auth.tenantId == data.orgId",
-  allowDelete: "auth.tenantId == data.orgId",
+  allowInsert: "false",
+  allowUpdate: "false",
+  allowDelete: "false",
 });
 
 const taskTemplatePolicy = policy({
@@ -606,9 +607,9 @@ const taskTemplatePolicy = policy({
   entity: "TaskTemplate",
   allowRead:
     "auth.tenantId == data.orgId || exists(SpeakerTask where taskTemplateId == data.id and speakerUserId == auth.userId)",
-  allowInsert: "auth.tenantId == data.orgId",
-  allowUpdate: "auth.tenantId == data.orgId",
-  allowDelete: "auth.tenantId == data.orgId",
+  allowInsert: "false",
+  allowUpdate: "false",
+  allowDelete: "false",
 });
 
 // Speakers see their own task rows live in the portal; completion goes through
@@ -617,9 +618,9 @@ const speakerTaskPolicy = policy({
   name: "speaker_task_access",
   entity: "SpeakerTask",
   allowRead: "auth.tenantId == data.orgId || auth.userId == data.speakerUserId",
-  allowInsert: "auth.tenantId == data.orgId",
-  allowUpdate: "auth.tenantId == data.orgId",
-  allowDelete: "auth.tenantId == data.orgId",
+  allowInsert: "false",
+  allowUpdate: "false",
+  allowDelete: "false",
 });
 
 const emailTemplatePolicy = policy({
