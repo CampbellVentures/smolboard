@@ -123,7 +123,7 @@ export default function LandingPage({ auth }: PageProps) {
             <p className="text-zinc-500"># any MCP client, e.g. Claude Code</p>
             <p className="mt-1 whitespace-pre">{`claude mcp add smolboard \\
   --transport http \\
-  https://smolboard.smallware.run/api/fn/mcp \\
+  https://www.smolboard.app/api/fn/mcp \\
   --header "Authorization: Bearer pk...."`}</p>
             <p className="mt-3 text-zinc-500"># then</p>
             <p className="mt-1 text-lime-300">

@@ -114,7 +114,7 @@ export const siteConfig: SiteConfig = {
   brand: {
     name: "smolboard",
     letter: "s",
-    domain: "smolboard.smallware.run",
+    domain: "www.smolboard.app",
     email: "hello@smolboard.dev",
     footerBlurb:
       "Open-source speaker & CFP management: forms, reviews, agenda, speaker portal, and an event copilot in one process.",

@@ -2,8 +2,8 @@
 
 Open-source speaker & CFP management — a [Sessionboard](https://www.sessionboard.com/) replacement built for the [AI Engineer hackathon](https://x.com/swyx/status/2085517544795079014). One [Pylon](https://pylonsync.com) process serves the API, auth, live sync, SSR, and the agent runtime.
 
-**Live demo:** https://smolboard.smallware.run
-**Public schedule example:** https://smolboard.smallware.run/ai-engineer/ai-engineer-sandbox
+**Live demo:** https://www.smolboard.app
+**Public schedule example:** https://www.smolboard.app/ai-engineer/ai-engineer-sandbox
 
 ## What it does
 
@@ -25,7 +25,7 @@ Sessionboard sells "AI & MCP" as six named agents. smolboard ships one tool belt
 
   ```bash
   claude mcp add smolboard --transport http \
-    https://smolboard.smallware.run/api/fn/mcp \
+    https://www.smolboard.app/api/fn/mcp \
     --header "Authorization: Bearer pk...."
   ```
 
