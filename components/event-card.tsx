@@ -73,7 +73,7 @@ export function EventCard({
 }: EventCardProps): React.ReactElement {
   return (
     <Link
-      href={`/dashboard/events/${event.id}/abstracts`}
+      href={`/dashboard/events/${event.id}/overview`}
       className="group block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
     >
       <Card className="overflow-hidden transition-[box-shadow] duration-150 ease-out group-hover:shadow-md">

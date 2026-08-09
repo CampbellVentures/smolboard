@@ -40,6 +40,8 @@ export function EventsList({
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [slugTouched, setSlugTouched] = useState(false);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -47,7 +49,15 @@ export function EventsList({
     e.preventDefault();
     const n = name.trim();
     const s = slugify(slugTouched ? slug : n);
-    if (!n || !s) return;
+    // Dates are required up front: the agenda grid, schedule page, and task
+    // due-date math all key off them, so an event without dates is broken on
+    // arrival.
+    const end = endDate || startDate;
+    if (!n || !s || !startDate) return;
+    if (end < startDate) {
+      setError("End date is before the start date.");
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -58,6 +68,8 @@ export function EventsList({
         cfpStatus: "draft",
         timezone: "America/Los_Angeles",
         schedulePublished: false,
+        startDate: new Date(`${startDate}T00:00:00Z`).toISOString(),
+        endDate: new Date(`${end}T00:00:00Z`).toISOString(),
       });
       router.push(`/dashboard/events/${id}`);
     } catch {
@@ -91,7 +103,7 @@ export function EventsList({
               <ResponsiveFormOverlay.Header>
                 <ResponsiveFormOverlay.Title>New event</ResponsiveFormOverlay.Title>
                 <ResponsiveFormOverlay.Description>
-                  Start with a name and public URL. You can add dates and details next.
+                  Name, public URL, and dates. Everything else can wait.
                 </ResponsiveFormOverlay.Description>
               </ResponsiveFormOverlay.Header>
               <ResponsiveFormOverlay.Body>
@@ -123,6 +135,29 @@ export function EventsList({
                       Used in /cfp/&lt;handle&gt; and /&lt;handle&gt;/schedule.
                     </FieldDescription>
                   </Field>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Field>
+                      <FieldLabel htmlFor="event-start">Start date</FieldLabel>
+                      <Input
+                        id="event-start"
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                        required
+                      />
+                    </Field>
+                    <Field>
+                      <FieldLabel htmlFor="event-end">End date</FieldLabel>
+                      <Input
+                        id="event-end"
+                        type="date"
+                        value={endDate}
+                        min={startDate || undefined}
+                        onChange={(e) => setEndDate(e.target.value)}
+                      />
+                      <FieldDescription>Leave empty for a one-day event.</FieldDescription>
+                    </Field>
+                  </div>
                   {error ? <FieldError>{error}</FieldError> : null}
                 </FieldGroup>
               </ResponsiveFormOverlay.Body>
@@ -130,7 +165,7 @@ export function EventsList({
                 <Button type="button" variant="outline" onClick={() => setCreating(false)}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={busy || !name.trim()}>
+                <Button type="submit" disabled={busy || !name.trim() || !startDate}>
                   {busy ? "Creating…" : "Create event"}
                 </Button>
               </ResponsiveFormOverlay.Footer>

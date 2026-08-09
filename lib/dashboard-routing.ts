@@ -7,11 +7,11 @@ export function dashboardDestination(
   lastEventId?: string | null,
 ): string {
   if (lastEventId && eventIds.includes(lastEventId)) {
-    return `/dashboard/events/${lastEventId}/abstracts`;
+    return `/dashboard/events/${lastEventId}/overview`;
   }
 
   if (eventIds.length === 1) {
-    return `/dashboard/events/${eventIds[0]}/abstracts`;
+    return `/dashboard/events/${eventIds[0]}/overview`;
   }
 
   return "/dashboard/events";

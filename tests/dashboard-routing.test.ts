@@ -6,12 +6,12 @@ import {
 import { submissionCountsByEvent } from "../lib/dashboard-events";
 
 test("dashboard opens the only event in a workspace", () => {
-  expect(dashboardDestination(["event-1"])).toBe("/dashboard/events/event-1/abstracts");
+  expect(dashboardDestination(["event-1"])).toBe("/dashboard/events/event-1/overview");
 });
 
 test("dashboard restores a valid recent event", () => {
   expect(dashboardDestination(["event-1", "event-2"], "event-2")).toBe(
-    "/dashboard/events/event-2/abstracts",
+    "/dashboard/events/event-2/overview",
   );
 });
 

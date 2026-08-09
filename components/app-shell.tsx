@@ -177,13 +177,13 @@ const WORKSPACE_NAV: NavEntry<WorkspaceNavKey>[] = [
 function eventNav(eventId: string): NavEntry<EventNavKey>[] {
   const base = `/dashboard/events/${eventId}`;
   return [
+    { key: "overview", label: "Overview", href: `${base}/overview`, Icon: LayoutDashboard },
     { key: "forms", label: "Forms", href: `${base}/forms`, Icon: FileText, group: "Collect" },
     { key: "abstracts", label: "Submissions", href: `${base}/abstracts`, Icon: Inbox, group: "Manage" },
     { key: "agenda", label: "Agenda", href: `${base}/agenda`, Icon: CalendarClock, group: "Manage" },
     { key: "speakers", label: "Speakers", href: `${base}/speakers`, Icon: Mic2, group: "Speakers" },
     { key: "tasks", label: "Tasks", href: `${base}/tasks`, Icon: ListChecks, group: "Speakers" },
     { key: "emails", label: "Emails", href: `${base}/emails`, Icon: Mail, group: "Speakers" },
-    { key: "overview", label: "Overview", href: `${base}/overview`, Icon: LayoutDashboard, group: "Event" },
     { key: "event-settings", label: "Settings", href: `${base}/settings`, Icon: SettingsIcon, group: "Event" },
   ];
 }

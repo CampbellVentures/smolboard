@@ -23,6 +23,7 @@ import {
   type ShowIfRule,
 } from "@/lib/forms";
 import { parseJson } from "@/lib/types";
+import { cn } from "@/lib/utils";
 import {
   ArrowDown,
   ArrowUp,
@@ -99,6 +100,7 @@ export function FormBuilder({
     }
   });
   const [selected, setSelected] = useState<string | null>(null);
+  const [addingField, setAddingField] = useState(false);
   const [previewAnswers, setPreviewAnswers] = useState<Answers>({});
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<number | null>(null);
@@ -230,24 +232,62 @@ export function FormBuilder({
               />
             ))}
           </ul>
-          <div className="mt-4 flex flex-wrap gap-2">
-            {PALETTE.map((p) => (
+          <div className="mt-4">
+            {!addingField ? (
               <Button
-                key={p.type}
                 type="button"
                 size="sm"
                 variant="outline"
-                onClick={() => addField(p.type)}
+                onClick={() => setAddingField(true)}
               >
-                <p.Icon data-icon="inline-start" /> {p.label}
+                <Plus data-icon="inline-start" /> Add field
               </Button>
-            ))}
+            ) : (
+              <div className="flex flex-wrap items-center gap-2">
+                {PALETTE.map((p) => (
+                  <Button
+                    key={p.type}
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      addField(p.type);
+                      setAddingField(false);
+                    }}
+                  >
+                    <p.Icon data-icon="inline-start" /> {p.label}
+                  </Button>
+                ))}
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setAddingField(false)}
+                >
+                  Cancel
+                </Button>
+              </div>
+            )}
           </div>
         </DashboardPanel>
 
-        <RoutingEditor fields={fields} routing={routing} onChange={setRouting} />
+        <CollapsiblePanel
+          title="Category routing"
+          hint={
+            routing.rules.length > 0
+              ? `${routing.rules.length} rule${routing.rules.length === 1 ? "" : "s"}`
+              : "Optional"
+          }
+          defaultOpen={routing.rules.length > 0}
+        >
+          <RoutingEditor fields={fields} routing={routing} onChange={setRouting} />
+        </CollapsiblePanel>
 
-        <DashboardPanel title="Confirmation message" variant="subtle">
+        <CollapsiblePanel
+          title="Confirmation message"
+          hint={confirmation.trim() ? "Custom" : "Default thank-you"}
+          defaultOpen={Boolean(confirmation.trim())}
+        >
           <Textarea
             value={confirmation}
             onChange={(e) => setConfirmation(e.target.value)}
@@ -256,7 +296,7 @@ export function FormBuilder({
             className="resize-none"
             aria-label="Confirmation message"
           />
-        </DashboardPanel>
+        </CollapsiblePanel>
       </div>
 
       {/* ---------------- Right: live preview ---------------- */}
@@ -295,6 +335,45 @@ export function FormBuilder({
   );
 }
 
+/* ------------------------- Collapsed side sections ------------------------- */
+
+// Routing and the confirmation message are set-once options; keeping them
+// folded keeps the builder to two working surfaces (fields + preview).
+function CollapsiblePanel({
+  title,
+  hint,
+  defaultOpen = false,
+  children,
+}: {
+  title: string;
+  hint?: string;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <section className="rounded-xl border bg-card">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="flex h-11 w-full items-center gap-2.5 rounded-xl px-4 text-left"
+      >
+        <span className="text-sm font-semibold text-zinc-900">{title}</span>
+        {hint && !open && <span className="text-xs text-zinc-400">{hint}</span>}
+        <ChevronDown
+          aria-hidden="true"
+          className={cn(
+            "ml-auto size-4 shrink-0 text-zinc-400 transition-transform duration-150",
+            !open && "-rotate-90",
+          )}
+        />
+      </button>
+      {open && <div className="border-t border-zinc-100 px-4 py-4">{children}</div>}
+    </section>
+  );
+}
+
 /* ------------------------- Field editor row ------------------------- */
 
 function FieldEditor({
@@ -324,7 +403,7 @@ function FieldEditor({
   const upstream = allFields.slice(0, index).filter((f) => f.type !== "section");
 
   return (
-    <li className="rounded-lg border border-zinc-200">
+    <li className="group/field rounded-lg border border-zinc-200">
       <div className="flex items-center gap-2 px-3 py-2">
         <Button
           type="button"
@@ -338,23 +417,31 @@ function FieldEditor({
             <ChevronRight className="size-3.5 shrink-0 text-zinc-400" />
           )}
           <span className="truncate text-[13.5px] font-medium text-zinc-800">{field.label}</span>
-          <span className="shrink-0 rounded bg-zinc-100 px-1.5 py-0.5 text-[10.5px] font-medium text-zinc-500">
+          <span className="shrink-0 text-[11px] text-zinc-400">
             {meta?.label ?? field.type}
+            {field.required ? " · required" : ""}
+            {field.showIf && field.showIf.length > 0 ? " · conditional" : ""}
           </span>
-          {field.required && <span className="text-[11px] text-red-400">required</span>}
-          {field.showIf && field.showIf.length > 0 && (
-            <span className="text-[11px] text-blue-500">conditional</span>
+        </Button>
+        {/* Row controls stay hidden until the row is hovered, focused, or
+            expanded — seven fields × three icons is the main source of noise. */}
+        <div
+          className={cn(
+            "flex items-center transition-opacity duration-150",
+            !open &&
+              "opacity-0 group-hover/field:opacity-100 focus-within:opacity-100",
           )}
-        </Button>
-        <Button type="button" size="icon" variant="ghost" aria-label="Move up" disabled={index === 0} onClick={() => onMove(-1)}>
-          <ArrowUp />
-        </Button>
-        <Button type="button" size="icon" variant="ghost" aria-label="Move down" disabled={index === count - 1} onClick={() => onMove(1)}>
-          <ArrowDown />
-        </Button>
-        <Button type="button" size="icon" variant="ghost" aria-label="Delete field" onClick={onRemove}>
-          <Trash2 />
-        </Button>
+        >
+          <Button type="button" size="icon" variant="ghost" aria-label="Move up" disabled={index === 0} onClick={() => onMove(-1)}>
+            <ArrowUp />
+          </Button>
+          <Button type="button" size="icon" variant="ghost" aria-label="Move down" disabled={index === count - 1} onClick={() => onMove(1)}>
+            <ArrowDown />
+          </Button>
+          <Button type="button" size="icon" variant="ghost" aria-label="Delete field" onClick={onRemove}>
+            <Trash2 />
+          </Button>
+        </div>
       </div>
 
       {open && (
@@ -537,11 +624,11 @@ function RoutingEditor({
     onChange({ ...routing, rules: routing.rules.map((r, j) => (j === i ? { ...r, ...p } : r)) });
   }
   return (
-    <DashboardPanel
-      title="Category routing"
-      description="The first matching rule tags the submission for review filtering."
-      variant="subtle"
-      action={
+    <div>
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-pretty text-sm text-zinc-500">
+          The first matching rule tags the submission for review filtering.
+        </p>
         <Button
           type="button"
           size="sm"
@@ -559,8 +646,7 @@ function RoutingEditor({
         >
           <Plus data-icon="inline-start" /> Add rule
         </Button>
-      }
-    >
+      </div>
 
       {routing.rules.length > 0 && (
         <ul className="mt-3 space-y-2">
@@ -651,6 +737,6 @@ function RoutingEditor({
           aria-label="Default category"
         />
       </label>
-    </DashboardPanel>
+    </div>
   );
 }
