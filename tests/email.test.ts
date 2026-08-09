@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import {
   DEFAULT_TEMPLATES,
   markdownToHtml,
+  renderEmailHtml,
   renderHtmlTemplate,
   renderTemplate,
 } from "../lib/email";
@@ -45,5 +46,15 @@ test("HTML merge tags escape text and attribute-breaking characters", () => {
     }),
   ).toBe(
     '<p>Hi Ada &lt;Admin&gt;</p><a href="https://example.com/?next=&quot;dashboard&quot;&amp;from=email">Portal</a>',
+  );
+});
+
+test("email body selection always escapes custom HTML merge values", () => {
+  expect(
+    renderEmailHtml("Hi {{speaker_name}}", '<p data-name="{{speaker_name}}">Welcome</p>', {
+      speaker_name: '"><img src=x onerror=alert(1)>',
+    }),
+  ).toBe(
+    '<p data-name="&quot;&gt;&lt;img src=x onerror=alert(1)&gt;">Welcome</p>',
   );
 });

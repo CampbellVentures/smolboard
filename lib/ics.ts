@@ -12,6 +12,10 @@ export interface CalendarEventInput {
   now?: Date;
 }
 
+export function calendarInviteUid(sessionId: string, speakerUserId: string) {
+  return `${sessionId}-${speakerUserId}@smolboard`;
+}
+
 export function escapeIcsText(value: string) {
   return value
     .replace(/\\/g, "\\\\")

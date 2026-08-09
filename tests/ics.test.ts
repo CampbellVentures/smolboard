@@ -1,5 +1,11 @@
 import { expect, test } from "bun:test";
-import { buildCalendarUrls, buildIcsInvite, escapeIcsText, foldIcsLine } from "../lib/ics";
+import {
+  buildCalendarUrls,
+  buildIcsInvite,
+  calendarInviteUid,
+  escapeIcsText,
+  foldIcsLine,
+} from "../lib/ics";
 
 test("ICS text escaping covers reserved characters and newlines", () => {
   expect(escapeIcsText("A, B; C\\D\nNext")).toBe("A\\, B\\; C\\\\D\\nNext");
@@ -45,4 +51,10 @@ test("calendar URLs encode the event for Google and Outlook", () => {
   expect(urls.ics).toBe("https://example.com/calendar/token");
   expect(new URL(urls.google).searchParams.get("text")).toBe("A&B talk");
   expect(new URL(urls.outlook).searchParams.get("subject")).toBe("A&B talk");
+});
+
+test("calendar invite identity is stable across delivery paths", () => {
+  expect(calendarInviteUid("session-1", "speaker-2")).toBe(
+    "session-1-speaker-2@smolboard",
+  );
 });

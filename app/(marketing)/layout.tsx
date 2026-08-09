@@ -3,6 +3,7 @@ import { Link, type PageAuth } from "@pylonsync/react";
 import { PRODUCTS } from "@/lib/products";
 import { SOLUTIONS, RESOURCES, COMPANY, COMPARISONS } from "@/lib/site";
 import { siteConfig } from "@/lib/site.config";
+import { BrandMark } from "@/components/brand";
 
 // `(marketing)` is a ROUTE GROUP: the parens segment is stripped from every
 // URL (so `(marketing)/page.tsx` still serves `/`), and this layout wraps
@@ -133,7 +134,7 @@ function MobileNav({ signedIn }: { signedIn: boolean }) {
           </div>
           <div className="flex flex-col gap-2 border-t border-zinc-100 pt-5">
             {signedIn ? (
-              <a href="/dashboard" className="inline-flex h-10 items-center justify-center rounded-full bg-zinc-900 text-[14px] font-medium text-white transition-colors hover:bg-zinc-700">
+              <a href="/dashboard" className="inline-flex h-10 items-center justify-center rounded-full bg-orange-600 text-[14px] font-medium text-white transition-colors hover:bg-orange-700">
                 Open dashboard
               </a>
             ) : (
@@ -141,7 +142,7 @@ function MobileNav({ signedIn }: { signedIn: boolean }) {
                 <a href="/login" className="inline-flex h-10 items-center justify-center rounded-full border border-zinc-300 text-[14px] font-medium text-zinc-900 transition-colors hover:bg-zinc-50">
                   Log in
                 </a>
-                <a href="/signup" className="inline-flex h-10 items-center justify-center rounded-full bg-zinc-900 text-[14px] font-medium text-white transition-colors hover:bg-zinc-700">
+                <a href="/signup" className="inline-flex h-10 items-center justify-center rounded-full bg-orange-600 text-[14px] font-medium text-white transition-colors hover:bg-orange-700">
                   Get started
                 </a>
               </>
@@ -188,9 +189,7 @@ export default function MarketingLayout({ children, auth }: LayoutProps) {
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-6">
           <div className="flex items-center gap-8">
             <Link href="/" className="flex items-center gap-2">
-              <span className="flex size-6 items-center justify-center rounded-[7px] bg-zinc-900 text-[13px] font-bold text-white">
-                {siteConfig.brand.letter}
-              </span>
+              <BrandMark size={24} />
               <span className="text-[15px] font-semibold tracking-tight text-zinc-900">
                 {siteConfig.brand.name}
               </span>
@@ -221,7 +220,7 @@ export default function MarketingLayout({ children, auth }: LayoutProps) {
             {signedIn ? (
               <Link
                 href="/dashboard"
-                className="inline-flex items-center rounded-full bg-zinc-900 px-3.5 py-1.5 text-[13px] font-medium text-white transition-colors hover:bg-zinc-700"
+                className="inline-flex items-center rounded-full bg-orange-600 px-3.5 py-1.5 text-[13px] font-medium text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] transition-colors hover:bg-orange-700"
               >
                 Dashboard
               </Link>
@@ -235,7 +234,7 @@ export default function MarketingLayout({ children, auth }: LayoutProps) {
                 </Link>
                 <Link
                   href="/signup"
-                  className="inline-flex items-center rounded-full bg-zinc-900 px-3.5 py-1.5 text-[13px] font-medium text-white transition-colors hover:bg-zinc-700"
+                  className="inline-flex items-center rounded-full bg-orange-600 px-3.5 py-1.5 text-[13px] font-medium text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] transition-colors hover:bg-orange-700"
                 >
                   Get started
                 </Link>
@@ -349,9 +348,7 @@ function SiteFooter() {
         {/* Brand block */}
         <div className="max-w-xs">
           <Link href="/" className="inline-flex items-center gap-2">
-            <span className="flex size-7 items-center justify-center rounded-lg bg-zinc-900 text-sm font-bold text-white">
-              {siteConfig.brand.letter}
-            </span>
+            <BrandMark size={28} />
             <span className="text-[15px] font-semibold tracking-tight text-zinc-900">
               {siteConfig.brand.name}
             </span>

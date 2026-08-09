@@ -3,7 +3,7 @@ import { Link, type Metadata } from "@pylonsync/react";
 import { AuthForm } from "../auth-form";
 
 export const metadata: Metadata = {
-  title: "Sign in — Acme",
+  title: "Sign in — smolboard",
   robots: "noindex",
 };
 
@@ -17,7 +17,7 @@ export default function LoginPage() {
         Welcome back
       </h1>
       <p className="mt-1 text-[13px] text-zinc-500">
-        New to Acme?{" "}
+        New to smolboard?{" "}
         <Link
           href="/signup"
           className="font-medium text-zinc-900 underline underline-offset-2"

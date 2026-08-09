@@ -4,6 +4,26 @@ import React, { useEffect, useMemo, useState } from "react";
 import { callFn, Link } from "@pylonsync/react";
 import { dayKey, fmtTime, minutesInDay } from "@/lib/agenda";
 import { CalendarDays, Loader2, MapPin } from "lucide-react";
+import { BrandMark } from "@/components/brand";
+
+const TONES = [
+  "bg-violet-100 text-violet-700",
+  "bg-sky-100 text-sky-700",
+  "bg-emerald-100 text-emerald-700",
+  "bg-amber-100 text-amber-700",
+  "bg-rose-100 text-rose-700",
+  "bg-cyan-100 text-cyan-700",
+];
+function initials(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return "?";
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  return `${words[0][0]}${words[words.length - 1][0]}`.toUpperCase();
+}
+function tone(name: string): string {
+  const h = [...name].reduce((t, c) => t + c.charCodeAt(0), 0);
+  return TONES[h % TONES.length];
+}
 
 interface Feed {
   event: {
@@ -82,7 +102,10 @@ export function PublicSchedule({ eventSlug, eventName }: { eventSlug: string; ev
     <div className="min-h-screen bg-zinc-50">
       <header className="border-b border-zinc-200/70 bg-white">
         <div className="mx-auto max-w-3xl px-6 py-10">
-          <p className="text-[13px] font-medium uppercase tracking-wide text-zinc-400">Schedule</p>
+          <div className="flex items-center gap-2">
+            <BrandMark size={20} />
+            <p className="text-[13px] font-semibold uppercase tracking-wide text-orange-600">Schedule</p>
+          </div>
           <h1 className="mt-1 text-balance text-3xl font-semibold tracking-tight text-zinc-900">
             {feed?.event?.name ?? eventName}
           </h1>
@@ -153,11 +176,21 @@ export function PublicSchedule({ eventSlug, eventName }: { eventSlug: string; ev
             </div>
 
             {/* Time blocks */}
-            <div className="mt-6 space-y-6">
+            <div className="relative mt-6 space-y-6">
+              <div
+                aria-hidden="true"
+                className="absolute bottom-3 top-3 hidden w-px bg-zinc-200 sm:block"
+                style={{ left: "5.75rem" }}
+              />
               {blocks.map((b) => (
-                <div key={b.start} className="grid gap-3 sm:grid-cols-[5rem_1fr]">
-                  <div className="pt-3 text-[13px] font-semibold tabular-nums text-zinc-400">
+                <div key={b.start} className="grid gap-6 sm:grid-cols-[5rem_1fr]">
+                  <div className="relative pt-3 text-right text-[13px] font-semibold tabular-nums text-zinc-500">
                     {fmtTime(minutesInDay(b.start, tz))}
+                    <span
+                      aria-hidden="true"
+                      className="absolute top-[1.15rem] hidden size-[7px] rounded-full bg-white ring-2 ring-zinc-300 sm:block"
+                      style={{ right: "-0.95rem" }}
+                    />
                   </div>
                   <div className="space-y-3">
                     {b.sessions.map((s) => {
@@ -179,7 +212,13 @@ export function PublicSchedule({ eventSlug, eventName }: { eventSlug: string; ev
                           </div>
                           <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
                             {s.speakers.map((sp) => (
-                              <span key={sp.name} className="font-medium text-zinc-700">
+                              <span key={sp.name} className="flex items-center gap-1.5 font-medium text-zinc-700">
+                                <span
+                                  aria-hidden="true"
+                                  className={`flex size-5 items-center justify-center rounded-full text-[9px] font-semibold ${tone(sp.name)}`}
+                                >
+                                  {initials(sp.name)}
+                                </span>
                                 {sp.name}
                                 {sp.company ? <span className="font-normal text-zinc-400"> · {sp.company}</span> : null}
                               </span>
@@ -219,8 +258,11 @@ export function PublicSchedule({ eventSlug, eventName }: { eventSlug: string; ev
         )}
       </main>
 
-      <footer className="mx-auto max-w-3xl px-6 pb-10 text-center text-xs text-zinc-300">
-        Powered by smolboard
+      <footer className="mx-auto flex max-w-3xl items-center justify-center gap-1.5 px-6 pb-10 text-xs text-zinc-400">
+        <BrandMark size={14} />
+        <a href="/" className="transition-colors hover:text-orange-600">
+          Powered by smolboard
+        </a>
       </footer>
     </div>
   );

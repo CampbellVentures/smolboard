@@ -46,12 +46,14 @@ export function CfpForm({
   const [answers, setAnswers] = useState<Answers>({});
   const [errors, setErrors] = useState<ValidationError[]>([]);
   const [topError, setTopError] = useState<string | null>(null);
+  const [needsLogin, setNeedsLogin] = useState(false);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setTopError(null);
+    setNeedsLogin(false);
     const missing: ValidationError[] = [];
     if (!name.trim()) missing.push({ field: "speaker_name", message: "Your name is required." });
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
@@ -78,7 +80,9 @@ export function CfpForm({
       });
       setDone(true);
     } catch (err) {
-      setTopError(err instanceof Error ? err.message : "Submission failed — try again.");
+      const message = err instanceof Error ? err.message : "Submission failed — try again.";
+      setTopError(message);
+      setNeedsLogin(message.includes("speaker account"));
       setBusy(false);
     }
   }
@@ -161,7 +165,16 @@ export function CfpForm({
         <FormRenderer fields={fields} answers={answers} onChange={setAnswers} errors={errors} />
       )}
 
-      {topError && <p className="text-sm text-red-600">{topError}</p>}
+      {topError && (
+        <div className="flex flex-wrap items-center gap-3">
+          <p className="text-sm text-red-600">{topError}</p>
+          {needsLogin ? (
+            <Button asChild type="button" size="sm" variant="outline">
+              <a href="/portal">Sign in</a>
+            </Button>
+          ) : null}
+        </div>
+      )}
       <Button type="submit" disabled={busy} className="w-full sm:w-auto">
         {busy ? "Submitting…" : "Submit talk"}
       </Button>

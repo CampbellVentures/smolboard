@@ -1,5 +1,5 @@
 import { query, v } from "@pylonsync/functions";
-import { buildCalendarUrls, buildIcsInvite } from "../lib/ics";
+import { buildCalendarUrls, buildIcsInvite, calendarInviteUid } from "../lib/ics";
 
 interface CalendarInviteResult {
   filename: string;
@@ -43,7 +43,7 @@ export default query<{ token: string }, CalendarInviteResult | null>({
     return {
       filename: `${slug(session.title as string) || "session"}.ics`,
       content: buildIcsInvite({
-        uid: `${session.id as string}-${invite.speakerUserId as string}@smolboard`,
+        uid: calendarInviteUid(session.id as string, invite.speakerUserId as string),
         sequence: Number(invite.sequence ?? 0),
         start: input.start,
         end: input.end,

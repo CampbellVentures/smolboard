@@ -1,5 +1,10 @@
 import { mutation, v } from "@pylonsync/functions";
-import { buildCalendarUrls, buildIcsInvite, formatSessionTime } from "../lib/ics";
+import {
+  buildCalendarUrls,
+  buildIcsInvite,
+  calendarInviteUid,
+  formatSessionTime,
+} from "../lib/ics";
 
 export default mutation({
   args: { sessionId: v.id("Session") },
@@ -71,7 +76,7 @@ export default mutation({
       // ≥0.3.378), so Gmail/Outlook render this as an RSVP-able invite; the
       // body's add-to-calendar links remain as the fallback.
       const ics = buildIcsInvite({
-        uid: `${inviteToken}@smolboard`,
+        uid: calendarInviteUid(args.sessionId, speakerUserId),
         sequence,
         start: session.startTime as string,
         end: session.endTime as string,

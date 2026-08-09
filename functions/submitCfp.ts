@@ -7,6 +7,7 @@ import {
   validateAnswers,
   type Answers,
 } from "../lib/forms";
+import { canClaimCfpEmail } from "../lib/cfp";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -68,12 +69,20 @@ export default mutation<
     }
     const category = routeSubmission(parseRouting(safeParse(form.routingJson)), answers);
 
-    // Find-or-create the speaker account by email. Existing organizers/speakers
-    // reuse their row; brand-new speakers get a passwordless account (magic
-    // code is their sign-in path).
+    // Find-or-create the speaker account by email. A first-time anonymous
+    // speaker can create an account; an existing address must prove ownership
+    // by signing in before another submission can attach to that account.
     // ctx.db.unsafe: cross-user lookup by email is exactly the trusted-context
     // case — an anonymous caller must be able to attach to the right account.
     let user = await ctx.db.unsafe.lookup("User", "email", email);
+    if (!canClaimCfpEmail(user?.id as string | undefined, ctx.auth.userId ?? undefined)) {
+      throw ctx.error(
+        "UNAUTHENTICATED",
+        user
+          ? "This email already has a speaker account. Sign in to the speaker portal before submitting."
+          : "Use the email associated with your signed-in speaker account.",
+      );
+    }
     if (!user) {
       const userId = await ctx.db.unsafe.insert("User", {
         email,

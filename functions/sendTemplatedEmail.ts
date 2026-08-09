@@ -1,5 +1,5 @@
 import { action, v } from "@pylonsync/functions";
-import { DEFAULT_TEMPLATES, markdownToHtml, renderTemplate, type MergeVars } from "../lib/email";
+import { DEFAULT_TEMPLATES, renderEmailHtml, renderTemplate, type MergeVars } from "../lib/email";
 
 // Central speaker-email sender. Resolves the event's EmailTemplate row (falling
 // back to the built-in default for the key), renders merge tags, sends via the
@@ -66,10 +66,7 @@ export default action<
     const text = bodyMd.replace(/\*\*([^*]+)\*\*/g, "$1");
     // Composer-authored templates carry their own HTML (with merge tags);
     // default templates fall back to the tiny markdown renderer.
-    const html =
-      custom?.bodyHtml && custom.bodyHtml.trim()
-        ? renderTemplate(custom.bodyHtml, vars)
-        : markdownToHtml(bodyMd);
+    const html = renderEmailHtml(template.body, custom?.bodyHtml, vars);
 
     const attachments = Array.isArray(args.attachments)
       ? (args.attachments as { filename: string; contentType: string; content: string }[])

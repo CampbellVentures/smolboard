@@ -18,6 +18,17 @@ export function renderHtmlTemplate(template: string, vars: MergeVars): string {
   );
 }
 
+// Keep both rendering paths behind one helper so callers cannot accidentally
+// interpolate untrusted merge values directly into composer-authored HTML.
+export function renderEmailHtml(
+  markdownBody: string,
+  htmlBody: string | undefined,
+  vars: MergeVars,
+): string {
+  if (htmlBody?.trim()) return renderHtmlTemplate(htmlBody, vars);
+  return markdownToHtml(renderTemplate(markdownBody, vars));
+}
+
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")

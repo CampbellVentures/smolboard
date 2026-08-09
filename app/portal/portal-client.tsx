@@ -4,19 +4,42 @@ import React, { useEffect, useState } from "react";
 import { callFn, db } from "@pylonsync/react";
 import { FileUpload, sendMagicLink, verifyMagicLink, useAuth } from "@pylonsync/client";
 import { Button } from "@/components/ui/button";
+import { BrandMark } from "@/components/brand";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Select } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { FormRenderer } from "@/components/form-renderer";
-import { CheckCircle2, ExternalLink, FileUp, LogOut, Loader2, Mic2 } from "lucide-react";
+import {
+  CalendarDays,
+  CheckCircle2,
+  ExternalLink,
+  FileUp,
+  LogOut,
+  Loader2,
+  Pencil,
+} from "lucide-react";
 import { fieldsOf, parseJson } from "@/lib/types";
 import { taskCompletion, taskDueState } from "@/lib/tasks";
-import type { Answers } from "@/lib/forms";
+import { formatSessionTime } from "@/lib/ics";
+import type { PortalSession } from "@/lib/portal";
+import { pruneAnswers, validateAnswers, type Answers } from "@/lib/forms";
 import type {
   EventRow,
   SpeakerFileRow,
   SpeakerProfileRow,
   SpeakerTaskRow,
+  SubmissionFormRow,
   SubmissionRow,
   TaskTemplateRow,
 } from "@/lib/types";
@@ -67,9 +90,7 @@ export function PortalLogin() {
     <div className="flex min-h-screen items-center justify-center bg-zinc-50 px-6">
       <div className="w-full max-w-sm">
         <div className="mb-6 text-center">
-          <span className="mx-auto flex size-10 items-center justify-center rounded-xl bg-zinc-900 text-white">
-            <Mic2 className="size-5" />
-          </span>
+          <BrandMark size={40} className="mx-auto" />
           <h1 className="mt-3 text-xl font-semibold tracking-tight text-zinc-900">
             Speaker portal
           </h1>
@@ -164,6 +185,7 @@ export function PortalHome({
   initialTasks,
   initialTemplates,
   initialFiles,
+  initialForms,
   events,
 }: {
   userId: string;
@@ -173,17 +195,37 @@ export function PortalHome({
   initialTasks: SpeakerTaskRow[];
   initialTemplates: TaskTemplateRow[];
   initialFiles: SpeakerFileRow[];
+  initialForms: SubmissionFormRow[];
   events: EventRow[];
 }) {
   const { signOut } = useAuth();
   const [hydrated, setHydrated] = useState(false);
-  useEffect(() => setHydrated(true), []);
+  const [sessions, setSessions] = useState<PortalSession[]>([]);
+  const [scheduleLoading, setScheduleLoading] = useState(true);
+  useEffect(() => {
+    setHydrated(true);
+    let active = true;
+    callFn("getMySchedule", {})
+      .then((result) => {
+        if (active) setSessions((result as { sessions: PortalSession[] }).sessions);
+      })
+      .catch(() => {
+        if (active) setSessions([]);
+      })
+      .finally(() => {
+        if (active) setScheduleLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
   // Live: status flips (accepted!) appear without a refresh.
   const subsQ = db.useQuery<SubmissionRow>("Submission");
   const profQ = db.useQuery<SpeakerProfileRow>("SpeakerProfile");
   const taskQ = db.useQuery<SpeakerTaskRow>("SpeakerTask");
   const templateQ = db.useQuery<TaskTemplateRow>("TaskTemplate");
   const fileQ = db.useQuery<SpeakerFileRow>("SpeakerFile");
+  const formQ = db.useQuery<SubmissionFormRow>("SubmissionForm");
   const submissions =
     !hydrated || subsQ.loading
       ? initialSubmissions
@@ -201,6 +243,7 @@ export function PortalHome({
     !hydrated || fileQ.loading
       ? initialFiles
       : fileQ.data.filter((file) => file.userId === userId);
+  const forms = !hydrated || formQ.loading ? initialForms : formQ.data;
 
   const eventName = (id: string) => events.find((e) => e.id === id)?.name ?? "Event";
 
@@ -214,7 +257,7 @@ export function PortalHome({
       <header className="border-b border-zinc-200 bg-white">
         <div className="mx-auto flex h-14 max-w-3xl items-center justify-between px-6">
           <span className="flex items-center gap-2 text-[15px] font-semibold tracking-tight text-zinc-900">
-            <Mic2 className="size-4 text-zinc-400" /> Speaker portal
+            <BrandMark size={18} /> Speaker portal
           </span>
           <div className="flex items-center gap-3">
             <span className="hidden text-xs text-zinc-400 sm:block">{email}</span>
@@ -230,6 +273,8 @@ export function PortalHome({
       </header>
 
       <main className="mx-auto max-w-3xl space-y-8 px-6 py-10">
+        <ScheduleSection sessions={sessions} loading={scheduleLoading} />
+
         {submissions.length === 0 ? (
           <div className="rounded-xl border border-dashed border-zinc-300 bg-white px-6 py-14 text-center">
             <p className="text-sm font-medium text-zinc-700">No submissions yet</p>
@@ -244,22 +289,34 @@ export function PortalHome({
               {submissions
                 .slice()
                 .sort((a, b) => (a.submittedAt < b.submittedAt ? 1 : -1))
-                .map((s) => (
-                  <li key={s.id} className="flex items-center gap-4 px-5 py-4">
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-semibold text-zinc-900">{s.title}</div>
-                      <div className="mt-0.5 text-xs text-zinc-400">{eventName(s.eventId)}</div>
-                    </div>
-                    <span
-                      className={
-                        "shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium capitalize " +
-                        statusTone(s.status)
-                      }
-                    >
-                      {statusLabel(s.status)}
-                    </span>
-                  </li>
-                ))}
+                .map((s) => {
+                  const form = forms.find((candidate) => candidate.id === s.formId);
+                  const event = events.find((candidate) => candidate.id === s.eventId);
+                  const editable = form?.status === "open" && event?.cfpStatus === "open";
+                  return (
+                    <li key={s.id} className="flex items-center gap-3 px-5 py-4">
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-semibold text-zinc-900">
+                          {s.title}
+                        </div>
+                        <div className="mt-0.5 text-xs text-zinc-400">
+                          {eventName(s.eventId)}
+                        </div>
+                      </div>
+                      <span
+                        className={
+                          "shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium capitalize " +
+                          statusTone(s.status)
+                        }
+                      >
+                        {statusLabel(s.status)}
+                      </span>
+                      {editable && form ? (
+                        <SubmissionEditor submission={s} form={form} />
+                      ) : null}
+                    </li>
+                  );
+                })}
             </ul>
           </section>
         )}
@@ -278,6 +335,171 @@ export function PortalHome({
         ))}
       </main>
     </div>
+  );
+}
+
+function ScheduleSection({
+  sessions,
+  loading,
+}: {
+  sessions: PortalSession[];
+  loading: boolean;
+}) {
+  return (
+    <section>
+      <h2 className="text-sm font-semibold text-zinc-900">Your schedule</h2>
+      <div className="mt-3 overflow-hidden rounded-xl border border-zinc-200 bg-white">
+        {loading ? (
+          <div className="flex items-center gap-2 px-5 py-4 text-sm text-zinc-400">
+            <Loader2 className="size-4 animate-spin" /> Loading schedule…
+          </div>
+        ) : sessions.length === 0 ? (
+          <div className="flex items-center gap-3 px-5 py-4">
+            <span className="flex size-8 items-center justify-center rounded-lg bg-zinc-100 text-zinc-400">
+              <CalendarDays className="size-4" />
+            </span>
+            <div>
+              <p className="text-sm font-medium text-zinc-700">Nothing scheduled yet</p>
+              <p className="text-xs text-zinc-400">Confirmed session times will appear here.</p>
+            </div>
+          </div>
+        ) : (
+          <ul className="divide-y divide-zinc-100">
+            {sessions.map((session) => (
+              <li key={session.id} className="flex items-start gap-3 px-5 py-4">
+                <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-zinc-500">
+                  <CalendarDays className="size-4" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-zinc-900">{session.title}</p>
+                  <p className="mt-0.5 text-xs text-zinc-500">
+                    {formatSessionTime(
+                      session.startTime,
+                      session.endTime,
+                      session.timezone,
+                    )}
+                    {session.roomName ? ` · ${session.roomName}` : ""}
+                  </p>
+                  <p className="mt-0.5 text-xs text-zinc-400">{session.eventName}</p>
+                </div>
+                {session.schedulePublished ? (
+                  <Button asChild type="button" size="sm" variant="ghost">
+                    <a href={`/${session.eventSlug}/schedule`}>
+                      View <ExternalLink data-icon="inline-end" />
+                    </a>
+                  </Button>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function SubmissionEditor({
+  submission,
+  form,
+}: {
+  submission: SubmissionRow;
+  form: SubmissionFormRow;
+}) {
+  const fields = fieldsOf(form);
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState(submission.title);
+  const [abstract, setAbstract] = useState(submission.abstract ?? "");
+  const [answers, setAnswers] = useState<Answers>(
+    () => parseJson<Answers>(submission.answersJson) ?? {},
+  );
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function save(event: React.FormEvent) {
+    event.preventDefault();
+    const pruned = pruneAnswers(fields, answers);
+    const validation = validateAnswers(fields, pruned);
+    if (!title.trim()) {
+      setError("A talk title is required.");
+      return;
+    }
+    if (validation.length > 0) {
+      setError(validation.map((item) => item.message).join(" "));
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      await callFn("updateMySubmission", {
+        submissionId: submission.id,
+        title: title.trim(),
+        abstract: abstract.trim() || undefined,
+        answers: pruned,
+      });
+      setOpen(false);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not update your submission.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <>
+      <Button
+        type="button"
+        size="icon"
+        variant="ghost"
+        aria-label={`Edit ${submission.title}`}
+        onClick={() => setOpen(true)}
+      >
+        <Pencil />
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-h-[calc(100vh-2rem)] max-w-2xl overflow-y-auto">
+          <form onSubmit={save}>
+            <DialogHeader>
+              <DialogTitle>Edit submission</DialogTitle>
+              <DialogDescription>
+                Changes are allowed while the call for speakers is open.
+              </DialogDescription>
+            </DialogHeader>
+            <FieldGroup className="mt-5 gap-4">
+              <Field>
+                <FieldLabel htmlFor={`submission-title-${submission.id}`}>Talk title</FieldLabel>
+                <Input
+                  id={`submission-title-${submission.id}`}
+                  value={title}
+                  maxLength={200}
+                  onChange={(event) => setTitle(event.target.value)}
+                />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor={`submission-abstract-${submission.id}`}>Abstract</FieldLabel>
+                <Textarea
+                  id={`submission-abstract-${submission.id}`}
+                  value={abstract}
+                  rows={5}
+                  onChange={(event) => setAbstract(event.target.value)}
+                />
+              </Field>
+              {fields.length > 0 ? (
+                <FormRenderer fields={fields} answers={answers} onChange={setAnswers} />
+              ) : null}
+              {error ? <p className="text-sm text-red-600">{error}</p> : null}
+            </FieldGroup>
+            <DialogFooter className="mt-6">
+              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={busy || !title.trim()}>
+                {busy ? "Saving…" : "Save changes"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
@@ -474,6 +696,11 @@ function ProfileEditor({
   const [bio, setBio] = useState(profile.bio ?? "");
   const [company, setCompany] = useState(profile.company ?? "");
   const [jobTitle, setJobTitle] = useState(profile.jobTitle ?? "");
+  const initialLinks = parseJson<Record<string, string>>(profile.linksJson) ?? {};
+  const [website, setWebsite] = useState(initialLinks.website ?? "");
+  const [linkedin, setLinkedin] = useState(initialLinks.linkedin ?? "");
+  const [github, setGithub] = useState(initialLinks.github ?? "");
+  const [twitter, setTwitter] = useState(initialLinks.twitter ?? "");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -488,6 +715,7 @@ function ProfileEditor({
         bio: bio.trim() || undefined,
         company: company.trim() || undefined,
         jobTitle: jobTitle.trim() || undefined,
+        linksJson: compactLinks({ website, linkedin, github, twitter }),
       });
       setSaved(true);
     } finally {
@@ -495,7 +723,9 @@ function ProfileEditor({
     }
   }
 
-  const completeness = [name, tagline, bio, company].filter((v) => v.trim()).length;
+  const hasLink = [website, linkedin, github, twitter].some((value) => value.trim());
+  const completeness = [name, tagline, bio, company].filter((value) => value.trim()).length +
+    (hasLink ? 1 : 0);
 
   return (
     <section>
@@ -503,7 +733,7 @@ function ProfileEditor({
         <h2 className="text-sm font-semibold text-zinc-900">
           Speaker profile · {eventName}
         </h2>
-        <span className="text-xs text-zinc-400">{completeness}/4 complete</span>
+        <span className="text-xs text-zinc-400">{completeness}/5 complete</span>
       </div>
       <form onSubmit={save} className="mt-3 space-y-4 rounded-xl border border-zinc-200 bg-white p-5">
         <div className="grid gap-3 sm:grid-cols-2">
@@ -541,6 +771,51 @@ function ProfileEditor({
             className={inputCls + " resize-y"}
           />
         </label>
+        <div>
+          <h3 className="text-[13px] font-medium text-zinc-700">Links</h3>
+          <div className="mt-2 grid gap-3 sm:grid-cols-2">
+            <Field>
+              <FieldLabel htmlFor={`website-${profile.id}`}>Website</FieldLabel>
+              <Input
+                id={`website-${profile.id}`}
+                type="url"
+                value={website}
+                placeholder="https://example.com"
+                onChange={(event) => { setWebsite(event.target.value); setSaved(false); }}
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor={`linkedin-${profile.id}`}>LinkedIn</FieldLabel>
+              <Input
+                id={`linkedin-${profile.id}`}
+                type="url"
+                value={linkedin}
+                placeholder="https://linkedin.com/in/…"
+                onChange={(event) => { setLinkedin(event.target.value); setSaved(false); }}
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor={`github-${profile.id}`}>GitHub</FieldLabel>
+              <Input
+                id={`github-${profile.id}`}
+                type="url"
+                value={github}
+                placeholder="https://github.com/…"
+                onChange={(event) => { setGithub(event.target.value); setSaved(false); }}
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor={`twitter-${profile.id}`}>X / Twitter</FieldLabel>
+              <Input
+                id={`twitter-${profile.id}`}
+                type="url"
+                value={twitter}
+                placeholder="https://x.com/…"
+                onChange={(event) => { setTwitter(event.target.value); setSaved(false); }}
+              />
+            </Field>
+          </div>
+        </div>
         <div className="flex items-center gap-3">
           <Button type="submit" size="sm" disabled={saving || !name.trim()}>
             {saving ? "Saving…" : "Save profile"}
@@ -550,4 +825,11 @@ function ProfileEditor({
       </form>
     </section>
   );
+}
+
+function compactLinks(links: Record<string, string>) {
+  const entries = Object.entries(links)
+    .map(([key, value]) => [key, value.trim()] as const)
+    .filter(([, value]) => value);
+  return entries.length > 0 ? Object.fromEntries(entries) : undefined;
 }

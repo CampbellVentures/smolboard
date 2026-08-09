@@ -23,6 +23,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { fieldsOf, parseJson } from "@/lib/types";
+import { reviewRoundForNumber } from "@/lib/reviews";
 import type {
   EventRow,
   ReviewRoundRow,
@@ -448,10 +449,9 @@ function DetailDrawer({
     }
   }
 
-  // Round to score against: the submission's current round, else the last
-  // defined, else an implicit round 1 (auto-created on first score).
-  const activeRound =
-    rounds.find((r) => r.roundNumber === submission.currentRound) ?? rounds[rounds.length - 1];
+  // Never fall back to a different round: that would silently attach a score
+  // to the wrong review phase after a submission advances.
+  const activeRound = reviewRoundForNumber(rounds, submission.currentRound);
 
   return (
     <aside className="hidden w-[380px] shrink-0 lg:block">
@@ -602,12 +602,12 @@ function ScorePanel({
     try {
       let roundId = round?.id;
       if (!roundId) {
-        // First score on an event with no rounds: create round 1 implicitly.
+        // Create the exact round the submission is currently in.
         roundId = await db.insert("ReviewRound", {
           orgId: event.orgId,
           eventId: event.id,
-          roundNumber: 1,
-          name: "Round 1",
+          roundNumber: submission.currentRound,
+          name: `Round ${submission.currentRound}`,
           criteriaJson: DEFAULT_CRITERIA,
           status: "open",
         });
@@ -639,7 +639,7 @@ function ScorePanel({
   return (
     <section className="rounded-lg border border-zinc-200 bg-zinc-50/60 p-3">
       <h4 className="text-[11px] font-medium uppercase tracking-wide text-zinc-400">
-        Your score {round ? `· ${round.name}` : "· Round 1"}
+        Your score {round ? `· ${round.name}` : `· Round ${submission.currentRound}`}
       </h4>
       <div className="mt-2 space-y-2.5">
         {criteria.map((c) => (

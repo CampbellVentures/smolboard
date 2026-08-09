@@ -6,6 +6,7 @@ import type {
   SpeakerFileRow,
   SpeakerProfileRow,
   SpeakerTaskRow,
+  SubmissionFormRow,
   SubmissionRow,
   TaskTemplateRow,
 } from "@/lib/types";
@@ -42,6 +43,7 @@ export default function PortalPage({ auth, serverData }: PageProps) {
   const files = use(serverData.list<SpeakerFileRow>("SpeakerFile")).filter(
     (file) => file.userId === auth.user_id,
   );
+  const forms = use(serverData.list<SubmissionFormRow>("SubmissionForm"));
 
   return (
     <PortalHome
@@ -52,6 +54,7 @@ export default function PortalPage({ auth, serverData }: PageProps) {
       initialTasks={tasks}
       initialTemplates={templates}
       initialFiles={files}
+      initialForms={forms}
       events={events}
     />
   );
