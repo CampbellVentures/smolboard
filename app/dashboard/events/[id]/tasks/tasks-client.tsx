@@ -240,8 +240,8 @@ export function TasksClient({
             <TableHeader>
               <TableRow>
                 <TableHead>Task</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Due</TableHead>
+                <TableHead className="hidden sm:table-cell">Type</TableHead>
+                <TableHead className="hidden sm:table-cell">Due</TableHead>
                 <TableHead>Progress</TableHead>
                 <TableHead className="w-16"><span className="sr-only">Actions</span></TableHead>
               </TableRow>
@@ -263,9 +263,14 @@ export function TasksClient({
                   <TableCell>
                     <div className="font-medium">{template.title}</div>
                     {template.description ? <div className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{template.description}</div> : null}
+                    {/* Type + due collapse into a meta line below sm. */}
+                    <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground sm:hidden">
+                      <DashboardStatusBadge status={template.kind}>{template.kind}</DashboardStatusBadge>
+                      <span>{formatDue(template.dueAt)}</span>
+                    </div>
                   </TableCell>
-                  <TableCell><DashboardStatusBadge status={template.kind}>{template.kind}</DashboardStatusBadge></TableCell>
-                  <TableCell className="text-muted-foreground">{formatDue(template.dueAt)}</TableCell>
+                  <TableCell className="hidden sm:table-cell"><DashboardStatusBadge status={template.kind}>{template.kind}</DashboardStatusBadge></TableCell>
+                  <TableCell className="hidden text-muted-foreground sm:table-cell">{formatDue(template.dueAt)}</TableCell>
                   <TableCell>
                     <span className="tabular-nums">{rowCompleted}/{assigned}</span>
                     {rowOverdue > 0 ? <span className="ml-2 text-xs text-destructive">{rowOverdue} overdue</span> : null}

@@ -436,7 +436,7 @@ export function EventOverview({
             )}
           </DashboardEmptyState>
         ) : (
-          <div className="divide-y divide-border overflow-hidden rounded-xl border border-border">
+          <div className="divide-y divide-border/70">
             {submissions
               .slice()
               .sort((a, b) => (a.submittedAt < b.submittedAt ? 1 : -1))
@@ -445,11 +445,12 @@ export function EventOverview({
                 <Link
                   key={submission.id}
                   href={`/dashboard/events/${event.id}/abstracts`}
-                  className="group flex items-center gap-4 px-4 py-3 transition-colors hover:bg-muted/50"
+                  className="group flex items-center gap-3 rounded-lg px-2 py-3 transition-colors hover:bg-muted/40"
                 >
+                  <DashboardIconChip icon={Inbox} tone="zinc" size="sm" />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">{submission.title}</p>
-                    <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                    <p className="mt-0.5 truncate text-xs capitalize text-muted-foreground">
                       {submission.category?.trim() || "Uncategorized"}
                     </p>
                   </div>
@@ -610,15 +611,15 @@ function NextStepRow({
   );
 
   return (
-    <div className="flex flex-col gap-3 rounded-xl px-3 py-3 hover:bg-muted/40 sm:flex-row sm:items-center">
+    <div className="flex flex-col gap-3 rounded-lg px-2 py-3 hover:bg-muted/40 sm:flex-row sm:items-center">
       <div className="flex min-w-0 flex-1 items-start gap-3">
-        <DashboardIconChip icon={Icon} tone={tones.get(Icon) ?? "zinc"} />
+        <DashboardIconChip icon={Icon} tone={tones.get(Icon) ?? "zinc"} size="sm" />
         <div className="min-w-0">
           <p className="text-sm font-medium">{step.title}</p>
           <p className="mt-0.5 text-xs leading-5 text-muted-foreground">{step.description}</p>
         </div>
       </div>
-      <div className="pl-12 sm:pl-0">{action}</div>
+      <div className="pl-11 sm:pl-0">{action}</div>
     </div>
   );
 }
@@ -636,7 +637,7 @@ function ReadinessRow({
 }) {
   return (
     <div className="flex items-start gap-3">
-      <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+      <DashboardIconChip icon={Icon} tone="zinc" size="sm" />
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-3">
           <p className="text-sm font-medium">{label}</p>

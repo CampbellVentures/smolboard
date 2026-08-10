@@ -4,10 +4,10 @@ import React, { useEffect, useState } from "react";
 import { callFn, db, Link, useRouter } from "@pylonsync/react";
 import {
   DashboardEmptyState,
+  DashboardHero,
   DashboardIconChip,
   DashboardPage,
   DashboardStatusBadge,
-  DashboardToolbar,
   DashboardWidePage,
 } from "@/components/dashboard";
 import { ResponsiveFormOverlay } from "@/components/responsive-overlay";
@@ -100,7 +100,15 @@ export function FormsList({
 
   return (
     <DashboardWidePage>
-      <DashboardToolbar className="justify-end">
+      <DashboardHero>
+        <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="max-w-lg">
+            <h2 className="text-balance text-lg font-semibold tracking-tight">Submission forms</h2>
+            <p className="mt-1 text-pretty text-sm text-muted-foreground">
+              Each form is a public CFP page — share the link and submissions land in
+              review the moment speakers hit send.
+            </p>
+          </div>
         <ResponsiveFormOverlay.Root
           open={creating}
           onOpenChange={(open) => {
@@ -147,7 +155,8 @@ export function FormsList({
             </form>
           </ResponsiveFormOverlay.Content>
         </ResponsiveFormOverlay.Root>
-      </DashboardToolbar>
+        </div>
+      </DashboardHero>
 
       {forms.length === 0 ? (
         <DashboardEmptyState
@@ -156,51 +165,68 @@ export function FormsList({
           description="Create a submission form to open your CFP."
         />
       ) : (
-        <ul className="overflow-hidden rounded-xl border border-border bg-card">
-          {forms.map((f) => (
-            <li
-              key={f.id}
-              className="flex min-h-14 items-center gap-3 border-b px-4 py-2.5 transition-[background-color] duration-150 ease-out last:border-b-0 hover:bg-muted/50"
-            >
-              <Link
-                href={`/dashboard/events/${event.id}/forms/${f.id}`}
-                className="flex min-w-0 flex-1 items-center gap-3"
+        <div className="grid items-start gap-4 md:grid-cols-2">
+          {forms.map((f) => {
+            const fieldCount = parseFields(parseJson(f.fieldsJson) ?? []).length;
+            const submissionCount = initialSubmissions.filter((s) => s.formId === f.id).length;
+            return (
+              <section
+                key={f.id}
+                className="flex flex-col overflow-hidden rounded-xl border border-border bg-card"
               >
-                <DashboardIconChip icon={FileText} tone="violet" />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2.5">
-                    <span className="truncate text-sm font-semibold text-zinc-900 hover:underline">
-                      {f.name}
-                    </span>
-                    <StatusBadge status={f.status} />
-                  </div>
-                  <div className="mt-0.5 text-xs text-zinc-400">
-                    /{orgSlug ?? "…"}/{event.slug}/cfp/{f.slug}
-                    <span className="text-zinc-300"> · </span>
-                    {parseFields(parseJson(f.fieldsJson) ?? []).length} custom field
-                    {parseFields(parseJson(f.fieldsJson) ?? []).length === 1 ? "" : "s"}
-                    <span className="text-zinc-300"> · </span>
-                    <span className="tabular-nums">
-                      {initialSubmissions.filter((s) => s.formId === f.id).length}
-                    </span>{" "}
-                    submissions
-                  </div>
-                </div>
-              </Link>
-              {f.status === "open" && orgSlug && (
-                <a
-                  href={`/${orgSlug}/${event.slug}/cfp/${f.slug}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex h-10 shrink-0 items-center gap-1 rounded-lg px-2 text-[13px] font-medium text-muted-foreground hover:bg-background hover:text-foreground"
+                <Link
+                  href={`/dashboard/events/${event.id}/forms/${f.id}`}
+                  className="flex items-start gap-3 p-4"
                 >
-                  <ExternalLink className="size-3.5" aria-hidden="true" /> View
-                </a>
-              )}
-              <ChevronRight className="size-4 shrink-0 text-muted-foreground/60" aria-hidden="true" />
-            </li>
-          ))}
-        </ul>
+                  <DashboardIconChip icon={FileText} tone="violet" size="lg" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="truncate text-sm font-semibold">{f.name}</span>
+                      <StatusBadge status={f.status} />
+                    </div>
+                    <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                      /{orgSlug ?? "…"}/{event.slug}/cfp/{f.slug}
+                    </p>
+                  </div>
+                </Link>
+                <dl className="grid grid-cols-2 gap-px border-t bg-border/60">
+                  <div className="bg-card px-4 py-2.5">
+                    <dt className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                      Questions
+                    </dt>
+                    <dd className="mt-0.5 text-sm font-semibold tabular-nums">{fieldCount + 4}</dd>
+                  </div>
+                  <div className="bg-card px-4 py-2.5">
+                    <dt className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                      Submissions
+                    </dt>
+                    <dd className="mt-0.5 text-sm font-semibold tabular-nums">{submissionCount}</dd>
+                  </div>
+                </dl>
+                <div className="mt-auto flex items-center justify-between gap-2 border-t bg-muted/40 px-4 py-2.5">
+                  <Button asChild size="sm" variant="ghost">
+                    <Link href={`/dashboard/events/${event.id}/forms/${f.id}`}>
+                      Edit form
+                      <ChevronRight data-icon="inline-end" />
+                    </Link>
+                  </Button>
+                  {f.status === "open" && orgSlug ? (
+                    <Button asChild size="sm" variant="outline">
+                      <a
+                        href={`/${orgSlug}/${event.slug}/cfp/${f.slug}`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        <ExternalLink data-icon="inline-start" />
+                        View public page
+                      </a>
+                    </Button>
+                  ) : null}
+                </div>
+              </section>
+            );
+          })}
+        </div>
       )}
     </DashboardWidePage>
   );
