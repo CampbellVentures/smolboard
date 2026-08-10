@@ -77,6 +77,9 @@ interface NextStep {
 export function EventOverview({
   event,
   initialSubmissions,
+  initialSessions,
+  initialSlots,
+  initialVersions,
   forms,
   initialProfiles,
   initialTasks,
@@ -87,6 +90,9 @@ export function EventOverview({
 }: {
   event: EventRow;
   initialSubmissions: SubmissionRow[];
+  initialSessions: SessionRow[];
+  initialSlots: DeliverableSlotRow[];
+  initialVersions: DeliverableVersionRow[];
   forms: SubmissionFormRow[];
   initialProfiles: SpeakerProfileRow[];
   initialTasks: SpeakerTaskRow[];
@@ -256,7 +262,13 @@ export function EventOverview({
         </dl>
       </section>
 
-      <AlsoCheckRibbon eventId={event.id} submissions={submissions} />
+      <AlsoCheckRibbon
+        eventId={event.id}
+        submissions={submissions}
+        initialSessions={initialSessions}
+        initialSlots={initialSlots}
+        initialVersions={initialVersions}
+      />
 
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(16rem,0.75fr)]">
         <DashboardPanel title="Next steps">
@@ -779,16 +791,27 @@ function formatEventDetails(event: EventRow) {
 function AlsoCheckRibbon({
   eventId,
   submissions,
+  initialSessions,
+  initialSlots,
+  initialVersions,
 }: {
   eventId: string;
   submissions: { id: string; status: string }[];
+  initialSessions: SessionRow[];
+  initialSlots: DeliverableSlotRow[];
+  initialVersions: DeliverableVersionRow[];
 }) {
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
   const sessionQ = db.useQuery<SessionRow>("Session");
   const slotQ = db.useQuery<DeliverableSlotRow>("DeliverableSlot");
   const versionQ = db.useQuery<DeliverableVersionRow>("DeliverableVersion");
-  const sessions = sessionQ.loading ? [] : sessionQ.data.filter((r) => r.eventId === eventId);
-  const slots = slotQ.loading ? [] : slotQ.data.filter((r) => r.eventId === eventId);
-  const versions = versionQ.loading ? [] : versionQ.data.filter((r) => r.eventId === eventId);
+  const sessions =
+    !hydrated || sessionQ.loading ? initialSessions : sessionQ.data.filter((r) => r.eventId === eventId);
+  const slots =
+    !hydrated || slotQ.loading ? initialSlots : slotQ.data.filter((r) => r.eventId === eventId);
+  const versions =
+    !hydrated || versionQ.loading ? initialVersions : versionQ.data.filter((r) => r.eventId === eventId);
 
   const scheduledBySubmission = new Set(
     sessions.filter((s) => s.startTime && s.submissionId).map((s) => s.submissionId),

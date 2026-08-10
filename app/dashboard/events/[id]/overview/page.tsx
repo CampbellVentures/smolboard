@@ -11,6 +11,9 @@ import type {
   SubmissionFormRow,
   SubmissionRow,
   TaskTemplateRow,
+  SessionRow,
+  DeliverableSlotRow,
+  DeliverableVersionRow,
 } from "@/lib/types";
 
 export const metadata: Metadata = {
@@ -56,6 +59,15 @@ export default function EventOverviewPage({
   const assignments = use(serverData.list<ReviewAssignmentRow>("ReviewAssignment")).filter(
     (row) => row.eventId === event.id,
   );
+  const sessions = use(serverData.list<SessionRow>("Session")).filter(
+    (row) => row.eventId === event.id,
+  );
+  const slots = use(serverData.list<DeliverableSlotRow>("DeliverableSlot")).filter(
+    (row) => row.eventId === event.id,
+  );
+  const versions = use(serverData.list<DeliverableVersionRow>("DeliverableVersion")).filter(
+    (row) => row.eventId === event.id,
+  );
   const rounds = use(serverData.list<ReviewRoundRow>("ReviewRound")).filter(
     (row) => row.eventId === event.id,
   );
@@ -64,6 +76,9 @@ export default function EventOverviewPage({
     <EventOverview
       event={event}
       initialSubmissions={submissions}
+      initialSessions={sessions}
+      initialSlots={slots}
+      initialVersions={versions}
       forms={forms}
       initialProfiles={profiles}
       initialTasks={tasks}
