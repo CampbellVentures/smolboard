@@ -119,7 +119,7 @@ export function EventsList({
           </ResponsiveFormOverlay.Trigger>
           <ResponsiveFormOverlay.Content>
             <form onSubmit={create} className="contents">
-              <ResponsiveFormOverlay.Header>
+              <ResponsiveFormOverlay.Header icon={CalendarPlus}>
                 <ResponsiveFormOverlay.Title>New event</ResponsiveFormOverlay.Title>
                 <ResponsiveFormOverlay.Description>
                   Name, public URL, and dates. Everything else can wait.

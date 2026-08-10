@@ -2,7 +2,12 @@
 
 import React, { useMemo, useState } from "react";
 import { callFn } from "@pylonsync/react";
-import { DashboardPanel, DashboardWidePage } from "@/components/dashboard";
+import {
+  DashboardIconChip,
+  DashboardPanel,
+  DashboardWidePage,
+  type DashboardChipTone,
+} from "@/components/dashboard";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -34,7 +39,13 @@ import {
 import type { SubmissionRow, TrackRow } from "@/lib/types";
 import {
   ArrowDown,
+  ArrowRightLeft,
   ArrowUp,
+  FileText,
+  Gauge,
+  MessageSquare,
+  Split,
+  type LucideIcon,
   ChevronDown,
   ChevronRight,
   Plus,
@@ -202,7 +213,7 @@ export function FormBuilder({
     <DashboardWidePage className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
       {/* ---------------- Left: settings + field list ---------------- */}
       <div className="flex flex-col gap-5">
-        <DashboardPanel title="Form details" variant="subtle">
+        <DashboardPanel title="Form details" icon={FileText} tone="violet" variant="subtle">
           <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
             <Input
               value={name}
@@ -248,6 +259,8 @@ export function FormBuilder({
 
         <DashboardPanel
           title="Fields"
+          icon={ListChecks}
+          tone="sky"
           description="Name, email, title, and abstract are always collected. Add your custom questions here."
           variant="subtle"
         >
@@ -308,6 +321,8 @@ export function FormBuilder({
 
         <CollapsiblePanel
           title="Category routing"
+          icon={Split}
+          tone="amber"
           hint={
             routing.rules.length > 0
               ? `${routing.rules.length} rule${routing.rules.length === 1 ? "" : "s"}`
@@ -320,6 +335,8 @@ export function FormBuilder({
 
         <CollapsiblePanel
           title="Confirmation message"
+          icon={MessageSquare}
+          tone="emerald"
           hint={confirmation.trim() ? "Custom" : "Default thank-you"}
           defaultOpen={Boolean(confirmation.trim())}
         >
@@ -335,6 +352,8 @@ export function FormBuilder({
 
         <CollapsiblePanel
           title="Agenda handoff mappings"
+          icon={ArrowRightLeft}
+          tone="pink"
           hint="Explicit format and track mapping"
           defaultOpen={Boolean(form.handoffMappingsJson)}
         >
@@ -454,11 +473,15 @@ function HandoffMappingEditor({
 function CollapsiblePanel({
   title,
   hint,
+  icon,
+  tone,
   defaultOpen = false,
   children,
 }: {
   title: string;
   hint?: string;
+  icon?: LucideIcon;
+  tone?: DashboardChipTone;
   defaultOpen?: boolean;
   children: React.ReactNode;
 }) {
@@ -469,8 +492,9 @@ function CollapsiblePanel({
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        className="flex h-11 w-full items-center gap-2.5 rounded-xl px-4 text-left"
+        className="flex min-h-12 w-full items-center gap-2.5 rounded-xl px-4 py-2 text-left"
       >
+        {icon ? <DashboardIconChip icon={icon} tone={tone} size="sm" /> : null}
         <span className="text-sm font-semibold text-zinc-900">{title}</span>
         {hint && !open && <span className="text-xs text-zinc-400">{hint}</span>}
         <ChevronDown

@@ -46,6 +46,7 @@ export interface EventRow {
   location?: string;
   cfpStatus: string;
   schedulePublished: boolean;
+  brandingJson?: string;
   createdAt: string;
 }
 

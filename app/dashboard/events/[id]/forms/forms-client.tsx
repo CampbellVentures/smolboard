@@ -115,7 +115,7 @@ export function FormsList({
           </ResponsiveFormOverlay.Trigger>
           <ResponsiveFormOverlay.Content>
             <form onSubmit={create} className="contents">
-              <ResponsiveFormOverlay.Header>
+              <ResponsiveFormOverlay.Header icon={FilePlus2}>
                 <ResponsiveFormOverlay.Title>New submission form</ResponsiveFormOverlay.Title>
                 <ResponsiveFormOverlay.Description>
                   Start with the common CFP questions, then customize the form builder.

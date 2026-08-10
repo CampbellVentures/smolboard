@@ -555,7 +555,7 @@ function SubmissionEditor({
       <ResponsiveFormOverlay.Root open={open} onOpenChange={setOpen}>
         <ResponsiveFormOverlay.Content className="max-w-2xl">
           <form onSubmit={save} className="contents">
-            <ResponsiveFormOverlay.Header>
+            <ResponsiveFormOverlay.Header icon={Pencil}>
               <ResponsiveFormOverlay.Title>Edit submission</ResponsiveFormOverlay.Title>
               <ResponsiveFormOverlay.Description>
                 Changes are allowed while the call for speakers is open.

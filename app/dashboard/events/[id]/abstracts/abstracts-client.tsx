@@ -526,7 +526,7 @@ function DetailDrawer({
   return (
     <ResponsiveDetailOverlay.Root open onOpenChange={(open) => !open && onClose()}>
       <ResponsiveDetailOverlay.Content>
-        <ResponsiveDetailOverlay.Header>
+        <ResponsiveDetailOverlay.Header icon={Inbox}>
           <ResponsiveDetailOverlay.Title>{submission.title}</ResponsiveDetailOverlay.Title>
           <ResponsiveDetailOverlay.Description>
             Review submission and record your score.

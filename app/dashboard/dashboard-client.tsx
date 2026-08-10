@@ -13,7 +13,7 @@ import {
   type PendingInvite,
 } from "@pylonsync/client";
 import { callFn } from "@pylonsync/react";
-import { Building2, Mail } from "lucide-react";
+import { Building2, Mail, TriangleAlert, UserPlus } from "lucide-react";
 import {
   DashboardEmptyState,
   DashboardPage,
@@ -182,6 +182,8 @@ function MembersList({
     <DashboardWidePage>
       <DashboardPanel
         title="Invite teammates"
+        icon={UserPlus}
+        tone="violet"
         description="Add organizers and reviewers to this workspace."
         action={members ? <Count n={members.length} /> : null}
       >
@@ -266,6 +268,8 @@ function MembersList({
       {canManage && invites && invites.length > 0 && (
         <DashboardPanel
           title="Pending invitations"
+          icon={Mail}
+          tone="amber"
           action={<span className="text-xs tabular-nums text-muted-foreground">{invites.length} pending</span>}
         >
           <ul className="divide-y divide-zinc-100">
@@ -362,7 +366,7 @@ function SettingsView({
 
   return (
     <DashboardWidePage>
-      <DashboardPanel title="Workspace" variant="subtle">
+      <DashboardPanel title="Workspace" icon={Building2} tone="sky" variant="subtle">
         <form onSubmit={rename} className="flex max-w-xl flex-col gap-3">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="workspace-name">Name</Label>
@@ -401,7 +405,7 @@ function SettingsView({
         </dl>
       </DashboardPanel>
 
-      <DashboardPanel title="Danger zone" variant="subtle">
+      <DashboardPanel title="Danger zone" icon={TriangleAlert} tone="amber" variant="subtle">
         {canDelete ? (
           <DeleteOrg org={org} onDeleted={clearOrg} />
         ) : (

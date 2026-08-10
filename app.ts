@@ -110,6 +110,9 @@ const Event = entity(
     // (name/dates/description power the public CFP + schedule pages).
     cfpStatus: field.string().default("draft"),
     schedulePublished: field.boolean().default(false),
+    // Public-site branding: JSON { accent, logoUrl, tagline } edited on the
+    // Branding page and consumed by the public event site.
+    brandingJson: field.string().optional(),
     createdAt: field.datetime().defaultNow(),
   },
   {

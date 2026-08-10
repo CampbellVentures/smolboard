@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { callFn, db, Link } from "@pylonsync/react";
 import { ClipboardList, Plus, Trash2 } from "lucide-react";
+import { OverlayHeaderChip } from "@/components/responsive-overlay";
 import { toast } from "sonner";
 import {
   DashboardEmptyState,
@@ -405,6 +406,7 @@ function TaskEditor({
       <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-lg">
         <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col">
           <SheetHeader className="border-b border-border px-6 py-4">
+            <OverlayHeaderChip icon={ClipboardList} />
             <SheetTitle className="text-left">
               {editor.id ? "Edit speaker task" : "New speaker task"}
             </SheetTitle>

@@ -302,7 +302,7 @@ export function SpeakersTable({
 
       <ResponsiveFormOverlay.Root open={importOpen} onOpenChange={setImportOpen}>
         <ResponsiveFormOverlay.Content className="max-w-3xl">
-          <ResponsiveFormOverlay.Header>
+          <ResponsiveFormOverlay.Header icon={FileSpreadsheet}>
             <ResponsiveFormOverlay.Title>Import speakers from CSV</ResponsiveFormOverlay.Title>
             <ResponsiveFormOverlay.Description>Name and email are required. Existing event emails are skipped deterministically.</ResponsiveFormOverlay.Description>
           </ResponsiveFormOverlay.Header>

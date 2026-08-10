@@ -12,7 +12,9 @@ import {
   Copy,
   ExternalLink,
   FileText,
+  Gauge,
   Inbox,
+  ListTodo,
   MapPin,
   Send,
   Users,
@@ -312,7 +314,7 @@ export function EventOverview({
       </DashboardHero>
 
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(16rem,0.75fr)]">
-        <DashboardPanel title="Next steps">
+        <DashboardPanel title="Next steps" icon={ListTodo} tone="violet" variant="subtle">
           {nextSteps.length === 0 ? (
             <div className="flex items-center gap-3 rounded-xl bg-muted/35 p-4">
               <CheckCircle2 className="size-5 text-emerald-500" aria-hidden="true" />
@@ -338,7 +340,7 @@ export function EventOverview({
           )}
         </DashboardPanel>
 
-        <DashboardPanel title="Event readiness" variant="subtle">
+        <DashboardPanel title="Event readiness" icon={Gauge} tone="emerald" variant="subtle">
           <div className="flex flex-col gap-4">
             <ReadinessRow
               icon={Send}
@@ -374,6 +376,9 @@ export function EventOverview({
 
       <DashboardPanel
         title="Latest submissions"
+        icon={Inbox}
+        tone="sky"
+        variant="subtle"
         description={submissions.length > 0 ? "Newest proposals" : undefined}
         action={
           submissions.length > 0 ? (
@@ -440,6 +445,9 @@ export function EventOverview({
       {onboarding.length > 0 ? (
         <DashboardPanel
           title="Speaker onboarding"
+          icon={Users}
+          tone="pink"
+          variant="subtle"
           description="Accepted speakers, profiles, and assigned tasks update live."
           action={
             <Button

@@ -138,6 +138,8 @@ export function DashboardPanel({
   title,
   description,
   action,
+  icon,
+  tone = "zinc",
   variant = "flat",
   className,
   children,
@@ -145,6 +147,8 @@ export function DashboardPanel({
   title: React.ReactNode;
   description?: React.ReactNode;
   action?: React.ReactNode;
+  icon?: LucideIcon;
+  tone?: DashboardChipTone;
   variant?: "flat" | "subtle" | "elevated";
   className?: string;
   children: React.ReactNode;
@@ -168,11 +172,14 @@ export function DashboardPanel({
           contained ? "p-4" : "px-0 pb-3 pt-0",
         )}
       >
-        <div className="flex min-w-0 flex-col gap-1">
-          <CardTitle className="text-balance text-sm">{title}</CardTitle>
-          {description ? (
-            <CardDescription className="text-pretty">{description}</CardDescription>
-          ) : null}
+        <div className="flex min-w-0 items-start gap-3">
+          {icon ? <DashboardIconChip icon={icon} tone={tone} /> : null}
+          <div className={cn("flex min-w-0 flex-col gap-1", icon && "pt-0.5")}>
+            <CardTitle className="text-balance text-sm">{title}</CardTitle>
+            {description ? (
+              <CardDescription className="text-pretty">{description}</CardDescription>
+            ) : null}
+          </div>
         </div>
         {action}
       </CardHeader>

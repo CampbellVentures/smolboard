@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext } from "react";
+import type { LucideIcon } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -127,15 +128,54 @@ function Content({ className, children }: React.ComponentProps<"div">) {
   );
 }
 
-function Header({ className, ...props }: React.ComponentProps<"div">) {
+// Overlay headers lead with an icon in a quiet gray chip so every dialog opens
+// with the same visual anchor. Pass `icon` from the call site; header text
+// renders below it.
+export function OverlayHeaderChip({ icon }: { icon: LucideIcon }) {
+  return <HeaderChip icon={icon} />;
+}
+
+function HeaderChip({ icon: Icon }: { icon: LucideIcon }) {
+  return (
+    <span
+      aria-hidden="true"
+      className="mb-3 flex size-10 items-center justify-center rounded-lg bg-muted text-muted-foreground outline outline-1 -outline-offset-1 outline-black/5"
+    >
+      <Icon className="size-5" />
+    </span>
+  );
+}
+
+function Header({
+  icon,
+  className,
+  children,
+  ...props
+}: React.ComponentProps<"div"> & { icon?: LucideIcon }) {
   const { desktop, kind } = useOverlay();
+  const chip = icon ? <HeaderChip icon={icon} /> : null;
   if (!desktop) {
-    return <DrawerHeader className={cn("px-5 pb-3 pt-5 text-left", className)} {...props} />;
+    return (
+      <DrawerHeader className={cn("px-5 pb-3 pt-5 text-left", className)} {...props}>
+        {chip}
+        {children}
+      </DrawerHeader>
+    );
   }
   if (kind === "detail") {
-    return <SheetHeader className={cn("border-b px-5 py-4", className)} {...props} />;
+    return (
+      <SheetHeader className={cn("border-b px-5 py-4", className)} {...props}>
+        {chip}
+        {children}
+      </SheetHeader>
+    );
   }
-  return <DialogHeader className={cn("px-6 pb-3 pt-6", className)} {...props} />;
+  return (
+    <DialogHeader className={cn("px-6 pb-3 pt-6", className)} {...props}>
+      {chip}
+      {children}
+    </DialogHeader>
+  );
 }
 
 function Title(props: React.ComponentProps<"h2">) {
@@ -167,7 +207,7 @@ function Footer({ className, ...props }: React.ComponentProps<"div">) {
     return (
       <DrawerFooter
         className={cn(
-          "border-t px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4",
+          "border-t bg-muted/40 px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4",
           className,
         )}
         {...props}
@@ -175,9 +215,9 @@ function Footer({ className, ...props }: React.ComponentProps<"div">) {
     );
   }
   if (kind === "detail") {
-    return <SheetFooter className={cn("border-t px-5 py-4", className)} {...props} />;
+    return <SheetFooter className={cn("border-t bg-muted/40 px-5 py-4", className)} {...props} />;
   }
-  return <DialogFooter className={cn("border-t px-6 py-4", className)} {...props} />;
+  return <DialogFooter className={cn("border-t bg-muted/40 px-6 py-4", className)} {...props} />;
 }
 
 const sharedParts = { Trigger, Content, Header, Title, Description, Body, Footer };

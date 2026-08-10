@@ -1046,7 +1046,7 @@ function SessionPopover({
   return (
     <ResponsiveFormOverlay.Root open onOpenChange={(open) => !open && onClose()}>
       <ResponsiveFormOverlay.Content>
-        <ResponsiveFormOverlay.Header>
+        <ResponsiveFormOverlay.Header icon={CalendarPlus}>
           <ResponsiveFormOverlay.Title>Edit session</ResponsiveFormOverlay.Title>
           <ResponsiveFormOverlay.Description>{timeLabel}</ResponsiveFormOverlay.Description>
         </ResponsiveFormOverlay.Header>

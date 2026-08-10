@@ -24,6 +24,8 @@ import {
   Menu,
   MessageSquareText,
   Send,
+  Palette,
+  Code2,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -59,6 +61,8 @@ export type EventNavKey =
   | "tasks"
   | "content"
   | "emails"
+  | "branding"
+  | "embeds"
   | "event-settings";
 
 interface PresencePerson {
@@ -191,6 +195,8 @@ function eventNav(eventId: string): NavEntry<EventNavKey>[] {
     { key: "tasks", label: "Tasks", href: `${base}/tasks`, Icon: ListChecks, group: "Speakers" },
     { key: "content", label: "Content", href: `${base}/content`, Icon: FileStack, group: "Speakers" },
     { key: "emails", label: "Emails", href: `${base}/emails`, Icon: Mail, group: "Speakers" },
+    { key: "branding", label: "Branding", href: `${base}/branding`, Icon: Palette, group: "Publish" },
+    { key: "embeds", label: "Embeds", href: `${base}/embeds`, Icon: Code2, group: "Publish" },
     { key: "event-settings", label: "Settings", href: `${base}/settings`, Icon: SettingsIcon, group: "Event" },
   ];
 }
