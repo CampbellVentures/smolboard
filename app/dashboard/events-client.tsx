@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { db, useRouter } from "@pylonsync/react";
+import { callFn, db, useRouter } from "@pylonsync/react";
+import { toast } from "sonner";
 import {
   DashboardEmptyState,
   DashboardPage,
@@ -36,6 +37,17 @@ export function EventsList({
   const { data, loading } = db.useQuery<EventRow>("Event");
   const rows = !hydrated || loading ? initial : data.filter((e) => e.orgId === tenantId);
   const orgSlug = useOrgSlug(tenantId);
+  const [loadingSample, setLoadingSample] = useState(false);
+  async function loadSample() {
+    setLoadingSample(true);
+    try {
+      const result = await callFn<{ eventId: string }>("createSampleEvent", { orgId: tenantId });
+      router.push(`/dashboard/events/${result.eventId}/overview`);
+    } catch (caught) {
+      toast.error(caught instanceof Error ? caught.message : "Couldn't create the sample event.");
+      setLoadingSample(false);
+    }
+  }
   const events = rows.slice().sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 
   const [creating, setCreating] = useState(false);
@@ -181,8 +193,17 @@ export function EventsList({
         <DashboardEmptyState
           icon={CalendarPlus}
           title="No events yet"
-          description="Create your first event to open a call for speakers."
-        />
+          description="Create your first event to open a call for speakers — or load a sample event to explore with real-looking data."
+        >
+          <Button
+            type="button"
+            variant="outline"
+            disabled={loadingSample}
+            onClick={() => void loadSample()}
+          >
+            {loadingSample ? "Loading sample…" : "Load a sample event"}
+          </Button>
+        </DashboardEmptyState>
       ) : (
         <ul className="grid gap-4">
           {events.map((ev) => (

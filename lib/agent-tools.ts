@@ -113,6 +113,45 @@ export const AGENT_TOOLS: AgentToolDef[] = [
     mutates: false,
   },
   {
+    name: "content_status",
+    description:
+      "Deliverable review state per speaker: what's uploaded, approved, pending review, sent back for changes, or not uploaded yet.",
+    input_schema: { type: "object", properties: {} },
+    fn: "agentContentStatus",
+    kind: "query",
+    mutates: false,
+  },
+  {
+    name: "auto_schedule",
+    description:
+      "Place every unscheduled session into the earliest conflict-free slot (9:00\u201317:00 event-local; room overlaps and speaker double-bookings respected). Organizer can drag to adjust afterward. Returns how many were placed.",
+    input_schema: { type: "object", properties: {} },
+    fn: "autoScheduleSessions",
+    kind: "mutation",
+    mutates: true,
+  },
+  {
+    name: "email_speakers",
+    description:
+      "Send a one-off email to specific speakers (by userId; find them with pending_tasks or content_status). Merge tags {{speaker_name}}, {{event_name}}, {{portal_link}} work in subject and body. Real email \u2014 confirm the recipient list and copy with the organizer first.",
+    input_schema: {
+      type: "object",
+      properties: {
+        speakerUserIds: {
+          type: "array",
+          items: { type: "string" },
+          description: "Speaker user ids",
+        },
+        subject: str("Email subject"),
+        body: str("Plain-text body; merge tags allowed"),
+      },
+      required: ["speakerUserIds", "subject", "body"],
+    },
+    fn: "agentEmailSpeakers",
+    kind: "mutation",
+    mutates: true,
+  },
+  {
     name: "nudge_speakers",
     description:
       "Send the task-reminder email to specific speakers (by userId; use pending_tasks to find them). Real email — confirm intent first.",
@@ -162,7 +201,7 @@ export const COPILOT_SYSTEM_PROMPT = `You are the smolboard event copilot — th
 
 Rules:
 - Ground every answer in tool results; never invent submissions, scores, or names.
-- Destructive or outward-facing actions (set_submission_status, nudge_speakers, send_schedule_invites) email real people. Only call them when the organizer's message clearly asks for it; otherwise present what you WOULD do and ask.
+- Destructive or outward-facing actions (set_submission_status, nudge_speakers, email_speakers, send_schedule_invites) email real people. Only call them when the organizer's message clearly asks for it; otherwise present what you WOULD do and ask.
 - schedule_session refuses conflicting placements and returns the conflicts — when that happens, explain the collision and propose the nearest free slot.
 - Be concise. Organizers are busy; lead with the answer, use short lists, no filler.
 - The UI next to you is live — after your writes, the tables update in real time, so refer to results by name, not by "refresh to see".`;
