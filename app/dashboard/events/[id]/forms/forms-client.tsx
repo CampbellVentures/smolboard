@@ -13,9 +13,10 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { ChevronRight, FilePlus2, ExternalLink } from "lucide-react";
-import { slugify } from "@/lib/forms";
+import { parseFields, slugify } from "@/lib/forms";
 import { useOrgSlug } from "@/components/use-org-slug";
-import type { EventRow, SubmissionFormRow } from "@/lib/types";
+import { parseJson } from "@/lib/types";
+import type { EventRow, SubmissionFormRow, SubmissionRow } from "@/lib/types";
 
 // Starter fields for a new CFP form — matches the common conference shape so
 // organizers edit rather than start blank.
@@ -52,7 +53,15 @@ function StatusBadge({ status }: { status: string }) {
   return <DashboardStatusBadge status={status} />;
 }
 
-export function FormsList({ event, initial }: { event: EventRow; initial: SubmissionFormRow[] }) {
+export function FormsList({
+  event,
+  initial,
+  initialSubmissions,
+}: {
+  event: EventRow;
+  initial: SubmissionFormRow[];
+  initialSubmissions: SubmissionRow[];
+}) {
   const router = useRouter();
   const orgSlug = useOrgSlug(event.orgId);
   const [hydrated, setHydrated] = useState(false);
@@ -163,6 +172,14 @@ export function FormsList({ event, initial }: { event: EventRow; initial: Submis
                 </div>
                 <div className="mt-0.5 text-xs text-zinc-400">
                   /{orgSlug ?? "…"}/{event.slug}/cfp/{f.slug}
+                  <span className="text-zinc-300"> · </span>
+                  {parseFields(parseJson(f.fieldsJson) ?? []).length} custom field
+                  {parseFields(parseJson(f.fieldsJson) ?? []).length === 1 ? "" : "s"}
+                  <span className="text-zinc-300"> · </span>
+                  <span className="tabular-nums">
+                    {initialSubmissions.filter((s) => s.formId === f.id).length}
+                  </span>{" "}
+                  submissions
                 </div>
               </Link>
               {f.status === "open" && orgSlug && (

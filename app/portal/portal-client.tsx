@@ -337,11 +337,33 @@ export function PortalHome({
         ) : null}
 
         {submissions.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-zinc-300 bg-white px-6 py-14 text-center">
+          <div className="rounded-xl border border-dashed border-zinc-300 bg-white px-6 py-12 text-center">
             <p className="text-sm font-medium text-zinc-700">No submissions yet</p>
             <p className="mt-1 text-sm text-zinc-400">
               Submit to an open call for speakers and it will show up here.
             </p>
+            {(() => {
+              const openCalls = forms
+                .filter((form) => form.status === "open")
+                .map((form) => {
+                  const event = events.find((candidate) => candidate.id === form.eventId);
+                  const org = event ? orgs.find((candidate) => candidate.id === event.orgId) : undefined;
+                  return event && event.cfpStatus === "open" && org?.slug
+                    ? { key: form.id, name: event.name, href: `/${org.slug}/${event.slug}/cfp/${form.slug}` }
+                    : null;
+                })
+                .filter((call): call is NonNullable<typeof call> => call !== null)
+                .slice(0, 3);
+              return openCalls.length > 0 ? (
+                <div className="mt-4 flex flex-wrap justify-center gap-2">
+                  {openCalls.map((call) => (
+                    <Button key={call.key} asChild size="sm" variant="outline">
+                      <a href={call.href}>Submit to {call.name}</a>
+                    </Button>
+                  ))}
+                </div>
+              ) : null;
+            })()}
           </div>
         ) : (
           <section>

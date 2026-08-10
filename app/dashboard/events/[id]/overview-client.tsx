@@ -762,7 +762,7 @@ function humanList(values: string[]) {
 
 function formatEventDetails(event: EventRow) {
   const date = event.startDate
-    ? new Date(event.startDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+    ? new Date(event.startDate).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })
     : "Dates set";
   return event.location ? `${date}, ${event.location}` : date;
 }

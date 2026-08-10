@@ -261,7 +261,11 @@ export function SpeakersTable({
                     <TableCell><DashboardStatusBadge status={profile.status || "invited"}>{label(profile.status || "invited")}</DashboardStatusBadge></TableCell>
                     <TableCell><DashboardStatusBadge status={profile.claimStatus || "unclaimed"}>{label(profile.claimStatus || "unclaimed")}</DashboardStatusBadge></TableCell>
                     <TableCell>{speakerSubmissions.length}</TableCell>
-                    <TableCell>{speakerTasks.filter((task) => task.status === "done").length}/{speakerTasks.length}</TableCell>
+                    <TableCell className="tabular-nums">
+                      {speakerTasks.length === 0
+                        ? "—"
+                        : `${speakerTasks.filter((task) => task.status === "done").length}/${speakerTasks.length}`}
+                    </TableCell>
                   </TableRow>
                 );
               })}

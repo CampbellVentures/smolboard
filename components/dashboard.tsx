@@ -249,7 +249,7 @@ export function DashboardStatusBadge({
         aria-hidden="true"
         className={cn("size-1.5 shrink-0 rounded-full", statusDot(status.toLowerCase()))}
       />
-      {children ?? status}
+      {children ?? status.replace(/_/g, " ")}
     </Badge>
   );
 }

@@ -350,7 +350,7 @@ export function AbstractsView({
                         {profile?.company ? ` · ${profile.company}` : ""}
                       </div>
                     </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{s.category ?? "—"}</TableCell>
+                    <TableCell className="text-xs capitalize text-muted-foreground">{s.category ?? "—"}</TableCell>
                     <TableCell className="text-xs tabular-nums text-muted-foreground">{s.currentRound}</TableCell>
                     <TableCell>
                       {score ? (
@@ -521,7 +521,7 @@ function DetailDrawer({
           <div className="flex items-center gap-2">
             <StatusPill status={submission.status} />
             {submission.category && (
-              <span className="text-xs text-zinc-400">{submission.category}</span>
+              <span className="text-xs capitalize text-zinc-400">{submission.category}</span>
             )}
             <span className="text-xs text-muted-foreground">round {submission.currentRound}</span>
           </div>

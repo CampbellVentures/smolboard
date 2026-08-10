@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 
 // Shared workspace-level client views (Members, Settings) + small UI helpers
@@ -121,6 +122,7 @@ function MembersList({
   const [invites, setInvites] = useState<PendingInvite[] | null>(null);
   const [reviewerIds, setReviewerIds] = useState<Set<string>>(new Set());
   const [email, setEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState("member");
   const [note, setNote] = useState<string | null>(null);
   const [inviting, setInviting] = useState(false);
 
@@ -147,7 +149,7 @@ function MembersList({
     setInviting(true);
     setNote(null);
     try {
-      await createInvite(orgId, value, "member");
+      await createInvite(orgId, value, inviteRole);
       setEmail("");
       setNote(`Invite sent to ${value}.`);
       void load();
@@ -196,6 +198,15 @@ function MembersList({
               autoComplete="email"
               spellCheck={false}
             />
+            <Select
+              aria-label="Invite role"
+              value={inviteRole}
+              onChange={(e) => setInviteRole(e.target.value)}
+              className="w-28 shrink-0"
+            >
+              <option value="member">Member</option>
+              <option value="admin">Admin</option>
+            </Select>
             <Button type="submit" size="sm" disabled={inviting || !email.trim()}>
               {inviting ? "…" : "Invite"}
             </Button>
