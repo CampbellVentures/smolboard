@@ -29,7 +29,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { Check, Download, FileStack, History, MessageSquareWarning } from "lucide-react";
+import { Archive, Check, Download, FileStack, History, MessageSquareWarning } from "lucide-react";
+import { buildZip, zipSafeName } from "@/lib/zip";
 import { latestVersion, versionsForSlot } from "@/lib/deliverables";
 import { reviewStatusLabel } from "@/lib/content";
 import type {
@@ -114,6 +115,7 @@ export function ContentTable({
   const [changesFor, setChangesFor] = useState<DeliverableSlotRow | null>(null);
   const [note, setNote] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [zipping, setZipping] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const effectiveStatus = (slot: DeliverableSlotRow) =>
@@ -149,6 +151,47 @@ export function ContentTable({
       setError(caught instanceof Error ? caught.message : "Couldn't save that review.");
     } finally {
       setBusyId(null);
+    }
+  }
+
+  const approvedSlots = slots.filter(
+    (slot) => effectiveStatus(slot) === "approved" && latestVersion(versions, slot.id),
+  );
+
+  // Bundle every approved deliverable's latest version into a zip, fetched
+  // through short-lived signed URLs in the organizer's browser — the files
+  // never transit shared storage.
+  async function downloadApproved() {
+    setZipping(true);
+    setError(null);
+    try {
+      const entries = [];
+      const seen = new Set<string>();
+      for (const slot of approvedSlots) {
+        const version = latestVersion(versions, slot.id)!;
+        const { url } = await callFn<{ url: string }>("getDeliverableFileUrl", {
+          versionId: version.id,
+        });
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`Couldn't fetch ${version.filename}.`);
+        const data = new Uint8Array(await response.arrayBuffer());
+        const speaker = speakerByUser.get(slot.speakerUserId)?.name ?? "speaker";
+        let name = zipSafeName(`${speaker}/${version.filename}`);
+        if (seen.has(name)) name = zipSafeName(`${speaker}/v${version.versionNumber}-${version.filename}`);
+        seen.add(name);
+        entries.push({ name, data });
+      }
+      const bytes = buildZip(entries, new Date());
+      const blob = new Blob([bytes.buffer as ArrayBuffer], { type: "application/zip" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `${event.slug || "event"}-approved-content.zip`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Couldn't build the archive.");
+    } finally {
+      setZipping(false);
     }
   }
 
@@ -189,9 +232,23 @@ export function ContentTable({
             ))}
           </Select>
         </div>
-        <span className="text-xs tabular-nums text-muted-foreground">
-          {pendingCount} pending · {rows.length} shown
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="text-xs tabular-nums text-muted-foreground">
+            {pendingCount} pending · {rows.length} shown
+          </span>
+          {approvedSlots.length > 0 ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={zipping}
+              onClick={() => void downloadApproved()}
+            >
+              <Archive data-icon="inline-start" />
+              {zipping ? "Zipping…" : `Download approved (${approvedSlots.length})`}
+            </Button>
+          ) : null}
+        </div>
       </DashboardToolbar>
 
       {error ? <p className="mb-3 text-sm text-red-600">{error}</p> : null}

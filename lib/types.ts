@@ -415,6 +415,16 @@ export interface EmailLogRow {
   sentAt: string;
 }
 
+export interface SpeakerNoteRow {
+  id: string;
+  orgId: string;
+  email: string;
+  authorUserId: string;
+  authorName: string;
+  body: string;
+  createdAt: string;
+}
+
 export const SUBMISSION_STATUSES = [
   "submitted",
   "in_review",

@@ -676,6 +676,21 @@ const CopilotMessage = entity(
 // Secret-token calendar downloads. The token is never replicated or returned
 // by entity APIs; getCalendarInvite is the only public read surface and looks
 // up exactly one unguessable token.
+// Workspace-level CRM notes. Keyed to the PERSON (email), not a per-event
+// profile, so a note written after one event follows the speaker to the next.
+const SpeakerNote = entity(
+  "SpeakerNote",
+  {
+    orgId: field.id("Org").readonly(),
+    email: field.string().readonly(),
+    authorUserId: field.id("User").readonly(),
+    authorName: field.string().readonly(),
+    body: field.string().readonly(),
+    createdAt: field.datetime().defaultNow(),
+  },
+  { indexes: [{ name: "by_org_email", fields: ["orgId", "email"], unique: false }] },
+);
+
 const CalendarInvite = entity(
   "CalendarInvite",
   {
@@ -986,6 +1001,15 @@ const copilotMessagePolicy = policy({
   allowDelete: "false",
 });
 
+const speakerNotePolicy = policy({
+  name: "speaker_note_access",
+  entity: "SpeakerNote",
+  allowRead: 'auth.tenantId == data.orgId && auth.hasAnyRole("owner", "admin")',
+  allowInsert: "false",
+  allowUpdate: "false",
+  allowDelete: "false",
+});
+
 const calendarInvitePolicy = policy({
   name: "calendar_invite_server_only",
   entity: "CalendarInvite",
@@ -1026,6 +1050,7 @@ const manifest = buildManifest({
     SpeakerTask,
     EmailTemplate,
     EmailLog,
+    SpeakerNote,
     CalendarInvite,
     CopilotThread,
     CopilotMessage,
@@ -1060,6 +1085,7 @@ const manifest = buildManifest({
     speakerTaskPolicy,
     emailTemplatePolicy,
     emailLogPolicy,
+    speakerNotePolicy,
     calendarInvitePolicy,
     copilotThreadPolicy,
     copilotMessagePolicy,

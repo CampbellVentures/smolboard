@@ -1,7 +1,7 @@
 import React, { use } from "react";
 import { type Metadata, type PageProps } from "@pylonsync/react";
 import { SpeakerDirectory } from "./directory-client";
-import type { EventRow, SpeakerProfileRow, SubmissionRow } from "@/lib/types";
+import type { EventRow, SpeakerNoteRow, SpeakerProfileRow, SubmissionRow } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Speakers — smolboard", robots: "noindex" };
 
@@ -21,11 +21,16 @@ export default function SpeakerDirectoryPage({ auth, response, serverData }: Pag
   const submissions = use(serverData.list<SubmissionRow>("Submission")).filter(
     (row) => row.orgId === auth.tenant_id,
   );
+  const notes = use(serverData.list<SpeakerNoteRow>("SpeakerNote")).filter(
+    (row) => row.orgId === auth.tenant_id,
+  );
   return (
     <SpeakerDirectory
+      orgId={auth.tenant_id}
       initialProfiles={profiles}
       initialEvents={events}
       initialSubmissions={submissions}
+      initialNotes={notes}
     />
   );
 }

@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { db, Link } from "@pylonsync/react";
-import { BookUser, ExternalLink } from "lucide-react";
+import { callFn, db, Link } from "@pylonsync/react";
+import { BookUser, ExternalLink, Trash2 } from "lucide-react";
 import {
   DashboardEmptyState,
   DashboardPage,
@@ -27,7 +27,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { EventRow, SpeakerProfileRow, SubmissionRow } from "@/lib/types";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import type { EventRow, SpeakerNoteRow, SpeakerProfileRow, SubmissionRow } from "@/lib/types";
 
 // Workspace-wide speaker CRM: one row per person across every event, built
 // from the per-event profiles (identity = email). Read-mostly by design —
@@ -120,22 +122,28 @@ function Avatar({ person }: { person: SpeakerPerson }) {
 }
 
 export function SpeakerDirectory({
+  orgId,
   initialProfiles,
   initialEvents,
   initialSubmissions,
+  initialNotes,
 }: {
+  orgId: string;
   initialProfiles: SpeakerProfileRow[];
   initialEvents: EventRow[];
   initialSubmissions: SubmissionRow[];
+  initialNotes: SpeakerNoteRow[];
 }) {
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => setHydrated(true), []);
   const profileQ = db.useQuery<SpeakerProfileRow>("SpeakerProfile");
   const eventQ = db.useQuery<EventRow>("Event");
   const submissionQ = db.useQuery<SubmissionRow>("Submission");
+  const noteQ = db.useQuery<SpeakerNoteRow>("SpeakerNote");
   const profiles = !hydrated || profileQ.loading ? initialProfiles : profileQ.data;
   const events = !hydrated || eventQ.loading ? initialEvents : eventQ.data;
   const submissions = !hydrated || submissionQ.loading ? initialSubmissions : submissionQ.data;
+  const notes = !hydrated || noteQ.loading ? initialNotes : noteQ.data;
   const eventById = useMemo(() => new Map(events.map((row) => [row.id, row])), [events]);
 
   const people = useMemo(() => aggregateSpeakers(profiles, submissions), [profiles, submissions]);
@@ -308,6 +316,11 @@ export function SpeakerDirectory({
                     ))}
                   </div>
                 ) : null}
+                <SpeakerNotes
+                  orgId={orgId}
+                  email={selected.email}
+                  notes={notes.filter((row) => row.email === selected.email)}
+                />
                 {selected.profiles
                   .slice()
                   .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
@@ -361,5 +374,92 @@ export function SpeakerDirectory({
         </SheetContent>
       </Sheet>
     </DashboardPage>
+  );
+}
+
+/* ============================= Notes ============================= */
+
+// Organizer-only CRM notes on the person; they follow the speaker across
+// events. Writes go through addSpeakerNote / deleteSpeakerNote.
+function SpeakerNotes({
+  orgId,
+  email,
+  notes,
+}: {
+  orgId: string;
+  email: string;
+  notes: SpeakerNoteRow[];
+}) {
+  const [draft, setDraft] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function add() {
+    setBusy(true);
+    setError(null);
+    try {
+      await callFn("addSpeakerNote", { orgId, email, body: draft.trim() });
+      setDraft("");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Couldn't save the note.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div>
+      <h3 className="text-[13px] font-semibold text-foreground">Notes</h3>
+      {notes.length > 0 ? (
+        <ul className="mt-2 space-y-2">
+          {notes
+            .slice()
+            .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+            .map((note) => (
+              <li key={note.id} className="group rounded-lg bg-muted/50 px-3 py-2">
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="text-xs font-medium text-foreground">{note.authorName}</span>
+                  <span className="flex items-center gap-2">
+                    <span className="text-[11px] tabular-nums text-muted-foreground">
+                      {new Date(note.createdAt).toLocaleDateString(undefined, {
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </span>
+                    <button
+                      type="button"
+                      aria-label="Delete note"
+                      onClick={() => void callFn("deleteSpeakerNote", { noteId: note.id })}
+                      className="text-zinc-300 opacity-0 transition-opacity hover:text-red-500 group-hover:opacity-100"
+                    >
+                      <Trash2 className="size-3.5" />
+                    </button>
+                  </span>
+                </div>
+                <p className="mt-0.5 whitespace-pre-wrap text-[13px] leading-5 text-zinc-700">
+                  {note.body}
+                </p>
+              </li>
+            ))}
+        </ul>
+      ) : (
+        <p className="mt-1 text-xs text-muted-foreground">
+          Nothing yet — notes follow this person across events.
+        </p>
+      )}
+      <div className="mt-2 flex items-start gap-2">
+        <Textarea
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          placeholder="Add a note…"
+          rows={2}
+          className="text-[13px]"
+        />
+        <Button type="button" size="sm" disabled={busy || !draft.trim()} onClick={() => void add()}>
+          {busy ? "…" : "Add"}
+        </Button>
+      </div>
+      {error ? <p className="mt-1 text-xs text-red-600">{error}</p> : null}
+    </div>
   );
 }
