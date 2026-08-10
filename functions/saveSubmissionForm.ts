@@ -1,5 +1,6 @@
 import { mutation, v } from "@pylonsync/functions";
 import { parseHandoffConfig } from "../lib/submission-handoff";
+import { logActivity } from "../lib/activity";
 
 const STATUSES = ["draft", "open", "closed"];
 
@@ -66,6 +67,15 @@ export default mutation({
         throw ctx.error("NOT_FOUND", "Submission form not found.");
       }
       await ctx.db.unsafe.update("SubmissionForm", args.formId, payload);
+      if (form.status !== "open" && args.status === "open") {
+        await logActivity(ctx, {
+          orgId: event.orgId as string,
+          eventId: args.eventId,
+          kind: "form.published",
+          message: `Submission form “${name}” is now open`,
+          href: `/dashboard/events/${args.eventId}/forms`,
+        });
+      }
       return { id: args.formId };
     }
     const id = await ctx.db.unsafe.insert("SubmissionForm", {

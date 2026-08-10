@@ -1,4 +1,5 @@
 import { mutation, v } from "@pylonsync/functions";
+import { logActivity } from "../lib/activity";
 import { isReviewVerdict } from "../lib/content";
 
 // Organizer verdict on a deliverable's current version: approve it or request
@@ -38,6 +39,13 @@ export default mutation<
       // null (not undefined) so approving actually clears a stale note.
       reviewNote: args.status === "approved" ? null : note,
       reviewedAt: new Date().toISOString(),
+    });
+    await logActivity(ctx, {
+      orgId: slot.orgId as string,
+      eventId: slot.eventId as string,
+      kind: "content.reviewed",
+      message: `Speaker file ${args.status === "approved" ? "approved" : "sent back for changes"}`,
+      href: `/dashboard/events/${slot.eventId}/content`,
     });
     return { id: args.slotId, status: args.status };
   },

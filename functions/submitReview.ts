@@ -1,4 +1,5 @@
 import { mutation, v } from "@pylonsync/functions";
+import { logActivity } from "../lib/activity";
 import { validateReviewValues } from "../lib/reviews";
 import { requireActiveReviewer } from "./_reviewAccess";
 
@@ -64,6 +65,13 @@ export default mutation({
       completedAt: now,
       recusedAt: undefined,
       recusalReason: undefined,
+    });
+    await logActivity(ctx, {
+      orgId: assignment.orgId as string,
+      eventId: assignment.eventId as string,
+      kind: "review.submitted",
+      message: "A reviewer submitted their score",
+      href: `/dashboard/events/${assignment.eventId}/abstracts`,
     });
     return { id, assignmentStatus: "complete" };
   },

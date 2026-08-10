@@ -1,4 +1,5 @@
 import { mutation, v } from "@pylonsync/functions";
+import { logActivity } from "../lib/activity";
 import { MAX_DELIVERABLE_BYTES } from "../lib/deliverables";
 
 export default mutation({
@@ -57,6 +58,13 @@ export default mutation({
       status: "pending",
       reviewNote: null,
       reviewedAt: null,
+    });
+    await logActivity(ctx, {
+      orgId: slot.orgId as string,
+      eventId: slot.eventId as string,
+      kind: "content.uploaded",
+      message: `New file uploaded for review (v${versionNumber})`,
+      href: `/dashboard/events/${slot.eventId}/content`,
     });
     return { id, versionNumber };
   },

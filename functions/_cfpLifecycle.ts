@@ -10,6 +10,7 @@ import {
   type Answers,
 } from "../lib/forms";
 import { normalizeSpeakerEmail } from "../lib/speakers";
+import { logActivity } from "../lib/activity";
 import type { SubmissionParticipantSnapshot } from "../lib/submission-participants";
 
 type Row = Record<string, unknown>;
@@ -157,6 +158,14 @@ export async function finalizeDraft(ctx: Ctx, draft: Row) {
     templateKey: "submission_received",
     toEmail: email,
     vars: { speaker_name: content.name, talk_title: content.title },
+  });
+  await logActivity(ctx, {
+    orgId,
+    eventId,
+    actorName: content.name,
+    kind: "submission.created",
+    message: `New submission: “${content.title}” by ${content.name}`,
+    href: `/dashboard/events/${eventId}/abstracts`,
   });
   return { submissionId, portalPath: "/portal", alreadyFinalized: false };
 }

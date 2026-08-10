@@ -41,6 +41,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { PersonAvatar } from "./person-avatar";
 import { SessionReconcile } from "./session-reconcile";
+import { ActivityBell } from "./activity-bell";
 import { lastEventStorageKey } from "@/lib/dashboard-routing";
 import { CopilotChat } from "@/components/copilot-chat";
 import { useEnsureOrgSlug } from "@/components/use-org-slug";
@@ -514,6 +515,7 @@ export function AppShell({
               <span className="hidden xl:inline">Ask smolboard</span>
               <span className="xl:hidden">Ask</span>
             </Button> : null}
+            {!reviewerMode ? <ActivityBell workspaceId={workspaceId} /> : null}
             <PresenceIndicator
               roomId={presenceRoomId}
               userId={userId}

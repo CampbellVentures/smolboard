@@ -1,5 +1,6 @@
 import { mutation, v } from "@pylonsync/functions";
 import { matchesEventAnchor } from "../lib/tenantAnchors";
+import { logActivity } from "../lib/activity";
 
 const STATUSES = ["submitted", "in_review", "accepted", "rejected", "waitlisted", "withdrawn"];
 
@@ -97,6 +98,13 @@ export default mutation<
       }
     }
 
+    await logActivity(ctx, {
+      orgId: sub.orgId as string,
+      eventId: sub.eventId as string,
+      kind: "submission.status",
+      message: `“${sub.title}” marked ${args.status.replace("_", " ")}`,
+      href: `/dashboard/events/${sub.eventId}/abstracts`,
+    });
     return { id: args.submissionId, status: args.status, emailQueued, tasksCreated };
   },
 });

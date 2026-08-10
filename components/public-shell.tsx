@@ -3,6 +3,7 @@ import { fmtDateRange } from "@/lib/format";
 import { Link } from "@pylonsync/react";
 import { CalendarDays, MapPin } from "lucide-react";
 import { BrandMark } from "@/components/brand";
+import type { EventBranding } from "@/lib/branding";
 
 // The one shell every public event page renders inside: same width, same
 // header, same tab nav, same footer. Schedule, speakers, and the CFP pages are
@@ -15,6 +16,7 @@ export interface PublicEventInfo {
   location?: string | null;
   startDate?: string | null;
   endDate?: string | null;
+  branding?: EventBranding;
 }
 
 export type PublicTab = "home" | "cfp";
@@ -36,17 +38,35 @@ export function PublicEventShell({
   active: PublicTab;
   children: React.ReactNode;
 }) {
+  const branding = event.branding ?? { accent: null, logoUrl: null, tagline: null };
+  const accent = branding.accent;
   return (
-    <div className="flex min-h-screen scroll-smooth flex-col bg-zinc-50">
+    <div
+      className="flex min-h-screen scroll-smooth flex-col bg-zinc-50"
+      style={accent ? ({ "--event-accent": accent } as React.CSSProperties) : undefined}
+    >
       <header className="border-b border-zinc-200/70 bg-white">
+        {/* Branded accent strip — the event's color across the very top. */}
+        {accent ? <div className="h-1 w-full" style={{ background: accent }} aria-hidden="true" /> : null}
         <div className="mx-auto w-full max-w-3xl px-6">
           <div className="pt-10">
-            <Link href={`/${event.orgSlug}/${event.slug}`} className="inline-flex">
-              <BrandMark size={22} />
+            <Link href={`/${event.orgSlug}/${event.slug}`} className="inline-flex items-center gap-3">
+              {branding.logoUrl ? (
+                <img
+                  src={branding.logoUrl}
+                  alt={`${event.name} logo`}
+                  className="h-7 w-auto max-w-40 object-contain"
+                />
+              ) : (
+                <BrandMark size={22} />
+              )}
             </Link>
             <h1 className="mt-4 text-balance text-3xl font-semibold tracking-tight text-zinc-900">
               <Link href={`/${event.orgSlug}/${event.slug}`}>{event.name}</Link>
             </h1>
+            {branding.tagline ? (
+              <p className="mt-2 text-pretty text-[15px] text-zinc-500">{branding.tagline}</p>
+            ) : null}
             <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-zinc-500">
               {event.startDate && (
                 <span className="flex items-center gap-1.5">
@@ -76,6 +96,7 @@ export function PublicEventShell({
                       ? "border-zinc-900 text-zinc-900"
                       : "border-transparent text-zinc-500 hover:text-zinc-900")
                   }
+                  style={isActive && accent ? { borderColor: accent } : undefined}
                 >
                   {t.label}
                 </Link>

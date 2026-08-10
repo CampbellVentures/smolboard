@@ -1,4 +1,5 @@
 import { mutation, v } from "@pylonsync/functions";
+import { logActivity } from "../lib/activity";
 import { computeAutoSchedule, type DaySpec, type SchedulableSession } from "../lib/auto-schedule";
 import { parseJson } from "../lib/types";
 
@@ -94,6 +95,13 @@ export default mutation<
         roomId: placement.roomId,
       });
     }
+    await logActivity(ctx, {
+      orgId: event.orgId as string,
+      eventId: args.eventId,
+      kind: "agenda.autoscheduled",
+      message: `Auto-schedule placed ${placements.length} session${placements.length === 1 ? "" : "s"}`,
+      href: `/dashboard/events/${args.eventId}/agenda`,
+    });
     return { placed: placements.length, unplaced: unplacedIds.length };
   },
 });

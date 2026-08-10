@@ -694,6 +694,22 @@ const SpeakerNote = entity(
   { indexes: [{ name: "by_org_email", fields: ["orgId", "email"], unique: false }] },
 );
 
+const ActivityLog = entity(
+  "ActivityLog",
+  {
+    orgId: field.id("Org").readonly(),
+    eventId: field.string().optional().readonly(),
+    actorName: field.string().optional().readonly(),
+    // Dotted kind, e.g. "submission.created", "content.approved".
+    kind: field.string().readonly(),
+    message: field.string().readonly(),
+    // In-app link the bell menu navigates to.
+    href: field.string().optional().readonly(),
+    createdAt: field.datetime().defaultNow(),
+  },
+  { indexes: [{ name: "by_org", fields: ["orgId"], unique: false }] },
+);
+
 const CalendarInvite = entity(
   "CalendarInvite",
   {
@@ -1013,6 +1029,17 @@ const speakerNotePolicy = policy({
   allowDelete: "false",
 });
 
+const activityLogPolicy = policy({
+  name: "activity_log_access",
+  entity: "ActivityLog",
+  // Organizers read their workspace's feed; rows are written only by server
+  // functions (logActivity) so clients can't forge history.
+  allowRead: 'auth.tenantId == data.orgId && auth.hasAnyRole("owner", "admin")',
+  allowInsert: "false",
+  allowUpdate: "false",
+  allowDelete: "false",
+});
+
 const calendarInvitePolicy = policy({
   name: "calendar_invite_server_only",
   entity: "CalendarInvite",
@@ -1054,6 +1081,7 @@ const manifest = buildManifest({
     EmailTemplate,
     EmailLog,
     SpeakerNote,
+    ActivityLog,
     CalendarInvite,
     CopilotThread,
     CopilotMessage,
@@ -1089,11 +1117,15 @@ const manifest = buildManifest({
     emailTemplatePolicy,
     emailLogPolicy,
     speakerNotePolicy,
+    activityLogPolicy,
     calendarInvitePolicy,
     copilotThreadPolicy,
     copilotMessagePolicy,
   ],
   crons: [
+    cron("0 14 * * *", "sendActivityDigest", {
+      description: "Email organizers a daily summary of workspace activity",
+    }),
     cron("0 15 * * *", "sendTaskReminders", {
       description: "Email speakers with due or overdue onboarding tasks",
     }),

@@ -1,3 +1,4 @@
+import { parseBranding } from "./branding";
 import type { EventRow, OrgRow } from "./types";
 
 // Resolve /<org-slug>/<event-slug> from the two policy-readable lists. Pages
@@ -24,5 +25,6 @@ export function publicEventInfo(org: OrgRow, event: EventRow) {
     location: event.location ?? null,
     startDate: event.startDate ?? null,
     endDate: event.endDate ?? null,
+    branding: parseBranding(event.brandingJson),
   };
 }
