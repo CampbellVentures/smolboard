@@ -55,6 +55,7 @@ export function EventSite({
   cfpOpen,
   initialSchedule = null,
   initialSpeakers = null,
+  section,
 }: {
   event: PublicEventInfo;
   description: string | null;
@@ -63,6 +64,9 @@ export function EventSite({
   // the page still fills in if a caller ever renders without them.
   initialSchedule?: ScheduleFeed | null;
   initialSpeakers?: SpeakersFeed | null;
+  // Embed mode renders exactly one section with none of the page chrome —
+  // used by the iframe widgets (?embed=schedule|speakers).
+  section?: "schedule" | "speakers";
 }) {
   const { orgSlug, slug: eventSlug } = event;
   const [schedule, setSchedule] = useState<ScheduleFeed | null>(initialSchedule);
@@ -80,6 +84,9 @@ export function EventSite({
         .catch(() => setError(true));
     }
   }, [orgSlug, eventSlug, initialSchedule, initialSpeakers]);
+
+  if (section === "schedule") return <ScheduleSection feed={schedule} error={error} embedded />;
+  if (section === "speakers") return <SpeakersSection feed={speakers} embedded />;
 
   return (
     <>
@@ -113,7 +120,15 @@ export function EventSite({
 
 /* ------------------------------ Schedule ------------------------------ */
 
-function ScheduleSection({ feed, error }: { feed: ScheduleFeed | null; error: boolean }) {
+function ScheduleSection({
+  feed,
+  error,
+  embedded = false,
+}: {
+  feed: ScheduleFeed | null;
+  error: boolean;
+  embedded?: boolean;
+}) {
   const tz = feed?.event?.timezone ?? "UTC";
   const days = useMemo(() => {
     if (!feed) return [];
@@ -145,8 +160,10 @@ function ScheduleSection({ feed, error }: { feed: ScheduleFeed | null; error: bo
   }, [daySessions]);
 
   return (
-    <section id="schedule" className="scroll-mt-6 pt-12">
-      <h2 className="text-xl font-semibold tracking-tight text-zinc-900">Schedule</h2>
+    <section id="schedule" className={embedded ? "" : "scroll-mt-6 pt-12"}>
+      {embedded ? null : (
+        <h2 className="text-xl font-semibold tracking-tight text-zinc-900">Schedule</h2>
+      )}
       {!feed && !error && (
         <div className="flex items-center justify-center gap-2 py-16 text-sm text-zinc-400">
           <Loader2 className="size-4 animate-spin" /> Loading schedule…
@@ -282,13 +299,21 @@ function ScheduleSection({ feed, error }: { feed: ScheduleFeed | null; error: bo
 
 /* ------------------------------ Speakers ------------------------------ */
 
-function SpeakersSection({ feed }: { feed: SpeakersFeed | null }) {
+function SpeakersSection({
+  feed,
+  embedded = false,
+}: {
+  feed: SpeakersFeed | null;
+  embedded?: boolean;
+}) {
   // The unpublished case is already covered by the schedule empty state; an
   // extra "no speakers yet" box would just repeat it.
   if (!feed?.published || feed.speakers.length === 0) return null;
   return (
-    <section id="speakers" className="scroll-mt-6 pt-12">
-      <h2 className="text-xl font-semibold tracking-tight text-zinc-900">Speakers</h2>
+    <section id="speakers" className={embedded ? "" : "scroll-mt-6 pt-12"}>
+      {embedded ? null : (
+        <h2 className="text-xl font-semibold tracking-tight text-zinc-900">Speakers</h2>
+      )}
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         {feed.speakers.map((sp) => (
           <article

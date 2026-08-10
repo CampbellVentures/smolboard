@@ -66,6 +66,7 @@ import {
   CalendarX2,
   CalendarPlus,
   Coffee,
+  Wand2,
   GripVertical,
   Plus,
   Trash2,
@@ -161,6 +162,26 @@ export function AgendaBuilder({
 
   const speakerName = (userId?: string) =>
     profiles.find((p) => p.userId === userId)?.name ?? "";
+
+  const [autoScheduling, setAutoScheduling] = useState(false);
+  async function autoSchedule() {
+    setAutoScheduling(true);
+    try {
+      const result = await callFn<{ placed: number; unplaced: number }>("autoScheduleSessions", {
+        eventId: event.id,
+      });
+      toast.success(
+        `Scheduled ${result.placed} session${result.placed === 1 ? "" : "s"}`,
+        result.unplaced > 0
+          ? { description: `${result.unplaced} didn't fit — add rooms or days.` }
+          : undefined,
+      );
+    } catch (caught) {
+      toast.error(caught instanceof Error ? caught.message : "Couldn't auto-schedule.");
+    } finally {
+      setAutoScheduling(false);
+    }
+  }
 
   /* ---------------- mutations ---------------- */
 
@@ -265,6 +286,18 @@ export function AgendaBuilder({
         >
           <Coffee data-icon="inline-start" /> Add break
         </Button>
+        {traySessions.length > 0 ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={autoScheduling}
+            onClick={() => void autoSchedule()}
+          >
+            <Wand2 data-icon="inline-start" />
+            {autoScheduling ? "Scheduling…" : `Auto-schedule (${traySessions.length})`}
+          </Button>
+        ) : null}
         <PublishToggle event={event} />
         </div>
         <div>

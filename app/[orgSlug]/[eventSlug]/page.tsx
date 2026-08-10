@@ -15,6 +15,7 @@ export const metadata: Metadata = {
 export default function EventHomePage({
   params,
   response,
+  searchParams,
   serverData,
 }: PageProps<{ orgSlug: string; eventSlug: string }>) {
   const orgsPromise = serverData.list<OrgRow>("Org");
@@ -39,6 +40,34 @@ export default function EventHomePage({
   const feedArgs = { orgSlug: params.orgSlug, eventSlug: params.eventSlug };
   const schedule = use(serverData.fn<ScheduleFeed>("getPublicSchedule", feedArgs));
   const speakers = use(serverData.fn<SpeakersFeed>("getPublicSpeakers", feedArgs));
+
+  // Widget mode: ?embed=schedule|speakers renders one section, chrome-less,
+  // sized for an iframe on the organizer's own site.
+  const embed = typeof searchParams.embed === "string" ? searchParams.embed : "";
+  if (embed === "schedule" || embed === "speakers") {
+    return (
+      <div className="bg-transparent p-2">
+        <EventSite
+          event={publicEventInfo(org, event)}
+          description={null}
+          cfpOpen={false}
+          initialSchedule={schedule}
+          initialSpeakers={speakers}
+          section={embed}
+        />
+        <p className="mt-4 text-center text-[11px] text-zinc-400">
+          <a
+            href={`/${params.orgSlug}/${params.eventSlug}`}
+            target="_blank"
+            rel="noreferrer"
+            className="hover:text-zinc-600"
+          >
+            Powered by smolboard
+          </a>
+        </p>
+      </div>
+    );
+  }
 
   return (
     <PublicEventShell event={publicEventInfo(org, event)} active="home">

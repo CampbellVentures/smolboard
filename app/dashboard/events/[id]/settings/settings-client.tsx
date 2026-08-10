@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { db, useRouter } from "@pylonsync/react";
+import { useOrgSlug } from "@/components/use-org-slug";
 import { DashboardPage, DashboardPanel } from "@/components/dashboard";
 import { Button } from "@/components/ui/button";
 import {
@@ -154,6 +155,8 @@ export function EventSettings({ event }: { event: EventRow }) {
         </form>
       </DashboardPanel>
 
+      <EmbedWidgets event={event} />
+
       <DashboardPanel title="Danger zone" variant="subtle">
         <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-pretty text-sm text-muted-foreground">
@@ -194,5 +197,57 @@ export function EventSettings({ event }: { event: EventRow }) {
         </div>
       </DashboardPanel>
     </DashboardPage>
+  );
+}
+
+/* ========================= Embed widgets ========================= */
+
+// Copy-paste iframes so organizers can put the live schedule and speaker
+// gallery on their own conference site. The ?embed views are chrome-less and
+// update as the program changes — no re-embed needed.
+function EmbedWidgets({ event }: { event: EventRow }) {
+  const orgSlug = useOrgSlug(event.orgId);
+  const [copied, setCopied] = useState<string | null>(null);
+  if (!orgSlug) return null;
+  const origin = typeof window === "undefined" ? "" : window.location.origin;
+  const base = `${origin}/${orgSlug}/${event.slug}`;
+  const widgets = [
+    { key: "schedule", label: "Schedule widget", height: 900 },
+    { key: "speakers", label: "Speaker gallery widget", height: 700 },
+  ];
+  return (
+    <DashboardPanel
+      title="Embed widgets"
+      description="Drop the live schedule or speaker gallery into your own site — they update automatically as the program changes."
+      variant="subtle"
+    >
+      <div className="space-y-4">
+        {widgets.map((widget) => {
+          const snippet = `<iframe src="${base}?embed=${widget.key}" width="100%" height="${widget.height}" frameborder="0" title="${event.name} ${widget.key}"></iframe>`;
+          return (
+            <div key={widget.key}>
+              <div className="flex items-center justify-between gap-3">
+                <Label>{widget.label}</Label>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    void navigator.clipboard.writeText(snippet);
+                    setCopied(widget.key);
+                    setTimeout(() => setCopied(null), 1500);
+                  }}
+                >
+                  {copied === widget.key ? "Copied" : "Copy embed code"}
+                </Button>
+              </div>
+              <pre className="mt-1.5 overflow-x-auto rounded-lg bg-muted/60 px-3 py-2 text-[11px] leading-5 text-zinc-600">
+                {snippet}
+              </pre>
+            </div>
+          );
+        })}
+      </div>
+    </DashboardPanel>
   );
 }

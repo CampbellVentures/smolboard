@@ -104,6 +104,15 @@ export const AGENT_TOOLS: AgentToolDef[] = [
     mutates: false,
   },
   {
+    name: "review_progress",
+    description:
+      "Review-round health: per-round assignment completion and which submissions still have no scores.",
+    input_schema: { type: "object", properties: {} },
+    fn: "agentReviewProgress",
+    kind: "query",
+    mutates: false,
+  },
+  {
     name: "nudge_speakers",
     description:
       "Send the task-reminder email to specific speakers (by userId; use pending_tasks to find them). Real email — confirm intent first.",
