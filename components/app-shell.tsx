@@ -42,6 +42,7 @@ import { cn } from "@/lib/utils";
 import { PersonAvatar } from "./person-avatar";
 import { SessionReconcile } from "./session-reconcile";
 import { ActivityBell } from "./activity-bell";
+import { CommandPalette, type PaletteDestination } from "./command-palette";
 import { lastEventStorageKey } from "@/lib/dashboard-routing";
 import { CopilotChat } from "@/components/copilot-chat";
 import { useEnsureOrgSlug } from "@/components/use-org-slug";
@@ -391,9 +392,20 @@ export function AppShell({
     localStorage.setItem("sb.copilot.open", next ? "1" : "0");
   }
 
+  const paletteDestinations: PaletteDestination[] = [
+    ...(event ? eventNav(event.id) : []),
+    ...WORKSPACE_NAV,
+  ].map((entry) => ({ label: entry.label, href: entry.href, group: "Go to", icon: entry.Icon }));
   return (
     <div className="flex min-h-screen bg-background text-foreground">
       <SessionReconcile />
+      {!reviewerMode ? (
+        <CommandPalette
+          workspaceId={workspaceId}
+          eventId={event?.id}
+          destinations={paletteDestinations}
+        />
+      ) : null}
       {/* ---------- Pane 1: nav sidebar ---------- */}
       <aside className="hidden w-60 shrink-0 flex-col border-r border-border/70 bg-muted/35 md:flex">
         <div className="px-3 pb-2 pt-3">

@@ -192,7 +192,18 @@ function ScheduleSection({
   return (
     <section id="schedule" className={embedded ? "" : "scroll-mt-6 pt-12"}>
       {embedded ? null : (
-        <h2 className="text-xl font-semibold tracking-tight text-zinc-900">Schedule</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-xl font-semibold tracking-tight text-zinc-900">Schedule</h2>
+          {feed && feed.sessions.length > 0 ? (
+            <a
+              href={`/${eventInfo.orgSlug}/${eventInfo.slug}/calendar.ics`}
+              className="flex items-center gap-1.5 text-[13px] font-medium text-zinc-500 hover:text-zinc-900"
+            >
+              <CalendarDays className="size-4" aria-hidden="true" />
+              Subscribe to calendar
+            </a>
+          ) : null}
+        </div>
       )}
       {!feed && !error && (
         <div className="flex items-center justify-center gap-2 py-16 text-sm text-zinc-400">

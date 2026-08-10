@@ -17,6 +17,7 @@ import {
   ListTodo,
   MapPin,
   Send,
+  TrendingUp,
   Users,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -183,6 +184,12 @@ export function EventOverview({
     (slot) => uploadedSlots.has(slot.id) && (slot.status ?? "pending") === "pending",
   ).length;
 
+  const acceptedSpeakerIds = new Set(
+    submissions.filter((s) => s.status === "accepted").map((s) => s.speakerUserId),
+  );
+  const incompleteProfiles = profiles.filter(
+    (p) => acceptedSpeakerIds.has(p.userId) && (!p.bio?.trim() || !p.headshotUrl?.trim()),
+  ).length;
   const crossChecks: NextStep[] = [
     ...(unscheduledAccepted > 0
       ? [{
@@ -200,6 +207,15 @@ export function EventOverview({
           description: "Speaker files are waiting for approval.",
           label: "Open content",
           href: `/dashboard/events/${event.id}/content`,
+        }]
+      : []),
+    ...(incompleteProfiles > 0
+      ? [{
+          icon: Users,
+          title: `Complete ${incompleteProfiles} speaker profile${incompleteProfiles === 1 ? "" : "s"}`,
+          description: "Accepted speakers are missing a bio or headshot for the public site.",
+          label: "Open speakers",
+          href: `/dashboard/events/${event.id}/speakers`,
         }]
       : []),
   ];
@@ -340,6 +356,7 @@ export function EventOverview({
           )}
         </DashboardPanel>
 
+        <div className="flex min-w-0 flex-col gap-6">
         <DashboardPanel title="Event readiness" icon={Gauge} tone="emerald" variant="subtle">
           <div className="flex flex-col gap-4">
             <ReadinessRow
@@ -372,6 +389,11 @@ export function EventOverview({
             />
           </div>
         </DashboardPanel>
+
+        <DashboardPanel title="Submission activity" icon={TrendingUp} tone="violet" variant="subtle">
+          <SubmissionActivity submissions={submissions} />
+        </DashboardPanel>
+        </div>
       </div>
 
       <DashboardPanel
@@ -836,4 +858,80 @@ function formatEventDetails(event: EventRow) {
     ? new Date(event.startDate).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })
     : "Dates set";
   return event.location ? `${date}, ${event.location}` : date;
+}
+
+// Fourteen-day sparkline + status funnel, no chart library — a polyline and a
+// few tinted bars. Counts come from the same live submissions the page holds.
+const FUNNEL_STEPS: { status: string; label: string; dot: string }[] = [
+  { status: "submitted", label: "Submitted", dot: "bg-amber-400" },
+  { status: "in_review", label: "In review", dot: "bg-violet-500" },
+  { status: "accepted", label: "Accepted", dot: "bg-emerald-500" },
+  { status: "waitlisted", label: "Waitlisted", dot: "bg-amber-400" },
+  { status: "rejected", label: "Rejected", dot: "bg-red-500" },
+];
+
+function SubmissionActivity({ submissions }: { submissions: SubmissionRow[] }) {
+  const days = 14;
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+  const perDay = Array.from({ length: days }, (_, i) => {
+    const day = new Date(today.getTime() - (days - 1 - i) * 86_400_000);
+    const key = day.toISOString().slice(0, 10);
+    return submissions.filter((s) => s.submittedAt?.slice(0, 10) === key).length;
+  });
+  const max = Math.max(1, ...perDay);
+  const points = perDay
+    .map((count, i) => `${(i / (days - 1)) * 100},${28 - (count / max) * 24}`)
+    .join(" ");
+  const recent = perDay.reduce((total, count) => total + count, 0);
+  const counts: Record<string, number> = {};
+  for (const s of submissions) counts[s.status] = (counts[s.status] ?? 0) + 1;
+  const funnelMax = Math.max(1, ...FUNNEL_STEPS.map((step) => counts[step.status] ?? 0));
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div>
+        <div className="flex items-baseline justify-between">
+          <span className="text-xs font-medium text-muted-foreground">Last 14 days</span>
+          <span className="text-xs tabular-nums text-muted-foreground">{recent} new</span>
+        </div>
+        <svg
+          viewBox="0 0 100 30"
+          preserveAspectRatio="none"
+          className="mt-2 h-10 w-full"
+          aria-label={`${recent} submissions in the last 14 days`}
+          role="img"
+        >
+          <polyline points={`0,30 ${points} 100,30`} fill="rgb(124 58 237 / 0.08)" stroke="none" />
+          <polyline
+            points={points}
+            fill="none"
+            stroke="rgb(124 58 237)"
+            strokeWidth="1.5"
+            strokeLinejoin="round"
+            strokeLinecap="round"
+            vectorEffect="non-scaling-stroke"
+          />
+        </svg>
+      </div>
+      <div className="flex flex-col gap-2">
+        {FUNNEL_STEPS.map((step) => {
+          const count = counts[step.status] ?? 0;
+          if (count === 0) return null;
+          return (
+            <div key={step.status} className="flex items-center gap-2 text-xs">
+              <span className={`size-1.5 shrink-0 rounded-full ${step.dot}`} aria-hidden="true" />
+              <span className="w-16 shrink-0 text-muted-foreground">{step.label}</span>
+              <span
+                className="h-1.5 rounded-full bg-zinc-200"
+                style={{ width: `${(count / funnelMax) * 60}%` }}
+                aria-hidden="true"
+              />
+              <span className="tabular-nums text-muted-foreground">{count}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 }

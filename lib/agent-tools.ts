@@ -104,6 +104,18 @@ export const AGENT_TOOLS: AgentToolDef[] = [
     mutates: false,
   },
   {
+    name: "recent_activity",
+    description:
+      "The workspace's recent activity feed: new submissions, status decisions, file uploads, content approvals, review scores, schedule runs. Use for questions like \"what happened today?\" or \"anything new since yesterday?\".",
+    input_schema: {
+      type: "object",
+      properties: { limit: str("Max entries to return (default 20, cap 50)") },
+    },
+    fn: "agentRecentActivity",
+    kind: "query",
+    mutates: false,
+  },
+  {
     name: "review_progress",
     description:
       "Review-round health: per-round assignment completion and which submissions still have no scores.",

@@ -3,6 +3,7 @@ import { Link, type Metadata, type PageProps } from "@pylonsync/react";
 import { ArrowRight, CalendarDays, MapPin } from "lucide-react";
 import { BrandMark } from "@/components/brand";
 import { formatRange } from "@/components/public-shell";
+import { parseBranding } from "@/lib/branding";
 import type { EventRow, OrgRow } from "@/lib/types";
 
 export const metadata: Metadata = {
@@ -51,10 +52,34 @@ export default function OrgSitePage({
             <Link
               key={e.id}
               href={`/${org.slug}/${e.slug}`}
-              className="flex items-center gap-4 rounded-xl bg-white px-6 py-5 shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.04)] transition-shadow hover:shadow-[0_0_0_1px_rgba(0,0,0,0.1),0_2px_6px_rgba(0,0,0,0.06)]"
+              className="block overflow-hidden rounded-xl bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.04)] transition-shadow hover:shadow-[0_0_0_1px_rgba(0,0,0,0.1),0_2px_6px_rgba(0,0,0,0.06)]"
             >
+              {(() => {
+                const branding = parseBranding(e.brandingJson);
+                return (
+                  <>
+                    {branding.heroUrl ? (
+                      <div
+                        className="h-24 bg-cover bg-center"
+                        style={{ backgroundImage: `url(${branding.heroUrl})` }}
+                        aria-hidden="true"
+                      />
+                    ) : branding.accent ? (
+                      <div className="h-1" style={{ background: branding.accent }} aria-hidden="true" />
+                    ) : null}
+                  </>
+                );
+              })()}
+              <div className="flex items-center gap-4 px-6 py-5">
               <div className="min-w-0 flex-1">
-                <div className="text-[15px] font-semibold text-zinc-900">{e.name}</div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[15px] font-semibold text-zinc-900">{e.name}</span>
+                  {e.cfpStatus === "open" ? (
+                    <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
+                      CFP open
+                    </span>
+                  ) : null}
+                </div>
                 <div className="mt-1 flex flex-wrap items-center gap-4 text-[13px] text-zinc-500">
                   {e.startDate && (
                     <span className="flex items-center gap-1.5">
@@ -71,6 +96,7 @@ export default function OrgSitePage({
                 </div>
               </div>
               <ArrowRight className="size-4 shrink-0 text-zinc-400" aria-hidden="true" />
+              </div>
             </Link>
           ))}
         </div>

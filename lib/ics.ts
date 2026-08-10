@@ -127,3 +127,36 @@ export function formatSessionTime(start: string, end: string, timeZone: string) 
     minute: "2-digit",
   })}`;
 }
+
+// A subscribable whole-event calendar (METHOD:PUBLISH, one VEVENT per
+// scheduled session) — served at /<org>/<event>/calendar.ics.
+export function buildScheduleCalendar(input: {
+  calendarName: string;
+  events: Omit<CalendarEventInput, "organizerEmail" | "attendeeEmail" | "sequence">[];
+  now?: Date;
+}) {
+  const stamp = utcStamp(input.now ?? new Date());
+  const lines = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//smolboard//Event Schedule//EN",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    `X-WR-CALNAME:${escapeIcsText(input.calendarName)}`,
+    ...input.events.flatMap((event) => [
+      "BEGIN:VEVENT",
+      `UID:${escapeIcsText(event.uid)}`,
+      `DTSTAMP:${stamp}`,
+      `DTSTART:${utcStamp(event.start)}`,
+      `DTEND:${utcStamp(event.end)}`,
+      `SUMMARY:${escapeIcsText(event.summary)}`,
+      ...(event.description ? [`DESCRIPTION:${escapeIcsText(event.description)}`] : []),
+      ...(event.location ? [`LOCATION:${escapeIcsText(event.location)}`] : []),
+      ...(event.url ? [`URL:${event.url}`] : []),
+      "STATUS:CONFIRMED",
+      "END:VEVENT",
+    ]),
+    "END:VCALENDAR",
+  ];
+  return `${lines.map(foldIcsLine).join("\r\n")}\r\n`;
+}
