@@ -7,6 +7,7 @@ import { fmtDate } from "@/lib/format";
 import { BookUser, ExternalLink, Trash2 } from "lucide-react";
 import {
   DashboardEmptyState,
+  DashboardHero,
   DashboardPage,
   DashboardStatusBadge,
   DashboardToolbar,
@@ -171,6 +172,14 @@ export function SpeakerDirectory({
 
   return (
     <DashboardWidePage>
+      <DashboardHero>
+        <h2 className="text-balance text-lg font-semibold tracking-tight">Speaker directory</h2>
+        <p className="mt-1 max-w-lg text-pretty text-sm text-muted-foreground">
+          Everyone who submits or speaks across your events builds a history here —{" "}
+          <span className="tabular-nums">{people.length}</span>{" "}
+          {people.length === 1 ? "person" : "people"} so far.
+        </p>
+      </DashboardHero>
       <DashboardToolbar>
         <div className="flex flex-wrap items-center gap-2">
           <Input

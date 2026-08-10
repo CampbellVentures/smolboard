@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { callFn, db, Link, useRouter } from "@pylonsync/react";
 import {
   DashboardEmptyState,
+  DashboardIconChip,
   DashboardPage,
   DashboardStatusBadge,
   DashboardToolbar,
@@ -13,7 +14,7 @@ import { ResponsiveFormOverlay } from "@/components/responsive-overlay";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { ChevronRight, FilePlus2, ExternalLink } from "lucide-react";
+import { ChevronRight, FilePlus2, FileText, ExternalLink } from "lucide-react";
 import { parseFields, slugify } from "@/lib/forms";
 import { useOrgSlug } from "@/components/use-org-slug";
 import { parseJson } from "@/lib/types";
@@ -163,24 +164,27 @@ export function FormsList({
             >
               <Link
                 href={`/dashboard/events/${event.id}/forms/${f.id}`}
-                className="min-w-0 flex-1"
+                className="flex min-w-0 flex-1 items-center gap-3"
               >
-                <div className="flex items-center gap-2.5">
-                  <span className="truncate text-sm font-semibold text-zinc-900 hover:underline">
-                    {f.name}
-                  </span>
-                  <StatusBadge status={f.status} />
-                </div>
-                <div className="mt-0.5 text-xs text-zinc-400">
-                  /{orgSlug ?? "…"}/{event.slug}/cfp/{f.slug}
-                  <span className="text-zinc-300"> · </span>
-                  {parseFields(parseJson(f.fieldsJson) ?? []).length} custom field
-                  {parseFields(parseJson(f.fieldsJson) ?? []).length === 1 ? "" : "s"}
-                  <span className="text-zinc-300"> · </span>
-                  <span className="tabular-nums">
-                    {initialSubmissions.filter((s) => s.formId === f.id).length}
-                  </span>{" "}
-                  submissions
+                <DashboardIconChip icon={FileText} tone="violet" />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2.5">
+                    <span className="truncate text-sm font-semibold text-zinc-900 hover:underline">
+                      {f.name}
+                    </span>
+                    <StatusBadge status={f.status} />
+                  </div>
+                  <div className="mt-0.5 text-xs text-zinc-400">
+                    /{orgSlug ?? "…"}/{event.slug}/cfp/{f.slug}
+                    <span className="text-zinc-300"> · </span>
+                    {parseFields(parseJson(f.fieldsJson) ?? []).length} custom field
+                    {parseFields(parseJson(f.fieldsJson) ?? []).length === 1 ? "" : "s"}
+                    <span className="text-zinc-300"> · </span>
+                    <span className="tabular-nums">
+                      {initialSubmissions.filter((s) => s.formId === f.id).length}
+                    </span>{" "}
+                    submissions
+                  </div>
                 </div>
               </Link>
               {f.status === "open" && orgSlug && (
