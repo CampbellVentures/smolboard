@@ -155,14 +155,60 @@ export function EventOverview({
     accepted,
     overdueSpeakers,
   });
-  const nextSteps = getNextSteps({
-    event,
-    formCount: forms.length,
-    openFormCount: openForms.length,
-    submissionCount: submissions.length,
-    awaitingReview,
-    overdueSpeakers,
-  }).slice(0, 3);
+  const sessionQuery = db.useQuery<SessionRow>("Session");
+  const slotQuery = db.useQuery<DeliverableSlotRow>("DeliverableSlot");
+  const versionQuery = db.useQuery<DeliverableVersionRow>("DeliverableVersion");
+  const sessions = (!hydrated || sessionQuery.loading ? initialSessions : sessionQuery.data).filter(
+    (row) => row.eventId === event.id,
+  );
+  const slots = (!hydrated || slotQuery.loading ? initialSlots : slotQuery.data).filter(
+    (row) => row.eventId === event.id,
+  );
+  const versions = (!hydrated || versionQuery.loading ? initialVersions : versionQuery.data).filter(
+    (row) => row.eventId === event.id,
+  );
+  const scheduledBySubmission = new Set(
+    sessions.filter((s) => s.startTime && s.submissionId).map((s) => s.submissionId),
+  );
+  const unscheduledAccepted = submissions.filter(
+    (s) => s.status === "accepted" && !scheduledBySubmission.has(s.id),
+  ).length;
+  const uploadedSlots = new Set(versions.map((v) => v.slotId));
+  const pendingFiles = slots.filter(
+    (slot) => uploadedSlots.has(slot.id) && (slot.status ?? "pending") === "pending",
+  ).length;
+
+  const crossChecks: NextStep[] = [
+    ...(unscheduledAccepted > 0
+      ? [{
+          icon: CalendarDays,
+          title: `Schedule ${unscheduledAccepted} accepted talk${unscheduledAccepted === 1 ? "" : "s"}`,
+          description: "Accepted talks aren't on the agenda yet.",
+          label: "Open agenda",
+          href: `/dashboard/events/${event.id}/agenda`,
+        }]
+      : []),
+    ...(pendingFiles > 0
+      ? [{
+          icon: FileText,
+          title: `Review ${pendingFiles} uploaded file${pendingFiles === 1 ? "" : "s"}`,
+          description: "Speaker files are waiting for approval.",
+          label: "Open content",
+          href: `/dashboard/events/${event.id}/content`,
+        }]
+      : []),
+  ];
+  const nextSteps = [
+    ...getNextSteps({
+      event,
+      formCount: forms.length,
+      openFormCount: openForms.length,
+      submissionCount: submissions.length,
+      awaitingReview,
+      overdueSpeakers,
+    }),
+    ...crossChecks,
+  ].slice(0, 4);
 
   const [selectedSpeakers, setSelectedSpeakers] = useState<string[]>([]);
   const [copied, setCopied] = useState(false);
@@ -262,14 +308,6 @@ export function EventOverview({
         </dl>
       </section>
 
-      <AlsoCheckRibbon
-        eventId={event.id}
-        submissions={submissions}
-        initialSessions={initialSessions}
-        initialSlots={initialSlots}
-        initialVersions={initialVersions}
-      />
-
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(16rem,0.75fr)]">
         <DashboardPanel title="Next steps">
           {nextSteps.length === 0 ? (
@@ -368,7 +406,7 @@ export function EventOverview({
             )}
           </DashboardEmptyState>
         ) : (
-          <div className="flex flex-col gap-1">
+          <div className="divide-y divide-border overflow-hidden rounded-xl border border-border">
             {submissions
               .slice()
               .sort((a, b) => (a.submittedAt < b.submittedAt ? 1 : -1))
@@ -377,7 +415,7 @@ export function EventOverview({
                 <Link
                   key={submission.id}
                   href={`/dashboard/events/${event.id}/abstracts`}
-                  className="group flex items-center gap-4 rounded-xl px-3 py-3 transition-colors hover:bg-muted/50"
+                  className="group flex items-center gap-4 px-4 py-3 transition-colors hover:bg-muted/50"
                 >
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">{submission.title}</p>
@@ -780,87 +818,4 @@ function formatEventDetails(event: EventRow) {
     ? new Date(event.startDate).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })
     : "Dates set";
   return event.location ? `${date}, ${event.location}` : date;
-}
-
-
-/* --------------------------- Also check --------------------------- */
-
-// Sessionboard-style cross-module nudges: the three handoffs organizers
-// forget, each linking straight to where the fix happens. Renders nothing
-// when everything is handled.
-function AlsoCheckRibbon({
-  eventId,
-  submissions,
-  initialSessions,
-  initialSlots,
-  initialVersions,
-}: {
-  eventId: string;
-  submissions: { id: string; status: string }[];
-  initialSessions: SessionRow[];
-  initialSlots: DeliverableSlotRow[];
-  initialVersions: DeliverableVersionRow[];
-}) {
-  const [hydrated, setHydrated] = useState(false);
-  useEffect(() => setHydrated(true), []);
-  const sessionQ = db.useQuery<SessionRow>("Session");
-  const slotQ = db.useQuery<DeliverableSlotRow>("DeliverableSlot");
-  const versionQ = db.useQuery<DeliverableVersionRow>("DeliverableVersion");
-  const sessions =
-    !hydrated || sessionQ.loading ? initialSessions : sessionQ.data.filter((r) => r.eventId === eventId);
-  const slots =
-    !hydrated || slotQ.loading ? initialSlots : slotQ.data.filter((r) => r.eventId === eventId);
-  const versions =
-    !hydrated || versionQ.loading ? initialVersions : versionQ.data.filter((r) => r.eventId === eventId);
-
-  const scheduledBySubmission = new Set(
-    sessions.filter((s) => s.startTime && s.submissionId).map((s) => s.submissionId),
-  );
-  const unscheduled = submissions.filter(
-    (s) => s.status === "accepted" && !scheduledBySubmission.has(s.id),
-  ).length;
-  const awaiting = submissions.filter(
-    (s) => s.status === "submitted" || s.status === "in_review",
-  ).length;
-  const uploadedSlots = new Set(versions.map((v) => v.slotId));
-  const pendingFiles = slots.filter(
-    (slot) => uploadedSlots.has(slot.id) && (slot.status ?? "pending") === "pending",
-  ).length;
-
-  const items = [
-    unscheduled > 0 && {
-      label: `${unscheduled} accepted talk${unscheduled === 1 ? "" : "s"} still need${unscheduled === 1 ? "s" : ""} a time slot`,
-      href: `/dashboard/events/${eventId}/agenda`,
-      cta: "Agenda",
-    },
-    awaiting > 0 && {
-      label: `${awaiting} submission${awaiting === 1 ? "" : "s"} awaiting a decision`,
-      href: `/dashboard/events/${eventId}/abstracts`,
-      cta: "Submissions",
-    },
-    pendingFiles > 0 && {
-      label: `${pendingFiles} uploaded file${pendingFiles === 1 ? "" : "s"} awaiting review`,
-      href: `/dashboard/events/${eventId}/content`,
-      cta: "Content",
-    },
-  ].filter(Boolean) as { label: string; href: string; cta: string }[];
-
-  if (items.length === 0) return null;
-  return (
-    <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 rounded-xl border border-border bg-card px-4 py-2.5 text-[13px]">
-      <span className="font-medium text-muted-foreground">Also check</span>
-      {items.map((item) => (
-        <Link
-          key={item.href}
-          href={item.href}
-          className="group inline-flex items-center gap-1 text-foreground"
-        >
-          {item.label}
-          <span className="font-medium text-muted-foreground underline-offset-2 group-hover:underline">
-            ({item.cta} →)
-          </span>
-        </Link>
-      ))}
-    </div>
-  );
 }

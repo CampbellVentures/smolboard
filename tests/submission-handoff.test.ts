@@ -14,10 +14,13 @@ const submission = {
 };
 
 describe("submission to agenda handoff", () => {
-  test("legacy forms remain visibly unresolved instead of guessing", () => {
+  test("legacy forms materialize with pre-feature defaults, no guessing", () => {
     const result = materializeSubmissionData({ submission, configRaw: undefined, validTrackIds: new Set() });
-    expect(result.data).toBeUndefined();
-    expect(result.unresolved).toEqual([expect.objectContaining({ dimension: "configuration" })]);
+    // No config → no mapping is applied at all: plain talk, no track. This is
+    // exactly how scheduling behaved before the handoff feature existed.
+    expect(result.unresolved).toEqual([]);
+    expect(result.data?.kind).toBe("talk");
+    expect(result.data?.trackId).toBeUndefined();
     expect(submission.answersJson.legacy).toBe("kept");
   });
 

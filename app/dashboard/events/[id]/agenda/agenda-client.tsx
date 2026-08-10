@@ -202,7 +202,9 @@ export function AgendaBuilder({
         endTime: end,
       });
       if (!result.materialized) {
-        toast.error(`Resolve CFP handoff mapping: ${result.unresolved.map((issue) => issue.value ? `${issue.value}: ${issue.reason}` : issue.reason).join(" ")}`);
+        toast.error("This talk's form needs its agenda mappings finished.", {
+          description: `${result.unresolved.map((issue) => (issue.value ? `${issue.value}: ${issue.reason}` : issue.reason)).join(" ")} Fix it under Forms → your form → Agenda handoff mappings.`,
+        });
       }
     } else if (payload.sessionId) {
       const ses = sessions.find((s) => s.id === payload.sessionId);

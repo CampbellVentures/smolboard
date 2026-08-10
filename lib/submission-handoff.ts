@@ -71,10 +71,17 @@ export function materializeSubmissionData(input: {
   configRaw: unknown;
   validTrackIds: ReadonlySet<string>;
 }): { data?: MaterializedSessionData; unresolved: HandoffIssue[] } {
-  const config = parseHandoffConfig(input.configRaw);
-  if (!config) {
-    return { unresolved: [{ dimension: "configuration", reason: "Explicit format and track mapping choices are required for this legacy form." }] };
-  }
+  // Forms saved since the handoff feature always carry a config (the builder
+  // writes one on every save). A missing config means the form predates the
+  // feature — materialize the way scheduling always worked for those forms
+  // (default talk, no track) instead of dead-ending the drag. Organizers opt
+  // into strict mapping by saving the form's "Agenda handoff mappings" panel.
+  const config = parseHandoffConfig(input.configRaw) ?? {
+    formatFieldKey: null,
+    formatValues: {},
+    trackFieldKey: null,
+    trackValues: {},
+  };
   const answers = input.submission.answersJson && typeof input.submission.answersJson === "object" && !Array.isArray(input.submission.answersJson)
     ? input.submission.answersJson as Answers
     : {};
