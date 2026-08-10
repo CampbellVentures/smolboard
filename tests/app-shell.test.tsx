@@ -14,6 +14,7 @@ mock.module("@pylonsync/react", () => ({
   usePathname: () => "/dashboard",
   callFn: async () => ({}),
   db: { useQuery: () => ({ data: [], loading: false }) },
+  storageKey: (slot: string) => `pylon:${slot}`,
 }));
 
 mock.module("@pylonsync/client", () => ({

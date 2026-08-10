@@ -38,6 +38,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { PersonAvatar } from "./person-avatar";
+import { SessionReconcile } from "./session-reconcile";
 import { lastEventStorageKey } from "@/lib/dashboard-routing";
 import { CopilotChat } from "@/components/copilot-chat";
 import { useEnsureOrgSlug } from "@/components/use-org-slug";
@@ -385,6 +386,7 @@ export function AppShell({
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
+      <SessionReconcile />
       {/* ---------- Pane 1: nav sidebar ---------- */}
       <aside className="hidden w-60 shrink-0 flex-col border-r border-border/70 bg-muted/35 md:flex">
         <div className="px-3 pb-2 pt-3">

@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { createOrg, listOrgs } from "@pylonsync/client";
 import { db } from "@pylonsync/react";
 import { Button } from "@/components/ui/button";
+import { reconcileStaleToken } from "@/components/session-reconcile";
 
 // Org-less safety net. New signups get "My Workspace" auto-created in the signup
 // flow, so this only renders in edge cases: that creation failed, or a user left
@@ -17,6 +18,10 @@ export function ProvisionWorkspace() {
     let cancelled = false;
     void (async () => {
       try {
+        // A stale local Bearer token would make every call below run as the
+        // wrong identity (or provision an org for it). Reconcile first; if it
+        // reloaded, skip this pass.
+        if (await reconcileStaleToken()) return;
         const orgs = await listOrgs();
         const target = orgs[0] ?? (await createOrg("My Workspace"));
         await db.sync.selectOrg(target.id);

@@ -48,6 +48,76 @@ export function DashboardWidePage({
   );
 }
 
+// THE page hero. A card with a soft aurora gradient pooling in the top-right
+// corner — the one place a page gets real color. Pass the whole header layout
+// as children; the shell only owns the surface.
+export function DashboardHero({
+  className,
+  children,
+}: {
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section
+      className={cn("relative overflow-hidden rounded-xl border bg-card p-5", className)}
+    >
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+        <div className="absolute -right-20 -top-36 size-80 rounded-full bg-violet-300/40 blur-3xl" />
+        <div className="absolute -right-44 top-4 size-72 rounded-full bg-sky-300/35 blur-3xl" />
+        <div className="absolute right-28 -top-24 size-64 rounded-full bg-amber-200/50 blur-3xl" />
+        <div className="absolute -right-8 top-20 size-56 rounded-full bg-emerald-200/40 blur-3xl" />
+        <div className="absolute right-64 -top-10 size-48 rounded-full bg-pink-300/30 blur-3xl" />
+      </div>
+      <div className="relative">{children}</div>
+    </section>
+  );
+}
+
+// Tinted icon chip for cards and action rows (Codex-style square). Tones are
+// pale-background + saturated-icon; this is where list pages pick up color.
+const CHIP_TONES = {
+  violet: "bg-violet-50 text-violet-600",
+  sky: "bg-sky-50 text-sky-600",
+  amber: "bg-amber-50 text-amber-600",
+  emerald: "bg-emerald-50 text-emerald-600",
+  pink: "bg-pink-50 text-pink-600",
+  zinc: "bg-muted text-muted-foreground",
+} as const;
+
+export type DashboardChipTone = keyof typeof CHIP_TONES;
+
+export function DashboardIconChip({
+  icon: Icon,
+  tone = "zinc",
+  size = "md",
+  className,
+}: {
+  icon: LucideIcon;
+  tone?: DashboardChipTone;
+  size?: "sm" | "md" | "lg";
+  className?: string;
+}) {
+  const sizes = {
+    sm: "size-8 rounded-lg [&_svg]:size-4",
+    md: "size-9 rounded-lg [&_svg]:size-4",
+    lg: "size-11 rounded-xl [&_svg]:size-5",
+  } as const;
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        "flex shrink-0 items-center justify-center outline outline-1 -outline-offset-1 outline-black/5",
+        sizes[size],
+        CHIP_TONES[tone],
+        className,
+      )}
+    >
+      <Icon />
+    </span>
+  );
+}
+
 export function DashboardToolbar({
   className,
   ...props

@@ -5,8 +5,8 @@ import { callFn, db, useRouter } from "@pylonsync/react";
 import { toast } from "sonner";
 import {
   DashboardEmptyState,
+  DashboardHero,
   DashboardPage,
-  DashboardToolbar,
   DashboardWidePage,
 } from "@/components/dashboard";
 import { EventCard } from "@/components/event-card";
@@ -95,13 +95,17 @@ export function EventsList({
 
   return (
     <DashboardWidePage>
-      <DashboardToolbar>
-        <p className="text-pretty text-sm text-muted-foreground">
-          {events.length === 0
-            ? "Run your call for speakers, reviews, and agenda from one place."
-            : `${events.length} event${events.length === 1 ? "" : "s"} in this workspace.`}
-        </p>
-        <ResponsiveFormOverlay.Root
+      <DashboardHero>
+        <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="max-w-lg">
+            <h2 className="text-balance text-lg font-semibold tracking-tight">Your events</h2>
+            <p className="mt-1 text-pretty text-sm text-muted-foreground">
+              {events.length === 0
+                ? "Run your call for speakers, reviews, and agenda from one place."
+                : `${events.length} event${events.length === 1 ? "" : "s"} in this workspace.`}
+            </p>
+          </div>
+          <ResponsiveFormOverlay.Root
           open={creating}
           onOpenChange={(open) => {
             setCreating(open);
@@ -187,8 +191,9 @@ export function EventsList({
               </ResponsiveFormOverlay.Footer>
             </form>
           </ResponsiveFormOverlay.Content>
-        </ResponsiveFormOverlay.Root>
-      </DashboardToolbar>
+          </ResponsiveFormOverlay.Root>
+        </div>
+      </DashboardHero>
 
       {events.length === 0 ? (
         <DashboardEmptyState

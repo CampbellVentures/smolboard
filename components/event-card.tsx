@@ -15,7 +15,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { DashboardStatusBadge } from "@/components/dashboard";
+import { DashboardIconChip, DashboardStatusBadge } from "@/components/dashboard";
 import type { EventRow } from "@/lib/types";
 
 interface EventDetailProps {
@@ -80,11 +80,14 @@ export function EventCard({
     >
       <Card className="overflow-hidden transition-[box-shadow] duration-150 ease-out group-hover:shadow-md">
         <CardHeader className="flex-row items-start justify-between gap-4 pb-5">
-          <div className="min-w-0">
-            <CardTitle className="truncate text-base">{event.name}</CardTitle>
-            <CardDescription className="mt-1 truncate text-pretty">
-              /{orgSlug ?? "…"}/{event.slug}
-            </CardDescription>
+          <div className="flex min-w-0 items-center gap-3">
+            <DashboardIconChip icon={CalendarDays} tone="violet" size="lg" />
+            <div className="min-w-0">
+              <CardTitle className="truncate text-base">{event.name}</CardTitle>
+              <CardDescription className="mt-1 truncate text-pretty">
+                /{orgSlug ?? "…"}/{event.slug}
+              </CardDescription>
+            </div>
           </div>
           <DashboardStatusBadge status={event.cfpStatus}>
             {cfpLabel(event.cfpStatus)}

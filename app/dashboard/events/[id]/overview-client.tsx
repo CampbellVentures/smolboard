@@ -20,9 +20,12 @@ import {
 import { toast } from "sonner";
 import {
   DashboardEmptyState,
+  DashboardHero,
+  DashboardIconChip,
   DashboardPage,
   DashboardPanel,
   DashboardStatusBadge,
+  type DashboardChipTone,
 } from "@/components/dashboard";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -275,7 +278,7 @@ export function EventOverview({
 
   return (
     <DashboardPage className="max-w-4xl gap-6">
-      <section className="overflow-hidden rounded-xl border bg-card p-5">
+      <DashboardHero>
         <div className="flex flex-col items-start gap-5 sm:flex-row sm:justify-between">
           <div className="max-w-xl">
             <DashboardStatusBadge status={overview.status}>{overview.label}</DashboardStatusBadge>
@@ -306,13 +309,13 @@ export function EventOverview({
           <OverviewMetric label="Need review" value={awaitingReview} />
           <OverviewMetric label="Accepted" value={accepted} />
         </dl>
-      </section>
+      </DashboardHero>
 
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(16rem,0.75fr)]">
         <DashboardPanel title="Next steps">
           {nextSteps.length === 0 ? (
             <div className="flex items-center gap-3 rounded-xl bg-muted/35 p-4">
-              <CheckCircle2 className="size-5 text-muted-foreground" aria-hidden="true" />
+              <CheckCircle2 className="size-5 text-emerald-500" aria-hidden="true" />
               <div>
                 <p className="text-sm font-medium">You are caught up</p>
                 <p className="mt-0.5 text-xs text-muted-foreground">
@@ -544,6 +547,15 @@ function NextStepRow({
   onShare: () => void;
 }) {
   const Icon = step.icon;
+  const tones = new Map<typeof FileText, DashboardChipTone>([
+    [FileText, "violet"],
+    [CalendarDays, "sky"],
+    [Send, "emerald"],
+    [ClipboardCheck, "amber"],
+    [Users, "pink"],
+    [Copy, "sky"],
+    [MapPin, "amber"],
+  ]);
   const action = step.href ? (
     <Button asChild size="sm" variant="ghost">
       <Link href={step.href}>
@@ -570,9 +582,7 @@ function NextStepRow({
   return (
     <div className="flex flex-col gap-3 rounded-xl px-3 py-3 hover:bg-muted/40 sm:flex-row sm:items-center">
       <div className="flex min-w-0 flex-1 items-start gap-3">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-          <Icon className="size-4" aria-hidden="true" />
-        </span>
+        <DashboardIconChip icon={Icon} tone={tones.get(Icon) ?? "zinc"} />
         <div className="min-w-0">
           <p className="text-sm font-medium">{step.title}</p>
           <p className="mt-0.5 text-xs leading-5 text-muted-foreground">{step.description}</p>
@@ -601,7 +611,7 @@ function ReadinessRow({
         <div className="flex items-center justify-between gap-3">
           <p className="text-sm font-medium">{label}</p>
           {ready ? (
-            <CheckCircle2 className="size-4 shrink-0 text-muted-foreground" aria-label="Ready" />
+            <CheckCircle2 className="size-4 shrink-0 text-emerald-500" aria-label="Ready" />
           ) : (
             <CircleDashed className="size-4 shrink-0 text-muted-foreground" aria-label="Incomplete" />
           )}
