@@ -46,6 +46,22 @@ export default mutation({
       eventId: event.id as string,
       ...payload,
     });
+    // Seed revision 1 from the submission content so the session can go
+    // through content approval (and reach the public schedule) without an
+    // extra manual edit first.
+    const user = await ctx.db.unsafe.get("User", ctx.auth.userId);
+    const revisionId = await ctx.db.unsafe.insert("SessionContentRevision", {
+      orgId: event.orgId as string,
+      eventId: event.id as string,
+      sessionId: id,
+      revisionNumber: 1,
+      title: result.data.title,
+      description: result.data.description,
+      speakerUserIdsJson: result.data.speakerUserIdsJson,
+      editorUserId: ctx.auth.userId,
+      editorName: String(user?.displayName || user?.email || "Organizer").slice(0, 200),
+    });
+    await ctx.db.unsafe.update("Session", id, { currentRevisionId: revisionId });
     return { materialized: true, sessionId: id, unresolved: [] };
   },
 });
