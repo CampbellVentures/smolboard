@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/sheet";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { cn } from "@/lib/utils";
+import { DashboardIconChip } from "@/components/dashboard";
 
 type OverlayKind = "form" | "detail";
 
@@ -131,19 +132,14 @@ function Content({ className, children }: React.ComponentProps<"div">) {
 // Overlay headers lead with an icon in a quiet gray chip so every dialog opens
 // with the same visual anchor. Pass `icon` from the call site; header text
 // renders below it.
+// Delegates to THE icon chip so overlays can't drift from the app-wide
+// treatment (light gray wrapper, icon carries any color).
 export function OverlayHeaderChip({ icon }: { icon: LucideIcon }) {
-  return <HeaderChip icon={icon} />;
+  return <DashboardIconChip icon={icon} size="lg" className="mb-3" />;
 }
 
-function HeaderChip({ icon: Icon }: { icon: LucideIcon }) {
-  return (
-    <span
-      aria-hidden="true"
-      className="mb-3 flex size-10 items-center justify-center rounded-lg bg-muted text-muted-foreground outline outline-1 -outline-offset-1 outline-black/5"
-    >
-      <Icon className="size-5" />
-    </span>
-  );
+function HeaderChip({ icon }: { icon: LucideIcon }) {
+  return <OverlayHeaderChip icon={icon} />;
 }
 
 function Header({

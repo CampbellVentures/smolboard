@@ -74,15 +74,16 @@ export function DashboardHero({
   );
 }
 
-// Tinted icon chip for cards and action rows (Codex-style square). Tones are
-// pale-background + saturated-icon; this is where list pages pick up color.
+// Icon chip for cards and action rows (Codex-style square). The wrapper is
+// ALWAYS light gray — only the icon carries the tone's color. Colored chip
+// backgrounds read as AI slop; don't reintroduce them.
 const CHIP_TONES = {
-  violet: "bg-violet-50 text-violet-600",
-  sky: "bg-sky-50 text-sky-600",
-  amber: "bg-amber-50 text-amber-600",
-  emerald: "bg-emerald-50 text-emerald-600",
-  pink: "bg-pink-50 text-pink-600",
-  zinc: "bg-muted text-muted-foreground",
+  violet: "bg-zinc-100 text-violet-600",
+  sky: "bg-zinc-100 text-sky-600",
+  amber: "bg-zinc-100 text-amber-600",
+  emerald: "bg-zinc-100 text-emerald-600",
+  pink: "bg-zinc-100 text-pink-600",
+  zinc: "bg-zinc-100 text-zinc-600",
 } as const;
 
 export type DashboardChipTone = keyof typeof CHIP_TONES;
