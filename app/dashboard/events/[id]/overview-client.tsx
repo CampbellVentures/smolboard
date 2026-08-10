@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/table";
 import { buildOnboardingRows } from "@/lib/tasks";
 import { assignmentProgress } from "@/lib/reviews";
+import type { DeliverableSlotRow, DeliverableVersionRow, SessionRow } from "@/lib/types";
 import { useOrgSlug } from "@/components/use-org-slug";
 import type {
   EventRow,
@@ -254,6 +255,8 @@ export function EventOverview({
           <OverviewMetric label="Accepted" value={accepted} />
         </dl>
       </section>
+
+      <AlsoCheckRibbon eventId={event.id} submissions={submissions} />
 
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(16rem,0.75fr)]">
         <DashboardPanel title="Next steps">
@@ -765,4 +768,76 @@ function formatEventDetails(event: EventRow) {
     ? new Date(event.startDate).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })
     : "Dates set";
   return event.location ? `${date}, ${event.location}` : date;
+}
+
+
+/* --------------------------- Also check --------------------------- */
+
+// Sessionboard-style cross-module nudges: the three handoffs organizers
+// forget, each linking straight to where the fix happens. Renders nothing
+// when everything is handled.
+function AlsoCheckRibbon({
+  eventId,
+  submissions,
+}: {
+  eventId: string;
+  submissions: { id: string; status: string }[];
+}) {
+  const sessionQ = db.useQuery<SessionRow>("Session");
+  const slotQ = db.useQuery<DeliverableSlotRow>("DeliverableSlot");
+  const versionQ = db.useQuery<DeliverableVersionRow>("DeliverableVersion");
+  const sessions = sessionQ.loading ? [] : sessionQ.data.filter((r) => r.eventId === eventId);
+  const slots = slotQ.loading ? [] : slotQ.data.filter((r) => r.eventId === eventId);
+  const versions = versionQ.loading ? [] : versionQ.data.filter((r) => r.eventId === eventId);
+
+  const scheduledBySubmission = new Set(
+    sessions.filter((s) => s.startTime && s.submissionId).map((s) => s.submissionId),
+  );
+  const unscheduled = submissions.filter(
+    (s) => s.status === "accepted" && !scheduledBySubmission.has(s.id),
+  ).length;
+  const awaiting = submissions.filter(
+    (s) => s.status === "submitted" || s.status === "in_review",
+  ).length;
+  const uploadedSlots = new Set(versions.map((v) => v.slotId));
+  const pendingFiles = slots.filter(
+    (slot) => uploadedSlots.has(slot.id) && (slot.status ?? "pending") === "pending",
+  ).length;
+
+  const items = [
+    unscheduled > 0 && {
+      label: `${unscheduled} accepted talk${unscheduled === 1 ? "" : "s"} still need${unscheduled === 1 ? "s" : ""} a time slot`,
+      href: `/dashboard/events/${eventId}/agenda`,
+      cta: "Agenda",
+    },
+    awaiting > 0 && {
+      label: `${awaiting} submission${awaiting === 1 ? "" : "s"} awaiting a decision`,
+      href: `/dashboard/events/${eventId}/abstracts`,
+      cta: "Submissions",
+    },
+    pendingFiles > 0 && {
+      label: `${pendingFiles} uploaded file${pendingFiles === 1 ? "" : "s"} awaiting review`,
+      href: `/dashboard/events/${eventId}/content`,
+      cta: "Content",
+    },
+  ].filter(Boolean) as { label: string; href: string; cta: string }[];
+
+  if (items.length === 0) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 rounded-xl border border-border bg-card px-4 py-2.5 text-[13px]">
+      <span className="font-medium text-muted-foreground">Also check</span>
+      {items.map((item) => (
+        <Link
+          key={item.href}
+          href={item.href}
+          className="group inline-flex items-center gap-1 text-foreground"
+        >
+          {item.label}
+          <span className="font-medium text-muted-foreground underline-offset-2 group-hover:underline">
+            ({item.cta} →)
+          </span>
+        </Link>
+      ))}
+    </div>
+  );
 }

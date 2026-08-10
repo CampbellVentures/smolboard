@@ -218,6 +218,34 @@ export function AbstractsView({
   return (
     <DashboardWidePage className="flex-row gap-6">
       <div className="flex min-w-0 flex-1 flex-col gap-4">
+        {/* Pipeline tabs: one-glance counts, one-click filters. */}
+        <div className="flex flex-wrap items-center gap-1 border-b border-border">
+          {["", ...STATUSES].map((value) => {
+            const count = value
+              ? submissions.filter((r) => r.status === value).length
+              : submissions.length;
+            const active = statusFilter === value;
+            if (value && count === 0 && !active) return null;
+            return (
+              <button
+                key={value || "all"}
+                type="button"
+                onClick={() => setStatusFilter(value)}
+                className={
+                  "-mb-px flex items-center gap-1.5 border-b-2 px-3 py-2 text-[13px] font-medium transition-colors " +
+                  (active
+                    ? "border-zinc-900 text-zinc-900"
+                    : "border-transparent text-zinc-500 hover:text-zinc-800")
+                }
+              >
+                <span className="capitalize">{value ? value.replace(/_/g, " ") : "All"}</span>
+                <span className="rounded-full bg-muted px-1.5 text-[11px] tabular-nums text-muted-foreground">
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
         {/* Toolbar */}
         <DashboardToolbar>
           <div className="flex flex-wrap items-center gap-2">
@@ -229,19 +257,6 @@ export function AbstractsView({
               aria-label="Search submissions"
               autoComplete="off"
             />
-            <Select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-auto"
-              aria-label="Filter by status"
-            >
-              <option value="">All statuses</option>
-              {STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {s.replace("_", " ")}
-                </option>
-              ))}
-            </Select>
             {categories.length > 0 && (
               <Select
                 value={categoryFilter}

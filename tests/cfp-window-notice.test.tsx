@@ -8,7 +8,7 @@ test("deadline notice renders upcoming, open, and closed states explicitly", () 
   expect(screen.getByText("Submissions open May 1, 2027, 9:00 AM CDT.")).toBeDefined();
 
   view.rerender(<CfpWindowNotice state="open" closesLabel="May 31, 2027, 11:59 PM CDT" />);
-  expect(screen.getByText("Submit by May 31, 2027, 11:59 PM CDT.")).toBeDefined();
+  expect(screen.getByText("Submissions will be accepted until May 31, 2027, 11:59 PM CDT.")).toBeDefined();
 
   view.rerender(<CfpWindowNotice state="closed" closesLabel="May 31, 2027, 11:59 PM CDT" />);
   expect(screen.getByText("Submissions are closed as of May 31, 2027, 11:59 PM CDT.")).toBeDefined();
