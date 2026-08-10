@@ -9,6 +9,7 @@ import {
   DashboardPage,
   DashboardStatusBadge,
   DashboardToolbar,
+  DashboardWidePage,
 } from "@/components/dashboard";
 import { Button } from "@/components/ui/button";
 import { ResponsiveFormOverlay } from "@/components/responsive-overlay";
@@ -194,7 +195,7 @@ export function TasksClient({
   }
 
   return (
-    <DashboardPage>
+    <DashboardWidePage>
       {rows.length === 0 ? (
         <DashboardEmptyState
           icon={ClipboardList}
@@ -374,7 +375,7 @@ export function TasksClient({
       ) : null}
 
       <TaskEditor editor={editor} onChange={setEditor} saving={saving} onSubmit={save} profiles={profiles} />
-    </DashboardPage>
+    </DashboardWidePage>
   );
 }
 

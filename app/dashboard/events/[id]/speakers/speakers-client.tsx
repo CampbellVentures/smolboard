@@ -9,6 +9,7 @@ import {
   DashboardPage,
   DashboardStatusBadge,
   DashboardToolbar,
+  DashboardWidePage,
 } from "@/components/dashboard";
 import { ResponsiveFormOverlay } from "@/components/responsive-overlay";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ import { Select } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { parseSpeakerCsv, SPEAKER_STATUSES, type SpeakerImportRow } from "@/lib/speakers";
+import { PersonAvatar } from "@/components/person-avatar";
 import type {
   EventRow,
   SessionRow,
@@ -198,7 +200,7 @@ export function SpeakersTable({
   const selectedProfile = editor?.id ? profiles.find((profile) => profile.id === editor.id) : undefined;
 
   return (
-    <DashboardPage>
+    <DashboardWidePage>
       <DashboardToolbar>
         <div className="flex flex-wrap items-center gap-2">
           <Input
@@ -249,7 +251,7 @@ export function SpeakersTable({
                   <TableRow key={profile.id} className="cursor-pointer" onClick={() => openProfile(profile)}>
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        {profile.headshotUrl ? <img src={profile.headshotUrl} alt="" className="size-10 rounded-full object-cover" /> : null}
+                        <PersonAvatar name={profile.name} src={profile.headshotUrl || null} size="lg" />
                         <div>
                           <div className="font-medium">{profile.name}</div>
                           <div className="text-xs text-muted-foreground">
@@ -322,7 +324,7 @@ export function SpeakersTable({
           </ResponsiveFormOverlay.Footer>
         </ResponsiveFormOverlay.Content>
       </ResponsiveFormOverlay.Root>
-    </DashboardPage>
+    </DashboardWidePage>
   );
 }
 

@@ -7,6 +7,7 @@ import {
   DashboardPage,
   DashboardStatusBadge,
   DashboardToolbar,
+  DashboardWidePage,
 } from "@/components/dashboard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -194,18 +195,18 @@ export function ContentTable({
 
   if (slots.length === 0) {
     return (
-      <DashboardPage>
+      <DashboardWidePage>
         <DashboardEmptyState
           icon={FileStack}
           title="No deliverables yet"
           description="Create upload tasks under Tasks; files speakers upload against them land here for review."
         />
-      </DashboardPage>
+      </DashboardWidePage>
     );
   }
 
   return (
-    <DashboardPage>
+    <DashboardWidePage>
       <DashboardToolbar>
         <div className="flex flex-wrap items-center gap-2">
           <Input
@@ -403,6 +404,6 @@ export function ContentTable({
           </ul>
         </DialogContent>
       </Dialog>
-    </DashboardPage>
+    </DashboardWidePage>
   );
 }

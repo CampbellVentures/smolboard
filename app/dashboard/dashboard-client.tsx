@@ -19,6 +19,7 @@ import {
   DashboardPage,
   DashboardPanel,
   DashboardStatusBadge,
+  DashboardWidePage,
 } from "@/components/dashboard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -52,7 +53,7 @@ export interface OrgMemberRow {
 
 export function NoOrg() {
   return (
-    <DashboardPage>
+    <DashboardWidePage>
       <DashboardEmptyState
         icon={Building2}
         title="No workspace yet"
@@ -62,7 +63,7 @@ export function NoOrg() {
           <a href="/dashboard">Set up your workspace</a>
         </Button>
       </DashboardEmptyState>
-    </DashboardPage>
+    </DashboardWidePage>
   );
 }
 
@@ -178,7 +179,7 @@ function MembersList({
   }
 
   return (
-    <DashboardPage>
+    <DashboardWidePage>
       <DashboardPanel
         title="Invite teammates"
         description="Add organizers and reviewers to this workspace."
@@ -293,7 +294,7 @@ function MembersList({
           </ul>
         </DashboardPanel>
       )}
-    </DashboardPage>
+    </DashboardWidePage>
   );
 }
 
@@ -360,7 +361,7 @@ function SettingsView({
   }
 
   return (
-    <DashboardPage>
+    <DashboardWidePage>
       <DashboardPanel title="Workspace" variant="subtle">
         <form onSubmit={rename} className="flex max-w-xl flex-col gap-3">
           <div className="flex flex-col gap-1.5">
@@ -409,7 +410,7 @@ function SettingsView({
           </p>
         )}
       </DashboardPanel>
-    </DashboardPage>
+    </DashboardWidePage>
   );
 }
 

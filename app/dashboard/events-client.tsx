@@ -7,6 +7,7 @@ import {
   DashboardEmptyState,
   DashboardPage,
   DashboardToolbar,
+  DashboardWidePage,
 } from "@/components/dashboard";
 import { EventCard } from "@/components/event-card";
 import { useOrgSlug } from "@/components/use-org-slug";
@@ -93,7 +94,7 @@ export function EventsList({
   }
 
   return (
-    <DashboardPage>
+    <DashboardWidePage>
       <DashboardToolbar>
         <p className="text-pretty text-sm text-muted-foreground">
           {events.length === 0
@@ -218,6 +219,6 @@ export function EventsList({
           ))}
         </ul>
       )}
-    </DashboardPage>
+    </DashboardWidePage>
   );
 }

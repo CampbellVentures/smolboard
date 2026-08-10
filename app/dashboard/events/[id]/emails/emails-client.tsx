@@ -161,7 +161,7 @@ function EmailsIndex({
   const failed = logs.filter((log) => log.status === "failed").length;
   return (
     <DashboardPage>
-      <div className="mx-auto w-full max-w-3xl">
+      <div className="w-full">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-sm font-semibold text-foreground">Automated messages</h2>
@@ -247,7 +247,7 @@ function EmailsIndex({
                         <TableCell>
                           <DashboardStatusBadge status={log.status} />
                         </TableCell>
-                        <TableCell className="whitespace-nowrap text-muted-foreground">
+                        <TableCell className="whitespace-nowrap text-sm tabular-nums text-muted-foreground">
                           {new Date(log.sentAt).toLocaleString()}
                         </TableCell>
                       </TableRow>

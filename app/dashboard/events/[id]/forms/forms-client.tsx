@@ -7,6 +7,7 @@ import {
   DashboardPage,
   DashboardStatusBadge,
   DashboardToolbar,
+  DashboardWidePage,
 } from "@/components/dashboard";
 import { ResponsiveFormOverlay } from "@/components/responsive-overlay";
 import { Button } from "@/components/ui/button";
@@ -97,7 +98,7 @@ export function FormsList({
   }
 
   return (
-    <DashboardPage>
+    <DashboardWidePage>
       <DashboardToolbar className="justify-end">
         <ResponsiveFormOverlay.Root
           open={creating}
@@ -197,6 +198,6 @@ export function FormsList({
           ))}
         </ul>
       )}
-    </DashboardPage>
+    </DashboardWidePage>
   );
 }

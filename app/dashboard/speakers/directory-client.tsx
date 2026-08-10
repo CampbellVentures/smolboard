@@ -10,6 +10,7 @@ import {
   DashboardPage,
   DashboardStatusBadge,
   DashboardToolbar,
+  DashboardWidePage,
 } from "@/components/dashboard";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -158,18 +159,18 @@ export function SpeakerDirectory({
 
   if (people.length === 0) {
     return (
-      <DashboardPage>
+      <DashboardWidePage>
         <DashboardEmptyState
           icon={BookUser}
           title="No speakers yet"
           description="Everyone who submits to any of your events builds a history here."
         />
-      </DashboardPage>
+      </DashboardWidePage>
     );
   }
 
   return (
-    <DashboardPage>
+    <DashboardWidePage>
       <DashboardToolbar>
         <div className="flex flex-wrap items-center gap-2">
           <Input
@@ -364,7 +365,7 @@ export function SpeakerDirectory({
           ) : null}
         </SheetContent>
       </Sheet>
-    </DashboardPage>
+    </DashboardWidePage>
   );
 }
 
