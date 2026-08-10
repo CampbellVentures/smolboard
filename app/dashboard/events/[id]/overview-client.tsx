@@ -578,15 +578,6 @@ function NextStepRow({
   onShare: () => void;
 }) {
   const Icon = step.icon;
-  const tones = new Map<typeof FileText, DashboardChipTone>([
-    [FileText, "violet"],
-    [CalendarDays, "sky"],
-    [Send, "emerald"],
-    [ClipboardCheck, "amber"],
-    [Users, "pink"],
-    [Copy, "sky"],
-    [MapPin, "amber"],
-  ]);
   const action = step.href ? (
     <Button asChild size="sm" variant="ghost">
       <Link href={step.href}>
@@ -611,15 +602,13 @@ function NextStepRow({
   );
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg px-2 py-3 hover:bg-muted/40 sm:flex-row sm:items-center">
-      <div className="flex min-w-0 flex-1 items-start gap-3">
-        <DashboardIconChip icon={Icon} tone={tones.get(Icon) ?? "zinc"} size="sm" />
-        <div className="min-w-0">
-          <p className="text-sm font-medium">{step.title}</p>
-          <p className="mt-0.5 text-xs leading-5 text-muted-foreground">{step.description}</p>
-        </div>
+    <div className="flex items-start gap-3 rounded-lg px-2 py-3 hover:bg-muted/40">
+      <DashboardIconChip icon={Icon} size="sm" />
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium">{step.title}</p>
+        <p className="mt-0.5 text-xs leading-5 text-muted-foreground">{step.description}</p>
+        <div className="mt-1 -ml-2.5">{action}</div>
       </div>
-      <div className="pl-11 sm:pl-0">{action}</div>
     </div>
   );
 }
