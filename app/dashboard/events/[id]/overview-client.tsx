@@ -445,9 +445,9 @@ export function EventOverview({
                 <Link
                   key={submission.id}
                   href={`/dashboard/events/${event.id}/abstracts`}
-                  className="group flex items-center gap-3 rounded-lg px-2 py-3 transition-colors hover:bg-muted/40"
+                  className="group flex items-center gap-3 rounded-lg py-3 transition-colors hover:bg-muted/40"
                 >
-                  <DashboardIconChip icon={Inbox} tone="zinc" size="sm" />
+                  <DashboardIconChip icon={Inbox} tone="zinc" />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">{submission.title}</p>
                     <p className="mt-0.5 truncate text-xs capitalize text-muted-foreground">
@@ -602,8 +602,8 @@ function NextStepRow({
   );
 
   return (
-    <div className="flex items-start gap-3 rounded-lg px-2 py-3 hover:bg-muted/40">
-      <DashboardIconChip icon={Icon} size="sm" />
+    <div className="flex items-start gap-3 rounded-lg py-3">
+      <DashboardIconChip icon={Icon} />
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium">{step.title}</p>
         <p className="mt-0.5 text-xs leading-5 text-muted-foreground">{step.description}</p>
@@ -626,7 +626,7 @@ function ReadinessRow({
 }) {
   return (
     <div className="flex items-start gap-3">
-      <DashboardIconChip icon={Icon} tone="zinc" size="sm" />
+      <DashboardIconChip icon={Icon} tone="zinc" />
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-3">
           <p className="text-sm font-medium">{label}</p>
