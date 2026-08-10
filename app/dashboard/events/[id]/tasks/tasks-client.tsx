@@ -12,7 +12,13 @@ import {
   DashboardWidePage,
 } from "@/components/dashboard";
 import { Button } from "@/components/ui/button";
-import { ResponsiveFormOverlay } from "@/components/responsive-overlay";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import {
   Field,
   FieldDescription,
@@ -395,18 +401,18 @@ function TaskEditor({
   if (!editor) return null;
   const set = <K extends keyof EditorState>(key: K, value: EditorState[K]) => onChange({ ...editor, [key]: value });
   return (
-    <ResponsiveFormOverlay.Root open onOpenChange={(open) => !open && onChange(null)}>
-      <ResponsiveFormOverlay.Content>
-        <form onSubmit={onSubmit} className="contents">
-          <ResponsiveFormOverlay.Header>
-            <ResponsiveFormOverlay.Title>
+    <Sheet open onOpenChange={(open) => !open && onChange(null)}>
+      <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-lg">
+        <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col">
+          <SheetHeader className="border-b border-border px-6 py-4">
+            <SheetTitle className="text-left">
               {editor.id ? "Edit speaker task" : "New speaker task"}
-            </ResponsiveFormOverlay.Title>
-            <ResponsiveFormOverlay.Description>
+            </SheetTitle>
+            <SheetDescription className="text-left">
               Assigned tasks appear live in each speaker’s portal.
-            </ResponsiveFormOverlay.Description>
-          </ResponsiveFormOverlay.Header>
-          <ResponsiveFormOverlay.Body>
+            </SheetDescription>
+          </SheetHeader>
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
             <FieldGroup className="gap-4">
               <Field>
                 <FieldLabel htmlFor="task-title">Title</FieldLabel>
@@ -528,18 +534,18 @@ function TaskEditor({
                 />
               </Field>
             </FieldGroup>
-          </ResponsiveFormOverlay.Body>
-          <ResponsiveFormOverlay.Footer>
+          </div>
+          <div className="flex justify-end gap-2 border-t border-border px-6 py-4">
             <Button type="button" variant="outline" onClick={() => onChange(null)}>
               Cancel
             </Button>
             <Button type="submit" disabled={saving || !editor.title.trim()}>
               {saving ? "Saving…" : "Save task"}
             </Button>
-          </ResponsiveFormOverlay.Footer>
+          </div>
         </form>
-      </ResponsiveFormOverlay.Content>
-    </ResponsiveFormOverlay.Root>
+      </SheetContent>
+    </Sheet>
   );
 }
 

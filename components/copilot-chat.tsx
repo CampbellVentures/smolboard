@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { toolByName } from "@/lib/agent-tools";
 import type { CopilotMessageRow, CopilotThreadRow } from "@/lib/types";
-import { Loader2, Plus, Send, Sparkles, Wrench, X } from "lucide-react";
+import { Bot, Loader2, Plus, Send, Wrench, X } from "lucide-react";
 
 // The live copilot chat (SPEC → Differentiators #1). Three data paths:
 //   - persisted turns: db.useQuery("CopilotMessage") — live rows, any device
@@ -156,7 +156,7 @@ export function CopilotChat({ eventId, eventName }: { eventId: string; eventName
           <div className="flex h-full flex-col">
             <div className="flex items-start gap-3">
               <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                <Sparkles className="size-4" aria-hidden="true" />
+                <Bot className="size-4" aria-hidden="true" />
               </span>
               <p className="min-w-0 pt-1 text-pretty text-sm leading-6">
                 I can run {eventName} from here — review submissions, schedule

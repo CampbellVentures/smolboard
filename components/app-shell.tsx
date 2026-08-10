@@ -18,7 +18,7 @@ import {
   Settings as SettingsIcon,
   LogOut,
   ExternalLink,
-  Sparkles,
+  Bot,
   PanelRightClose,
   ChevronsUpDown,
   Menu,
@@ -65,13 +65,8 @@ interface PresencePerson {
   name: string;
 }
 
-const PRESENCE_TONES = [
-  "bg-violet-100 text-violet-700",
-  "bg-sky-100 text-sky-700",
-  "bg-emerald-100 text-emerald-700",
-  "bg-amber-100 text-amber-700",
-  "bg-rose-100 text-rose-700",
-] as const;
+// One neutral treatment for every initials chip — never color-on-color.
+const PRESENCE_TONES = ["bg-zinc-100 text-zinc-600"] as const;
 
 function initials(name: string): string {
   const words = name.trim().split(/\s+/).filter(Boolean);
@@ -507,7 +502,7 @@ export function AppShell({
               aria-label="Ask smolboard"
               aria-expanded={copilotOpen}
             >
-              <Sparkles data-icon="inline-start" />
+              <Bot data-icon="inline-start" />
               <span className="hidden xl:inline">Ask smolboard</span>
               <span className="xl:hidden">Ask</span>
             </Button> : null}
@@ -552,7 +547,7 @@ function CopilotPane({
     <aside className="hidden w-80 shrink-0 flex-col border-l border-border/60 bg-background shadow-[0_16px_48px_-16px_rgba(0,0,0,0.22)] md:fixed md:inset-y-0 md:right-0 md:z-40 md:flex xl:static xl:z-auto xl:border-l-0 xl:border-r xl:shadow-none">
       <div className="flex h-14 items-center justify-between border-b border-border/60 px-4">
         <div className="flex min-w-0 items-center gap-2 text-[13.5px] font-semibold">
-          <Sparkles className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+          <Bot className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
           <span className="truncate">Copilot</span>
           {!event && (
             <span className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
@@ -598,7 +593,7 @@ function WorkspaceCopilotTeaser({
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-5">
         <div className="flex items-start gap-3">
           <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
-            <Sparkles className="size-4" aria-hidden="true" />
+            <Bot className="size-4" aria-hidden="true" />
           </span>
           <div className="min-w-0 pt-1">
             <p className="text-pretty text-sm leading-6 text-foreground">
@@ -685,7 +680,7 @@ function UserMenu({
         {avatarUrl ? (
           <PersonAvatar name={email} src={avatarUrl} size="sm" />
         ) : (
-          <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-semibold text-primary-foreground">
+          <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-[11px] font-semibold text-zinc-600">
             {initial}
           </span>
         )}

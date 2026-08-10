@@ -301,7 +301,7 @@ function EditorShell({
 }) {
   return (
     <DashboardWidePage>
-      <div className="mx-auto w-full max-w-3xl">
+      <div className="w-full">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <button
             type="button"
@@ -315,8 +315,8 @@ function EditorShell({
 
         {aboveCanvas}
 
-        <div className="relative mt-4">
-          <div className="absolute -left-16 top-8 hidden xl:block">
+        <div className="mt-4 flex items-start gap-3">
+          <div className="sticky top-4 hidden md:block">
             <EmailBlockRail
               composer={composerRef}
               variables={VARIABLES}
@@ -325,7 +325,7 @@ function EditorShell({
             />
           </div>
 
-          <div className="overflow-hidden rounded-xl border border-border bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+          <div className="min-w-0 flex-1 overflow-hidden rounded-xl border border-border bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
             {preview ? (
               <>
                 <div className="border-b border-border px-6 py-4">

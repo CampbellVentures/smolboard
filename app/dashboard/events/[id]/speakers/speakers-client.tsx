@@ -20,6 +20,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { parseSpeakerCsv, SPEAKER_STATUSES, type SpeakerImportRow } from "@/lib/speakers";
 import { PersonAvatar } from "@/components/person-avatar";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { fmtDate, fmtDateTime } from "@/lib/format";
 import type {
   EventRow,
   SessionRow,
@@ -355,57 +363,104 @@ function SpeakerEditor({
   const set = <K extends keyof SpeakerEditorState>(key: K, value: SpeakerEditorState[K]) => setEditor({ ...editor, [key]: value });
   const templateById = new Map(templates.map((template) => [template.id, template]));
   return (
-    <ResponsiveFormOverlay.Root open onOpenChange={(open) => !open && setEditor(null)}>
-      <ResponsiveFormOverlay.Content className="max-w-4xl">
-        <form className="contents" onSubmit={onSubmit}>
-          <ResponsiveFormOverlay.Header>
-            <ResponsiveFormOverlay.Title>{editor.id ? editor.name : "Add speaker"}</ResponsiveFormOverlay.Title>
-            <ResponsiveFormOverlay.Description>{editor.id ? "Profile, status, sessions, tasks, and portal access." : "Provision an unclaimed passwordless speaker identity."}</ResponsiveFormOverlay.Description>
-          </ResponsiveFormOverlay.Header>
-          <ResponsiveFormOverlay.Body>
-            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
-              <FieldGroup className="gap-4">
-                {editor.headshotUrl ? <img src={editor.headshotUrl} alt={`${editor.name} headshot`} className="size-24 rounded-xl object-cover" /> : null}
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Field><FieldLabel htmlFor="speaker-name">Name</FieldLabel><Input id="speaker-name" value={editor.name} onChange={(event) => set("name", event.target.value)} required /></Field>
-                  <Field><FieldLabel htmlFor="speaker-email">Email</FieldLabel><Input id="speaker-email" type="email" value={editor.email} onChange={(event) => set("email", event.target.value)} disabled={Boolean(editor.id)} required /></Field>
-                  <Field><FieldLabel htmlFor="speaker-title">Job title</FieldLabel><Input id="speaker-title" value={editor.jobTitle} onChange={(event) => set("jobTitle", event.target.value)} /></Field>
-                  <Field><FieldLabel htmlFor="speaker-company">Company</FieldLabel><Input id="speaker-company" value={editor.company} onChange={(event) => set("company", event.target.value)} /></Field>
-                  <Field><FieldLabel htmlFor="speaker-status">Status</FieldLabel><Select id="speaker-status" value={editor.status} onChange={(event) => set("status", event.target.value)}>{SPEAKER_STATUSES.map((value) => <option key={value} value={value}>{label(value)}</option>)}</Select></Field>
-                  <Field><FieldLabel htmlFor="speaker-headshot">Public headshot URL</FieldLabel><Input id="speaker-headshot" type="url" placeholder="https://cdn.example.com/photo.jpg" value={editor.headshotUrl} onChange={(event) => set("headshotUrl", event.target.value)} /><FieldDescription>HTTPS image visible to organizers and the speaker. Private Pylon uploads remain speaker-only.</FieldDescription></Field>
-                </div>
-                <Field><FieldLabel htmlFor="speaker-tagline">Tagline</FieldLabel><Input id="speaker-tagline" value={editor.tagline} onChange={(event) => set("tagline", event.target.value)} /></Field>
-                <Field><FieldLabel htmlFor="speaker-bio">Bio</FieldLabel><Textarea id="speaker-bio" rows={6} value={editor.bio} onChange={(event) => set("bio", event.target.value)} /></Field>
-                <Field><FieldLabel htmlFor="speaker-logistics">Travel and logistics</FieldLabel><Textarea id="speaker-logistics" rows={3} value={editor.logistics} onChange={(event) => set("logistics", event.target.value)} placeholder="Arrival, dietary, accessibility, or travel preferences" /></Field>
-                <div className="grid gap-4 sm:grid-cols-3">
-                  <Field><FieldLabel htmlFor="speaker-website">Website</FieldLabel><Input id="speaker-website" value={editor.website} onChange={(event) => set("website", event.target.value)} /></Field>
-                  <Field><FieldLabel htmlFor="speaker-twitter">Twitter / X</FieldLabel><Input id="speaker-twitter" value={editor.twitter} onChange={(event) => set("twitter", event.target.value)} /></Field>
-                  <Field><FieldLabel htmlFor="speaker-linkedin">LinkedIn</FieldLabel><Input id="speaker-linkedin" value={editor.linkedin} onChange={(event) => set("linkedin", event.target.value)} /></Field>
-                </div>
-              </FieldGroup>
+    <Sheet open onOpenChange={(open) => !open && setEditor(null)}>
+      <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-xl">
+        <form className="flex min-h-0 flex-1 flex-col" onSubmit={onSubmit}>
+          <SheetHeader className="border-b border-border px-6 py-4">
+            <div className="flex items-center gap-3">
+              <PersonAvatar name={editor.name || "?"} src={editor.headshotUrl || null} size="lg" />
+              <div className="min-w-0">
+                <SheetTitle className="truncate text-left">
+                  {editor.id ? editor.name : "Add speaker"}
+                </SheetTitle>
+                <SheetDescription className="truncate text-left">
+                  {editor.id ? editor.email : "Provision an unclaimed passwordless speaker identity."}
+                </SheetDescription>
+              </div>
+            </div>
+          </SheetHeader>
+
+          <div className="min-h-0 flex-1 space-y-7 overflow-y-auto px-6 py-5">
+            <EditorSection title="Profile">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field><FieldLabel htmlFor="speaker-name">Name</FieldLabel><Input id="speaker-name" value={editor.name} onChange={(event) => set("name", event.target.value)} required /></Field>
+                <Field><FieldLabel htmlFor="speaker-email">Email</FieldLabel><Input id="speaker-email" type="email" value={editor.email} onChange={(event) => set("email", event.target.value)} disabled={Boolean(editor.id)} required /></Field>
+                <Field><FieldLabel htmlFor="speaker-title">Job title</FieldLabel><Input id="speaker-title" value={editor.jobTitle} onChange={(event) => set("jobTitle", event.target.value)} /></Field>
+                <Field><FieldLabel htmlFor="speaker-company">Company</FieldLabel><Input id="speaker-company" value={editor.company} onChange={(event) => set("company", event.target.value)} /></Field>
+              </div>
+              <Field><FieldLabel htmlFor="speaker-tagline">Tagline</FieldLabel><Input id="speaker-tagline" value={editor.tagline} onChange={(event) => set("tagline", event.target.value)} /></Field>
+              <Field><FieldLabel htmlFor="speaker-bio">Bio</FieldLabel><Textarea id="speaker-bio" rows={5} value={editor.bio} onChange={(event) => set("bio", event.target.value)} /></Field>
+              <Field>
+                <FieldLabel htmlFor="speaker-headshot">Public headshot URL</FieldLabel>
+                <Input id="speaker-headshot" type="url" placeholder="https://cdn.example.com/photo.jpg" value={editor.headshotUrl} onChange={(event) => set("headshotUrl", event.target.value)} />
+                <FieldDescription>HTTPS image visible to organizers and the speaker. Private Pylon uploads remain speaker-only.</FieldDescription>
+              </Field>
+            </EditorSection>
+
+            <EditorSection title="Status & portal">
+              <Field><FieldLabel htmlFor="speaker-status">Status</FieldLabel><Select id="speaker-status" value={editor.status} onChange={(event) => set("status", event.target.value)}>{SPEAKER_STATUSES.map((value) => <option key={value} value={value}>{label(value)}</option>)}</Select></Field>
               {profile ? (
-                <div className="space-y-5 text-sm">
-                  <DetailList title="Sessions" empty="No sessions assigned.">{sessions.map((session) => <div key={session.id}><div className="font-medium">{session.title}</div><div className="text-xs text-muted-foreground">{session.startTime ? new Date(session.startTime).toLocaleString() : "Unscheduled"}</div></div>)}</DetailList>
-                  <DetailList title="Tasks" empty="No tasks assigned.">{tasks.map((task) => <div key={task.id} className="flex items-center justify-between gap-2"><div><div className="font-medium">{templateById.get(task.taskTemplateId)?.title ?? "Task"}</div><div className="text-xs text-muted-foreground">{templateById.get(task.taskTemplateId)?.dueAt ? `Due ${new Date(templateById.get(task.taskTemplateId)!.dueAt!).toLocaleDateString()}` : "No due date"}</div></div><DashboardStatusBadge status={task.status}>{task.status === "done" ? "Complete" : "Incomplete"}</DashboardStatusBadge></div>)}</DetailList>
-                  <DetailList title="Private upload metadata" empty="No private uploads recorded.">{files.map((file) => <div key={file.id}><div className="font-medium">{file.label || file.kind}</div><div className="text-xs text-muted-foreground">Uploaded {new Date(file.createdAt).toLocaleString()} · bytes remain private to the speaker</div></div>)}</DetailList>
-                  <Button type="button" variant="outline" className="w-full" onClick={() => onInvite(profile.id)}><Mail data-icon="inline-start" /> Send portal invite</Button>
-                  {profile.invitedAt ? <p className="text-xs text-muted-foreground">Last invited {new Date(profile.invitedAt).toLocaleString()}</p> : null}
+                <div className="flex flex-wrap items-center gap-3">
+                  <Button type="button" variant="outline" onClick={() => onInvite(profile.id)}>
+                    <Mail data-icon="inline-start" /> Send portal invite
+                  </Button>
+                  {profile.invitedAt ? (
+                    <span className="text-xs text-muted-foreground">Last invited {fmtDateTime(profile.invitedAt)}</span>
+                  ) : null}
                 </div>
               ) : null}
-            </div>
-          </ResponsiveFormOverlay.Body>
-          <ResponsiveFormOverlay.Footer>
+            </EditorSection>
+
+            {profile ? (
+              <>
+                <EditorSection title="Sessions">
+                  <DetailList empty="No sessions assigned.">{sessions.map((session) => <div key={session.id}><div className="font-medium">{session.title}</div><div className="text-xs text-muted-foreground">{session.startTime ? fmtDateTime(session.startTime) : "Unscheduled"}</div></div>)}</DetailList>
+                </EditorSection>
+                <EditorSection title="Tasks">
+                  <DetailList empty="No tasks assigned.">{tasks.map((task) => <div key={task.id} className="flex items-center justify-between gap-2"><div><div className="font-medium">{templateById.get(task.taskTemplateId)?.title ?? "Task"}</div><div className="text-xs text-muted-foreground">{templateById.get(task.taskTemplateId)?.dueAt ? `Due ${fmtDate(templateById.get(task.taskTemplateId)!.dueAt!)}` : "No due date"}</div></div><DashboardStatusBadge status={task.status}>{task.status === "done" ? "Complete" : "Incomplete"}</DashboardStatusBadge></div>)}</DetailList>
+                </EditorSection>
+                <EditorSection title="Private upload metadata">
+                  <DetailList empty="No private uploads recorded.">{files.map((file) => <div key={file.id}><div className="font-medium">{file.label || file.kind}</div><div className="text-xs text-muted-foreground">Uploaded {fmtDateTime(file.createdAt)} · bytes remain private to the speaker</div></div>)}</DetailList>
+                </EditorSection>
+              </>
+            ) : null}
+
+            <EditorSection title="Travel & logistics">
+              <Textarea id="speaker-logistics" rows={3} value={editor.logistics} onChange={(event) => set("logistics", event.target.value)} placeholder="Arrival, dietary, accessibility, or travel preferences" aria-label="Travel and logistics" />
+            </EditorSection>
+
+            <EditorSection title="Links">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field><FieldLabel htmlFor="speaker-website">Website</FieldLabel><Input id="speaker-website" value={editor.website} onChange={(event) => set("website", event.target.value)} /></Field>
+                <Field><FieldLabel htmlFor="speaker-twitter">Twitter / X</FieldLabel><Input id="speaker-twitter" value={editor.twitter} onChange={(event) => set("twitter", event.target.value)} /></Field>
+                <Field><FieldLabel htmlFor="speaker-linkedin">LinkedIn</FieldLabel><Input id="speaker-linkedin" value={editor.linkedin} onChange={(event) => set("linkedin", event.target.value)} /></Field>
+              </div>
+            </EditorSection>
+          </div>
+
+          <div className="flex justify-end gap-2 border-t border-border px-6 py-4">
             <Button type="button" variant="outline" onClick={() => setEditor(null)}>Cancel</Button>
             <Button type="submit" disabled={saving || !editor.name.trim() || !editor.email.trim()}>{saving ? "Saving…" : "Save speaker"}</Button>
-          </ResponsiveFormOverlay.Footer>
+          </div>
         </form>
-      </ResponsiveFormOverlay.Content>
-    </ResponsiveFormOverlay.Root>
+      </SheetContent>
+    </Sheet>
   );
 }
 
-function DetailList({ title, empty, children }: { title: string; empty: string; children: React.ReactNode[] }) {
-  return <section><h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</h3><div className="space-y-2 rounded-lg border p-3">{children.length ? children : <p className="text-xs text-muted-foreground">{empty}</p>}</div></section>;
+// One labeled section in the editor sheet — quiet uppercase headers keep the
+// long form scannable.
+function EditorSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="space-y-3">
+      <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</h3>
+      {children}
+    </section>
+  );
+}
+
+function DetailList({ empty, children }: { empty: string; children: React.ReactNode[] }) {
+  return <div className="space-y-2 rounded-lg border p-3 text-sm">{children.length ? children : <p className="text-xs text-muted-foreground">{empty}</p>}</div>;
 }
 
 function eventRows<T extends { eventId: string }>(hydrated: boolean, query: { loading: boolean; data: T[] }, initial: T[], eventId: string) {
