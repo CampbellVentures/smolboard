@@ -6,12 +6,15 @@ export interface EventBranding {
   accent: string | null;
   logoUrl: string | null;
   tagline: string | null;
+  /** Full-bleed header background image (ai.engineer-style). */
+  heroUrl: string | null;
 }
 
 export const DEFAULT_BRANDING: EventBranding = {
   accent: null,
   logoUrl: null,
   tagline: null,
+  heroUrl: null,
 };
 
 // Curated accents that hold up on white — shown as swatches on the Branding
@@ -56,5 +59,5 @@ export function parseBranding(raw: unknown): EventBranding {
     typeof rec.accent === "string" && isValidAccent(rec.accent) ? rec.accent.trim() : null;
   const tagline =
     typeof rec.tagline === "string" && rec.tagline.trim() ? rec.tagline.trim().slice(0, 160) : null;
-  return { accent, logoUrl: cleanUrl(rec.logoUrl), tagline };
+  return { accent, logoUrl: cleanUrl(rec.logoUrl), tagline, heroUrl: cleanUrl(rec.heroUrl) };
 }

@@ -159,6 +159,15 @@ export async function finalizeDraft(ctx: Ctx, draft: Row) {
     toEmail: email,
     vars: { speaker_name: content.name, talk_title: content.title },
   });
+  await ctx.scheduler.runAfter(0, "sendOrganizerAlert", {
+    eventId,
+    subject: `New submission: ${content.title}`,
+    heading: "A new talk just came in",
+    intro: `${content.name} submitted to your call for speakers.`,
+    lines: [{ text: `“${content.title}”`, href: `/dashboard/events/${eventId}/abstracts` }],
+    ctaLabel: "Review it",
+    ctaHref: `/dashboard/events/${eventId}/abstracts`,
+  });
   await logActivity(ctx, {
     orgId,
     eventId,

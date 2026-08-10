@@ -59,6 +59,18 @@ export default mutation({
       reviewNote: null,
       reviewedAt: null,
     });
+    await ctx.auth.elevate({
+      admin: true,
+      reason: "queue organizer alert after speaker file upload",
+    });
+    await ctx.scheduler.runAfter(0, "sendOrganizerAlert", {
+      eventId: slot.eventId as string,
+      subject: "Speaker file ready for review",
+      heading: "A speaker uploaded a file",
+      intro: `Version ${versionNumber} is waiting for your approval.`,
+      ctaLabel: "Open the content desk",
+      ctaHref: `/dashboard/events/${slot.eventId}/content`,
+    });
     await logActivity(ctx, {
       orgId: slot.orgId as string,
       eventId: slot.eventId as string,

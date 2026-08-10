@@ -38,8 +38,67 @@ export function PublicEventShell({
   active: PublicTab;
   children: React.ReactNode;
 }) {
-  const branding = event.branding ?? { accent: null, logoUrl: null, tagline: null };
+  const branding = event.branding ?? { accent: null, logoUrl: null, tagline: null, heroUrl: null };
   const accent = branding.accent;
+  const hero = branding.heroUrl;
+  // With a hero image the masthead goes full-bleed (image + dark scrim, white
+  // text, ai.engineer-style); without one it stays the quiet white header.
+  const heading = (
+    <div className={hero ? "pb-8 pt-10" : "pt-10"}>
+      <Link href={`/${event.orgSlug}/${event.slug}`} className="inline-flex items-center gap-3">
+        {branding.logoUrl ? (
+          <img
+            src={branding.logoUrl}
+            alt={`${event.name} logo`}
+            className={
+              "h-7 w-auto max-w-40 object-contain" +
+              (hero ? " drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)]" : "")
+            }
+          />
+        ) : (
+          <BrandMark size={22} />
+        )}
+      </Link>
+      <h1
+        className={
+          "mt-4 text-balance text-3xl font-semibold tracking-tight " +
+          (hero ? "text-white" : "text-zinc-900")
+        }
+      >
+        <Link href={`/${event.orgSlug}/${event.slug}`}>{event.name}</Link>
+      </h1>
+      {branding.tagline ? (
+        <p className={"mt-2 text-pretty text-[15px] " + (hero ? "text-white/85" : "text-zinc-500")}>
+          {branding.tagline}
+        </p>
+      ) : null}
+      <div
+        className={
+          "mt-3 flex flex-wrap items-center gap-4 text-sm " +
+          (hero ? "text-white/80" : "text-zinc-500")
+        }
+      >
+        {event.startDate && (
+          <span className="flex items-center gap-1.5">
+            <CalendarDays
+              className={"size-4 " + (hero ? "text-white/60" : "text-zinc-400")}
+              aria-hidden="true"
+            />
+            {formatRange(event.startDate, event.endDate ?? undefined)}
+          </span>
+        )}
+        {event.location && (
+          <span className="flex items-center gap-1.5">
+            <MapPin
+              className={"size-4 " + (hero ? "text-white/60" : "text-zinc-400")}
+              aria-hidden="true"
+            />
+            {event.location}
+          </span>
+        )}
+      </div>
+    </div>
+  );
   return (
     <div
       className="flex min-h-screen scroll-smooth flex-col bg-zinc-50"
@@ -48,41 +107,23 @@ export function PublicEventShell({
       <header className="border-b border-zinc-200/70 bg-white">
         {/* Branded accent strip — the event's color across the very top. */}
         {accent ? <div className="h-1 w-full" style={{ background: accent }} aria-hidden="true" /> : null}
-        <div className="mx-auto w-full max-w-3xl px-6">
-          <div className="pt-10">
-            <Link href={`/${event.orgSlug}/${event.slug}`} className="inline-flex items-center gap-3">
-              {branding.logoUrl ? (
-                <img
-                  src={branding.logoUrl}
-                  alt={`${event.name} logo`}
-                  className="h-7 w-auto max-w-40 object-contain"
-                />
-              ) : (
-                <BrandMark size={22} />
-              )}
-            </Link>
-            <h1 className="mt-4 text-balance text-3xl font-semibold tracking-tight text-zinc-900">
-              <Link href={`/${event.orgSlug}/${event.slug}`}>{event.name}</Link>
-            </h1>
-            {branding.tagline ? (
-              <p className="mt-2 text-pretty text-[15px] text-zinc-500">{branding.tagline}</p>
-            ) : null}
-            <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-zinc-500">
-              {event.startDate && (
-                <span className="flex items-center gap-1.5">
-                  <CalendarDays className="size-4 text-zinc-400" aria-hidden="true" />
-                  {formatRange(event.startDate, event.endDate ?? undefined)}
-                </span>
-              )}
-              {event.location && (
-                <span className="flex items-center gap-1.5">
-                  <MapPin className="size-4 text-zinc-400" aria-hidden="true" />
-                  {event.location}
-                </span>
-              )}
-            </div>
+        {hero ? (
+          <div className="relative">
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 bg-cover bg-center"
+              style={{ backgroundImage: `url(${hero})` }}
+            />
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/45 to-black/65"
+            />
+            <div className="relative mx-auto w-full max-w-3xl px-6">{heading}</div>
           </div>
-          <nav className="-mb-px mt-6 flex gap-6" aria-label="Event pages">
+        ) : null}
+        <div className="mx-auto w-full max-w-3xl px-6">
+          {hero ? null : heading}
+          <nav className={"-mb-px flex gap-6" + (hero ? " mt-1" : " mt-6")} aria-label="Event pages">
             {TABS.map((t) => {
               const isActive = t.cfp === true && active === "cfp";
               return (

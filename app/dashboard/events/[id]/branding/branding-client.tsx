@@ -1,8 +1,16 @@
 "use client";
 
-import React, { useState } from "react";
-import { db } from "@pylonsync/react";
-import { Check, ExternalLink, Image as ImageIcon, Palette, Type } from "lucide-react";
+import React, { useRef, useState } from "react";
+import { callFn, db } from "@pylonsync/react";
+import {
+  Check,
+  ExternalLink,
+  Image as ImageIcon,
+  Mountain,
+  Palette,
+  Type,
+  Upload,
+} from "lucide-react";
 import { toast } from "sonner";
 import {
   DashboardHero,
@@ -26,6 +34,73 @@ import type { EventRow } from "@/lib/types";
 // one JSON blob on the Event row; the public shell renders it. The preview
 // iframe is the real public site, reloaded after each save.
 
+// File-picker button that pushes an image to the stack0 CDN (same organizer-
+// gated action the email editor uses) and hands back its public URL.
+function UploadImageButton({
+  eventId,
+  label,
+  onUploaded,
+}: {
+  eventId: string;
+  label: string;
+  onUploaded: (url: string) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function onPick(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (file.size > 4 * 1024 * 1024) {
+      toast.error("Images must be 4 MB or smaller.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const buf = new Uint8Array(await file.arrayBuffer());
+      let binary = "";
+      for (let i = 0; i < buf.length; i += 0x8000) {
+        binary += String.fromCharCode(...buf.subarray(i, i + 0x8000));
+      }
+      const result = await callFn<{ url: string }>("uploadEmailImage", {
+        eventId,
+        filename: file.name,
+        mimeType: file.type || "image/png",
+        dataBase64: btoa(binary),
+      });
+      onUploaded(result.url);
+      toast.success("Uploaded.");
+    } catch (caught) {
+      toast.error(caught instanceof Error ? caught.message : "Upload failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml"
+        className="hidden"
+        onChange={onPick}
+      />
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        disabled={busy}
+        onClick={() => inputRef.current?.click()}
+      >
+        <Upload data-icon="inline-start" />
+        {busy ? "Uploading…" : label}
+      </Button>
+    </>
+  );
+}
+
 export function BrandingPage({ event }: { event: EventRow }) {
   const orgSlug = useOrgSlug(event.orgId);
   const initial = parseBranding(event.brandingJson);
@@ -36,6 +111,7 @@ export function BrandingPage({ event }: { event: EventRow }) {
       : "",
   );
   const [logoUrl, setLogoUrl] = useState(initial.logoUrl ?? "");
+  const [heroUrl, setHeroUrl] = useState(initial.heroUrl ?? "");
   const [tagline, setTagline] = useState(initial.tagline ?? "");
   const [saving, setSaving] = useState(false);
   // Bumps the iframe key so the preview re-renders with what was saved.
@@ -55,6 +131,7 @@ export function BrandingPage({ event }: { event: EventRow }) {
         accent: activeAccent,
         logoUrl: logoUrl.trim() || null,
         tagline: tagline.trim() || null,
+        heroUrl: heroUrl.trim() || null,
       };
       await db.update("Event", event.id, { brandingJson: JSON.stringify(branding) });
       setPreviewNonce((n) => n + 1);
@@ -170,18 +247,49 @@ export function BrandingPage({ event }: { event: EventRow }) {
             tone="sky"
             variant="subtle"
           >
-            <Input
-              value={logoUrl}
-              onChange={(e) => setLogoUrl(e.target.value)}
-              placeholder="https://yoursite.com/logo.svg…"
-              aria-label="Logo URL"
-              autoComplete="off"
-              spellCheck={false}
-            />
+            <div className="flex items-center gap-2">
+              <Input
+                value={logoUrl}
+                onChange={(e) => setLogoUrl(e.target.value)}
+                placeholder="https://yoursite.com/logo.svg…"
+                aria-label="Logo URL"
+                autoComplete="off"
+                spellCheck={false}
+              />
+              <UploadImageButton eventId={event.id} label="Upload" onUploaded={setLogoUrl} />
+            </div>
             {logoUrl.trim() ? (
               <div className="mt-3 flex h-16 items-center rounded-lg border border-dashed bg-muted/30 px-4">
                 <img src={logoUrl} alt="Logo preview" className="h-8 w-auto max-w-48 object-contain" />
               </div>
+            ) : null}
+          </DashboardPanel>
+
+          <DashboardPanel
+            title="Header image"
+            description="Full-bleed background behind the event name — think ai.engineer. A dark scrim keeps the text readable, so most photos work."
+            icon={Mountain}
+            tone="emerald"
+            variant="subtle"
+          >
+            <div className="flex items-center gap-2">
+              <Input
+                value={heroUrl}
+                onChange={(e) => setHeroUrl(e.target.value)}
+                placeholder="https://yoursite.com/hero.jpg…"
+                aria-label="Header image URL"
+                autoComplete="off"
+                spellCheck={false}
+              />
+              <UploadImageButton eventId={event.id} label="Upload" onUploaded={setHeroUrl} />
+            </div>
+            {heroUrl.trim() ? (
+              <div
+                className="mt-3 h-24 rounded-lg border bg-cover bg-center"
+                style={{ backgroundImage: `url(${heroUrl})` }}
+                role="img"
+                aria-label="Header image preview"
+              />
             ) : null}
           </DashboardPanel>
 
