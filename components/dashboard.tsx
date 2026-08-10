@@ -233,6 +233,22 @@ function statusDot(status: string): string {
   return "bg-zinc-300";
 }
 
+// THE table/list container. One border, one radius, one background —
+// wrap every data table and row list in this.
+export function DashboardTableCard({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={cn("overflow-x-auto rounded-xl border border-border bg-card", className)}>
+      {children}
+    </div>
+  );
+}
+
 export function DashboardStatusBadge({
   status,
   children,

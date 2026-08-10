@@ -230,7 +230,7 @@ export function SpeakersTable({
           description="Add speakers manually or import a CSV to start the event roster."
         />
       ) : (
-        <div className="overflow-x-auto rounded-xl border bg-card">
+        <div className="overflow-x-auto rounded-xl border border-border bg-card">
           <Table>
             <TableHeader>
               <TableRow>

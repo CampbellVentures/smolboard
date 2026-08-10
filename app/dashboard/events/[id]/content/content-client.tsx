@@ -54,10 +54,7 @@ const STATUS_FILTERS = [
   ["awaiting_upload", "Awaiting upload"],
 ] as const;
 
-function fmtDate(iso: string | undefined): string {
-  if (!iso) return "";
-  return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
-}
+import { fmtDateTime as fmtDate } from "@/lib/format";
 
 function DownloadLink({ version, children }: { version: DeliverableVersionRow; children: React.ReactNode }) {
   const [busy, setBusy] = useState(false);

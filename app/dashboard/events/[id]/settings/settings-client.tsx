@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { db, useRouter } from "@pylonsync/react";
+import { callFn, db, useRouter } from "@pylonsync/react";
 import { useOrgSlug } from "@/components/use-org-slug";
 import { DashboardPage, DashboardPanel } from "@/components/dashboard";
 import { Button } from "@/components/ui/button";
@@ -90,7 +90,7 @@ export function EventSettings({ event }: { event: EventRow }) {
     setDeleting(true);
     setDeleteError(null);
     try {
-      await db.delete("Event", event.id);
+      await callFn("deleteEvent", { eventId: event.id });
       window.location.assign("/dashboard");
     } catch {
       setDeleting(false);

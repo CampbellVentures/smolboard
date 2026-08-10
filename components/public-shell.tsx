@@ -1,4 +1,5 @@
 import React from "react";
+import { fmtDateRange } from "@/lib/format";
 import { Link } from "@pylonsync/react";
 import { CalendarDays, MapPin } from "lucide-react";
 import { BrandMark } from "@/components/brand";
@@ -125,19 +126,6 @@ export function initials(name: string): string {
   return `${words[0][0]}${words[words.length - 1][0]}`.toUpperCase();
 }
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-function fmt(iso: string) {
-  const d = new Date(iso);
-  return `${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`;
-}
-
 export function formatRange(start: string, end?: string) {
-  if (!end || end === start) return fmt(start);
-  const s = new Date(start);
-  const e = new Date(end);
-  if (s.getUTCMonth() === e.getUTCMonth() && s.getUTCFullYear() === e.getUTCFullYear()) {
-    return `${MONTHS[s.getUTCMonth()]} ${s.getUTCDate()}–${e.getUTCDate()}, ${s.getUTCFullYear()}`;
-  }
-  return `${fmt(start)} – ${fmt(end)}`;
+  return fmtDateRange(start, end);
 }

@@ -154,7 +154,7 @@ export function FormsList({
           description="Create a submission form to open your CFP."
         />
       ) : (
-        <ul className="overflow-hidden rounded-xl border bg-card">
+        <ul className="overflow-hidden rounded-xl border border-border bg-card">
           {forms.map((f) => (
             <li
               key={f.id}

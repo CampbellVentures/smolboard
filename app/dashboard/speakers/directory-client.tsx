@@ -2,6 +2,8 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { callFn, db, Link } from "@pylonsync/react";
+import { PersonAvatar } from "@/components/person-avatar";
+import { fmtDate } from "@/lib/format";
 import { BookUser, ExternalLink, Trash2 } from "lucide-react";
 import {
   DashboardEmptyState,
@@ -94,31 +96,8 @@ export function aggregateSpeakers(
   return [...byEmail.values()].sort((a, b) => b.lastActivity.localeCompare(a.lastActivity));
 }
 
-function fmtDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
 function Avatar({ person }: { person: SpeakerPerson }) {
-  if (person.headshotUrl) {
-    return (
-      <img
-        src={person.headshotUrl}
-        alt=""
-        loading="lazy"
-        className="size-8 shrink-0 rounded-full object-cover outline outline-1 -outline-offset-1 outline-black/10"
-      />
-    );
-  }
-  const initial = (person.name.trim()[0] || "?").toUpperCase();
-  return (
-    <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-[12px] font-semibold text-zinc-600">
-      {initial}
-    </span>
-  );
+  return <PersonAvatar name={person.name} src={person.headshotUrl} />;
 }
 
 export function SpeakerDirectory({
@@ -146,7 +125,16 @@ export function SpeakerDirectory({
   const notes = !hydrated || noteQ.loading ? initialNotes : noteQ.data;
   const eventById = useMemo(() => new Map(events.map((row) => [row.id, row])), [events]);
 
-  const people = useMemo(() => aggregateSpeakers(profiles, submissions), [profiles, submissions]);
+  // Only profiles whose event still exists — pre-cascade deletes left orphans
+  // in older workspaces, and a person built purely from orphans is noise.
+  const liveProfiles = useMemo(
+    () => profiles.filter((profile) => eventById.has(profile.eventId)),
+    [profiles, eventById],
+  );
+  const people = useMemo(
+    () => aggregateSpeakers(liveProfiles, submissions),
+    [liveProfiles, submissions],
+  );
   const allTags = useMemo(
     () => [...new Set(people.flatMap((person) => person.tags))].sort(),
     [people],
@@ -252,11 +240,14 @@ export function SpeakerDirectory({
                 </TableCell>
                 <TableCell>
                   <div className="flex flex-wrap gap-1">
-                    {person.profiles.slice(0, 3).map((profile) => (
-                      <Badge key={profile.id} variant="outline" className="max-w-36 truncate">
-                        {eventById.get(profile.eventId)?.name ?? "Event"}
-                      </Badge>
-                    ))}
+                    {person.profiles
+                      .filter((profile) => eventById.has(profile.eventId))
+                      .slice(0, 3)
+                      .map((profile) => (
+                        <Badge key={profile.id} variant="outline" className="max-w-36 truncate">
+                          {eventById.get(profile.eventId)!.name}
+                        </Badge>
+                      ))}
                     {person.profiles.length > 3 ? (
                       <span className="text-xs text-muted-foreground">
                         +{person.profiles.length - 3}

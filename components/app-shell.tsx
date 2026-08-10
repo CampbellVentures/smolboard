@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { PersonAvatar } from "./person-avatar";
 import { lastEventStorageKey } from "@/lib/dashboard-routing";
 import { CopilotChat } from "@/components/copilot-chat";
 import { useEnsureOrgSlug } from "@/components/use-org-slug";
@@ -682,12 +683,7 @@ function UserMenu({
         }
       >
         {avatarUrl ? (
-          <img
-            src={avatarUrl}
-            alt=""
-            referrerPolicy="no-referrer"
-            className="size-7 shrink-0 rounded-full object-cover outline outline-1 -outline-offset-1 outline-black/10"
-          />
+          <PersonAvatar name={email} src={avatarUrl} size="sm" />
         ) : (
           <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-semibold text-primary-foreground">
             {initial}

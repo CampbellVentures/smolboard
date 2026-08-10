@@ -487,7 +487,7 @@ function Grid({
   }
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white">
+    <div className="overflow-x-auto rounded-xl border border-border bg-card">
       <div className="flex min-w-fit">
         {/* Time gutter */}
         <div className="w-14 shrink-0 border-r border-zinc-100">
@@ -628,7 +628,7 @@ function ListView({
 }) {
   const sorted = sessions.slice().sort((a, b) => (a.startTime! < b.startTime! ? -1 : 1));
   return (
-    <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white">
+    <div className="overflow-x-auto rounded-xl border border-border bg-card">
       <Table>
         <TableHeader>
           <TableRow>

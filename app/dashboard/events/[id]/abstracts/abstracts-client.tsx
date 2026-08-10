@@ -295,7 +295,7 @@ export function AbstractsView({
         )}
 
         {/* Table */}
-        <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white">
+        <div className="overflow-x-auto rounded-xl border border-border bg-card">
           <Table>
             <TableHeader>
               <TableRow>

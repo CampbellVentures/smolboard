@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { ArrowRight, CalendarDays, Loader2, Send } from "lucide-react";
 import { InitialsAvatar, type PublicEventInfo } from "@/components/public-shell";
+import { PersonAvatar } from "@/components/person-avatar";
 
 // The whole public event site is ONE page: description, schedule, speakers —
 // the header tabs are anchor links that scroll here. Only the CFP is a
@@ -409,16 +410,7 @@ function SessionDetailDialog({
           <div className="space-y-3">
             {session.speakers.map((sp) => (
               <div key={sp.name} className="flex items-start gap-3">
-                {sp.headshotUrl ? (
-                  <img
-                    src={sp.headshotUrl}
-                    alt=""
-                    loading="lazy"
-                    className="size-10 shrink-0 rounded-full object-cover outline outline-1 -outline-offset-1 outline-black/10"
-                  />
-                ) : (
-                  <InitialsAvatar name={sp.name} className="size-10 text-[12px]" />
-                )}
+                <PersonAvatar name={sp.name} src={sp.headshotUrl} size="lg" />
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-zinc-900">{sp.name}</p>
                   <p className="text-xs text-zinc-500">
@@ -486,16 +478,7 @@ function SpeakersSection({
             className="rounded-xl bg-white p-5 shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.04)]"
           >
             <div className="flex items-center gap-3">
-              {sp.headshotUrl ? (
-                <img
-                  src={sp.headshotUrl}
-                  alt=""
-                  loading="lazy"
-                  className="size-11 shrink-0 rounded-full object-cover outline outline-1 -outline-offset-1 outline-black/10"
-                />
-              ) : (
-                <InitialsAvatar name={sp.name} className="size-11 text-[13px]" />
-              )}
+              <PersonAvatar name={sp.name} src={sp.headshotUrl} size="xl" />
               <div className="min-w-0">
                 <h3 className="truncate text-[15px] font-semibold text-zinc-900">{sp.name}</h3>
                 <p className="truncate text-xs text-zinc-500">

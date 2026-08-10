@@ -227,7 +227,7 @@ export function TasksClient({
             </div>
           </DashboardToolbar>
 
-          <div className="overflow-hidden rounded-xl border bg-card">
+          <div className="overflow-hidden rounded-xl border border-border bg-card">
             <Table>
             <TableHeader>
               <TableRow>
@@ -310,7 +310,7 @@ export function TasksClient({
               <option value="done">Complete</option>
             </Select>
           </DashboardToolbar>
-          <div className="overflow-x-auto rounded-xl border bg-card">
+          <div className="overflow-x-auto rounded-xl border border-border bg-card">
             <Table>
               <TableHeader>
                 <TableRow>
