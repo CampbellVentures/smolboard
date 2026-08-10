@@ -273,7 +273,7 @@ export function AbstractsView({
               </Select>
             )}
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             {rounds.length > 0 ? (
               <ReviewOperations
                 eventId={event.id}
@@ -918,7 +918,7 @@ function ReviewOperations({
     URL.revokeObjectURL(url);
   }
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex flex-wrap items-center gap-1">
       <Button type="button" size="sm" variant="outline" onClick={() => void assign()}>Assign reviewers</Button>
       <Button type="button" size="sm" variant="ghost" onClick={() => void remind()}>Remind</Button>
       <Button type="button" size="sm" variant="ghost" onClick={() => void download()}>Export CSV</Button>
