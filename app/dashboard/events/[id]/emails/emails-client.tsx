@@ -13,7 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { DashboardPage, DashboardStatusBadge } from "@/components/dashboard";
+import { DashboardStatusBadge, DashboardWidePage } from "@/components/dashboard";
 import {
   EmailComposer,
   type EmailComposerContent,
@@ -109,7 +109,7 @@ export function EmailsClient({
   );
   const [view, setView] = useState<View>({ kind: "index" });
 
-  if (!hydrated) return <DashboardPage>{null}</DashboardPage>;
+  if (!hydrated) return <DashboardWidePage>{null}</DashboardWidePage>;
 
   if (view.kind === "template") {
     return (
@@ -160,7 +160,7 @@ function EmailsIndex({
   const sent = logs.filter((log) => log.status === "sent").length;
   const failed = logs.filter((log) => log.status === "failed").length;
   return (
-    <DashboardPage>
+    <DashboardWidePage>
       <div className="w-full">
         <div className="flex items-center justify-between">
           <div>
@@ -258,7 +258,7 @@ function EmailsIndex({
           )}
         </div>
       </div>
-    </DashboardPage>
+    </DashboardWidePage>
   );
 }
 
@@ -300,7 +300,7 @@ function EditorShell({
   onUploadImage: (file: File) => Promise<{ url: string }>;
 }) {
   return (
-    <DashboardPage>
+    <DashboardWidePage>
       <div className="mx-auto w-full max-w-3xl">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <button
@@ -384,7 +384,7 @@ function EditorShell({
           </p>
         )}
       </div>
-    </DashboardPage>
+    </DashboardWidePage>
   );
 }
 
