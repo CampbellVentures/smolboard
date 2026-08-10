@@ -289,7 +289,7 @@ function ScheduleSection({
                         key={s.id}
                         onClick={isBreak ? undefined : () => setDetail(s)}
                         className={
-                          "rounded-xl bg-white p-4 shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.04)] " +
+                          "min-w-0 rounded-xl bg-white p-4 shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.04)] " +
                           (isBreak
                             ? "opacity-70"
                             : "cursor-pointer transition-shadow hover:shadow-[0_0_0_1px_rgba(0,0,0,0.1),0_2px_6px_rgba(0,0,0,0.06)]")
@@ -486,7 +486,7 @@ function SpeakersSection({
         {feed.speakers.map((sp) => (
           <article
             key={sp.name}
-            className="rounded-xl bg-white p-5 shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.04)]"
+            className="min-w-0 rounded-xl bg-white p-5 shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.04)]"
           >
             <div className="flex items-center gap-3">
               <PersonAvatar name={sp.name} src={sp.headshotUrl} size="xl" />

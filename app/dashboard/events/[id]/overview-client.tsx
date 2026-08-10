@@ -322,7 +322,7 @@ export function EventOverview({
 
         <Separator className="my-5" />
 
-        <dl className="grid gap-5 sm:grid-cols-3 sm:gap-0">
+        <dl className="grid grid-cols-3 gap-3 sm:gap-0">
           <OverviewMetric label="Submissions" value={submissions.length} />
           <OverviewMetric label="Need review" value={awaitingReview} />
           <OverviewMetric label="Accepted" value={accepted} />
@@ -559,7 +559,7 @@ export function EventOverview({
 
 function OverviewMetric({ label, value }: { label: string; value: number }) {
   return (
-    <div className="sm:px-6 sm:first:pl-0 sm:last:pr-0">
+    <div className="min-w-0 sm:px-6 sm:first:pl-0 sm:last:pr-0">
       <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
       <dd className="mt-1 text-2xl font-semibold tracking-tight tabular-nums">{value}</dd>
     </div>

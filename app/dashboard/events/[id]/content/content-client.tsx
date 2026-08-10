@@ -308,7 +308,8 @@ export function ContentTable({
                     ) : null}
                   </TableCell>
                   <TableCell className="text-sm tabular-nums text-zinc-500">
-                    {fmtDate(latest?.createdAt)}
+                    {/* Viewer-local time: differs from the SSR (UTC) render by design. */}
+                    <span suppressHydrationWarning>{fmtDate(latest?.createdAt)}</span>
                   </TableCell>
                   <TableCell>
                     <DashboardStatusBadge status={rowStatus}>
@@ -396,7 +397,7 @@ export function ContentTable({
                   <DownloadLink version={version}>
                     <span className="truncate">{version.filename}</span>
                   </DownloadLink>
-                  <span className="shrink-0 text-xs tabular-nums text-zinc-400">
+                  <span className="shrink-0 text-xs tabular-nums text-zinc-400" suppressHydrationWarning>
                     v{version.versionNumber} · {fmtDate(version.createdAt)}
                   </span>
                 </li>
