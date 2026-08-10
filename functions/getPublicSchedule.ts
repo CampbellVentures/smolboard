@@ -109,6 +109,9 @@ export default query<
                 name: p.name as string,
                 tagline: (p.tagline as string) ?? null,
                 company: (p.company as string) ?? null,
+                jobTitle: (p.jobTitle as string) ?? null,
+                bio: (p.bio as string) ?? null,
+                headshotUrl: (p.headshotUrl as string) ?? null,
               })),
           };
         })

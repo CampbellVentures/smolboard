@@ -3,6 +3,14 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { callFn, Link } from "@pylonsync/react";
 import { dayKey, fmtTime, minutesInDay } from "@/lib/agenda";
+import { buildCalendarUrls, buildIcsInvite } from "@/lib/ics";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { ArrowRight, CalendarDays, Loader2, Send } from "lucide-react";
 import { InitialsAvatar, type PublicEventInfo } from "@/components/public-shell";
 
@@ -24,7 +32,14 @@ export interface ScheduleFeed {
     trackId: string | null;
     startTime: string | null;
     endTime: string | null;
-    speakers: { name: string; tagline: string | null; company: string | null }[];
+    speakers: {
+      name: string;
+      tagline: string | null;
+      company: string | null;
+      jobTitle: string | null;
+      bio: string | null;
+      headshotUrl: string | null;
+    }[];
   }[];
 }
 
@@ -85,7 +100,7 @@ export function EventSite({
     }
   }, [orgSlug, eventSlug, initialSchedule, initialSpeakers]);
 
-  if (section === "schedule") return <ScheduleSection feed={schedule} error={error} embedded />;
+  if (section === "schedule") return <ScheduleSection feed={schedule} error={error} embedded eventInfo={event} />;
   if (section === "speakers") return <SpeakersSection feed={speakers} embedded />;
 
   return (
@@ -112,7 +127,7 @@ export function EventSite({
         </Link>
       )}
 
-      <ScheduleSection feed={schedule} error={error} />
+      <ScheduleSection feed={schedule} error={error} eventInfo={event} />
       <SpeakersSection feed={speakers} />
     </>
   );
@@ -120,14 +135,18 @@ export function EventSite({
 
 /* ------------------------------ Schedule ------------------------------ */
 
+type PublicSession = ScheduleFeed["sessions"][number];
+
 function ScheduleSection({
   feed,
   error,
   embedded = false,
+  eventInfo,
 }: {
   feed: ScheduleFeed | null;
   error: boolean;
   embedded?: boolean;
+  eventInfo: PublicEventInfo;
 }) {
   const tz = feed?.event?.timezone ?? "UTC";
   const days = useMemo(() => {
@@ -137,6 +156,8 @@ function ScheduleSection({
   const [day, setDay] = useState<string | null>(null);
   const activeDay = day ?? days[0];
   const [trackFilter, setTrackFilter] = useState<string>("");
+  const [search, setSearch] = useState("");
+  const [detail, setDetail] = useState<PublicSession | null>(null);
 
   const roomName = (id: string | null) => feed?.rooms.find((r) => r.id === id)?.name;
   const track = (id: string | null) => feed?.tracks.find((t) => t.id === id);
@@ -145,8 +166,16 @@ function ScheduleSection({
     if (!feed || !activeDay) return [];
     let list = feed.sessions.filter((s) => dayKey(s.startTime!, tz) === activeDay);
     if (trackFilter) list = list.filter((s) => s.trackId === trackFilter);
+    if (search.trim()) {
+      const needle = search.trim().toLowerCase();
+      list = list.filter(
+        (s) =>
+          s.title.toLowerCase().includes(needle) ||
+          s.speakers.some((sp) => sp.name.toLowerCase().includes(needle)),
+      );
+    }
     return list.sort((a, b) => (a.startTime! < b.startTime! ? -1 : 1));
-  }, [feed, activeDay, trackFilter, tz]);
+  }, [feed, activeDay, trackFilter, search, tz]);
 
   // Group consecutive sessions that share a start time into one time block.
   const blocks = useMemo(() => {
@@ -199,12 +228,19 @@ function ScheduleSection({
                 {dayLabel(d)}
               </button>
             ))}
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search talks…"
+              aria-label="Search schedule"
+              className="ml-auto h-8 w-40 rounded-full bg-white px-3.5 text-[13px] text-zinc-600 shadow-[0_0_0_1px_rgba(0,0,0,0.06)] outline-none placeholder:text-zinc-400 focus:shadow-[0_0_0_1px_rgba(0,0,0,0.15)]"
+            />
             {feed.tracks.length > 0 && (
               <select
                 value={trackFilter}
                 onChange={(e) => setTrackFilter(e.target.value)}
                 aria-label="Filter by track"
-                className="ml-auto h-8 rounded-full bg-white px-3 text-[13px] text-zinc-600 shadow-[0_0_0_1px_rgba(0,0,0,0.06)] outline-none"
+                className="h-8 rounded-full bg-white px-3 text-[13px] text-zinc-600 shadow-[0_0_0_1px_rgba(0,0,0,0.06)] outline-none"
               >
                 <option value="">All tracks</option>
                 {feed.tracks.map((t) => (
@@ -239,9 +275,12 @@ function ScheduleSection({
                     return (
                       <article
                         key={s.id}
+                        onClick={isBreak ? undefined : () => setDetail(s)}
                         className={
                           "rounded-xl bg-white p-4 shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.04)] " +
-                          (isBreak ? "opacity-70" : "")
+                          (isBreak
+                            ? "opacity-70"
+                            : "cursor-pointer transition-shadow hover:shadow-[0_0_0_1px_rgba(0,0,0,0.1),0_2px_6px_rgba(0,0,0,0.06)]")
                         }
                       >
                         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
@@ -293,7 +332,133 @@ function ScheduleSection({
           </div>
         </>
       )}
+      <SessionDetailDialog
+        session={detail}
+        onClose={() => setDetail(null)}
+        tz={tz}
+        roomName={detail ? roomName(detail.roomId) : undefined}
+        trackName={detail ? track(detail.trackId)?.name ?? null : null}
+        eventInfo={eventInfo}
+      />
     </section>
+  );
+}
+
+/* --------------------------- Session detail --------------------------- */
+
+function SessionDetailDialog({
+  session,
+  onClose,
+  tz,
+  roomName,
+  trackName,
+  eventInfo,
+}: {
+  session: PublicSession | null;
+  onClose: () => void;
+  tz: string;
+  roomName?: string;
+  trackName: string | null;
+  eventInfo: PublicEventInfo;
+}) {
+  if (!session || !session.startTime || !session.endTime) {
+    return null;
+  }
+  const location = [roomName, eventInfo.location].filter(Boolean).join(" · ");
+  const calendar = buildCalendarUrls({
+    start: session.startTime,
+    end: session.endTime,
+    summary: `${session.title} — ${eventInfo.name}`,
+    description: session.description ?? undefined,
+    location: location || undefined,
+    icsUrl: "",
+  });
+  function downloadIcs() {
+    const ics = buildIcsInvite({
+      uid: `${session!.id}@smolboard`,
+      start: session!.startTime!,
+      end: session!.endTime!,
+      summary: `${session!.title} — ${eventInfo.name}`,
+      description: session!.description ?? undefined,
+      location: location || undefined,
+    });
+    const blob = new Blob([ics], { type: "text/calendar" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `${session!.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.ics`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  }
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="text-left text-lg leading-snug">{session.title}</DialogTitle>
+          <DialogDescription className="text-left">
+            {fmtTime(minutesInDay(session.startTime, tz))}–{fmtTime(minutesInDay(session.endTime, tz))}
+            {roomName ? ` · ${roomName}` : ""}
+            {trackName ? ` · ${trackName}` : ""}
+          </DialogDescription>
+        </DialogHeader>
+        {session.description ? (
+          <p className="whitespace-pre-line text-[14px] leading-relaxed text-zinc-600">
+            {session.description}
+          </p>
+        ) : null}
+        {session.speakers.length > 0 ? (
+          <div className="space-y-3">
+            {session.speakers.map((sp) => (
+              <div key={sp.name} className="flex items-start gap-3">
+                {sp.headshotUrl ? (
+                  <img
+                    src={sp.headshotUrl}
+                    alt=""
+                    loading="lazy"
+                    className="size-10 shrink-0 rounded-full object-cover outline outline-1 -outline-offset-1 outline-black/10"
+                  />
+                ) : (
+                  <InitialsAvatar name={sp.name} className="size-10 text-[12px]" />
+                )}
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-zinc-900">{sp.name}</p>
+                  <p className="text-xs text-zinc-500">
+                    {[sp.jobTitle, sp.company].filter(Boolean).join(", ") || sp.tagline || ""}
+                  </p>
+                  {sp.bio ? (
+                    <p className="mt-1 line-clamp-3 text-[13px] leading-relaxed text-zinc-500">{sp.bio}</p>
+                  ) : null}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : null}
+        <div className="flex flex-wrap gap-2 border-t border-zinc-100 pt-3">
+          <a
+            href={calendar.google}
+            target="_blank"
+            rel="noreferrer"
+            className="rounded-full bg-zinc-100 px-3 py-1.5 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-200"
+          >
+            Google Calendar
+          </a>
+          <a
+            href={calendar.outlook}
+            target="_blank"
+            rel="noreferrer"
+            className="rounded-full bg-zinc-100 px-3 py-1.5 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-200"
+          >
+            Outlook
+          </a>
+          <button
+            type="button"
+            onClick={downloadIcs}
+            className="rounded-full bg-zinc-100 px-3 py-1.5 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-200"
+          >
+            Download .ics
+          </button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
