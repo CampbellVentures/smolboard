@@ -55,6 +55,15 @@ export default mutation<{ orgId: string }, { eventId: string }>({
       location: "San Francisco, CA",
       cfpStatus: "open",
       schedulePublished: true,
+      // Branded out of the box so the public site demos the hero treatment.
+      brandingJson: JSON.stringify({
+        accent: "#7c3aed",
+        logoUrl:
+          "https://cdn.stack0.dev/30d4ac08-ddda-4035-ab78-5a9785c469a7/4a5091be-57e0-47cc-8576-6284863da7cf/devsummit-logo.svg",
+        heroUrl:
+          "https://cdn.stack0.dev/30d4ac08-ddda-4035-ab78-5a9785c469a7/56d1598b-c7ea-4973-acdb-9a6bdb56883a/devsummit-hero.svg",
+        tagline: "Two days of shipping-focused talks and workshops.",
+      }),
     })) as string;
 
     const formId = (await ctx.db.unsafe.insert("SubmissionForm", {

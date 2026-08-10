@@ -16,11 +16,22 @@ The six requirements from the brief, all working end to end:
 5. **Drag-and-drop agenda** — day × room grid, 15-minute slots, drag accepted talks from the tray, conflict detection (room overlaps + double-booked speakers) recomputed on every change. List and track views. One-click publish to a public schedule page.
 6. **Real-time dashboard** — submissions, review progress, and speaker onboarding status, all live queries: no refresh, ever.
 
+Beyond the brief:
+
+- **Content desk** — versioned speaker deliverables (slides, headshots) with organizer review; approving content is what gates it onto the public schedule, and approved files ship as signed URLs or a one-click ZIP.
+- **Branding & white-label** — per-event accent color, logo, tagline, and a full-bleed header image (ai.engineer-style) on the public site; alert emails render in the same brand. Assets upload straight to a CDN.
+- **Embeds** — copy-paste iframe widgets for the live schedule and speaker gallery, with in-dashboard previews framed as a real browser.
+- **Activity everywhere** — a server-written audit feed drives the bell menu, immediate organizer alert emails (new submission, file awaiting review), and a daily digest that stays silent on quiet days.
+- **Analytics at a glance** — submissions-over-time sparkline and a status funnel on the event overview.
+- **Speaker CRM** — a workspace-wide directory aggregating every person across events, with private organizer notes.
+- **Cmd+K** — palette over pages, events, submissions, and speakers, powered by the local sync replica (no server round trip).
+- **Calendar feed** — `/​<org>/<event>/calendar.ics` is a subscribable schedule (RFC 5545 `METHOD:PUBLISH`) honoring the same content-approval gate as the public page.
+
 ## The agent layer
 
 Sessionboard sells "AI & MCP" as six named agents. smolboard ships one tool belt (`lib/agent-tools.ts`) exposed two ways:
 
-- **Event copilot** — a chat pane in the dashboard running a streaming tool-use loop (`ctx.llm.stream`). Ask it to review, accept, schedule (conflict-checked — it refuses collisions and says why), or nudge speakers. Its writes go through the same functions as the UI buttons, and every table is a live query, so you watch its changes land next to the conversation.
+- **Event copilot** — a chat pane in the dashboard running a streaming tool-use loop (`ctx.llm.stream`). Ask it to review, accept, schedule (conflict-checked — it refuses collisions and says why), nudge speakers, or summarize what happened today (the activity feed is a tool too). Its writes go through the same functions as the UI buttons, and every table is a live query, so you watch its changes land next to the conversation.
 - **MCP server** — the same tools over the Model Context Protocol:
 
   ```bash
@@ -38,7 +49,7 @@ Public read API (no auth): `POST /api/fn/getPublicSchedule` and `POST /api/fn/ge
 ```bash
 bun install
 bun run dev        # http://localhost:4321
-bun test           # 69 tests (form logic, conflicts, ICS, components)
+bun test           # form logic, conflicts, ICS, ZIP, branding, components
 pylon lint --strict
 ```
 
@@ -55,8 +66,8 @@ Deploy with `pylon deploy`. The manifest already declares `trustedOrigins` for t
 
 ## Architecture
 
-- `app.ts` — 21 entities + row-level policies. Everything org-scoped; speakers get owner-scoped reads (their submissions/tasks sync live to the portal); public pages read only through gated `auth: "public"` functions that strip private fields (speaker emails never leave the server).
-- `functions/` — 27 server functions. Status changes, emails, scheduling, the copilot loop, and the MCP endpoint. Agent tools and UI buttons share the same functions.
+- `app.ts` — 32 entities + row-level policies. Everything org-scoped; speakers get owner-scoped reads (their submissions/tasks sync live to the portal); public pages read only through gated `auth: "public"` functions that strip private fields (speaker emails never leave the server).
+- `functions/` — 90+ server functions. Status changes, emails, scheduling, the copilot loop, and the MCP endpoint. Agent tools and UI buttons share the same functions.
 - `lib/` — pure, tested logic: form engine (conditional visibility, validation, routing), agenda math (conflicts, DST-safe timezone handling), RFC 5545 ICS builder, merge-tag templating.
 - `app/` — SSR pages: organizer dashboard (three-pane: nav / copilot / content), public CFP + schedule + speakers, speaker portal.
 
