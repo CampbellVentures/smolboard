@@ -333,9 +333,9 @@ export function AgendaBuilder({
         </div>
       )}
 
-      <div className="flex gap-5">
+      <div className="flex flex-col gap-5 lg:flex-row">
         {/* Tray */}
-        <div className="w-60 shrink-0 space-y-3">
+        <div className="w-full shrink-0 space-y-3 lg:w-60">
           <h3 className="text-[11px] font-medium uppercase tracking-wide text-zinc-400">
             Unscheduled
           </h3>
@@ -1108,7 +1108,7 @@ function SessionPopover({
                 ))}
               </div>
             </Field>
-            <FieldGroup className="grid grid-cols-2 gap-3">
+            <FieldGroup className="grid gap-3 sm:grid-cols-2">
               <Field>
                 <FieldLabel htmlFor="session-duration">Duration</FieldLabel>
                 <Select

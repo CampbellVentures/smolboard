@@ -213,7 +213,7 @@ export function ContentTable({
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search files or speakers…"
-            className="w-64"
+            className="w-full sm:w-64"
             aria-label="Search files"
             autoComplete="off"
           />

@@ -80,7 +80,7 @@ export function ActivityBell({ workspaceId }: { workspaceId: string }) {
           />
         ) : null}
       </summary>
-      <div className="absolute right-0 top-11 z-50 w-[22rem] overflow-hidden rounded-xl border border-border bg-card shadow-lg">
+      <div className="absolute right-0 top-11 z-50 w-[min(22rem,calc(100vw-1.5rem))] overflow-hidden rounded-xl border border-border bg-card shadow-lg">
         <div className="flex items-center justify-between border-b bg-muted/40 px-4 py-2.5">
           <span className="text-sm font-semibold">Activity</span>
           <span className="text-[11px] text-muted-foreground">

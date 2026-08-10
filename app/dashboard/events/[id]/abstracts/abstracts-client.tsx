@@ -253,7 +253,7 @@ export function AbstractsView({
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Search title, abstract, speaker…"
-              className="w-64"
+              className="w-full sm:w-64"
               aria-label="Search submissions"
               autoComplete="off"
             />

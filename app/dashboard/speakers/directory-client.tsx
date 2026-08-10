@@ -186,7 +186,7 @@ export function SpeakerDirectory({
             value={q}
             onChange={(event) => setQ(event.target.value)}
             placeholder="Search name, email, company…"
-            className="w-64"
+            className="w-full sm:w-64"
             aria-label="Search speakers"
             autoComplete="off"
           />
@@ -292,7 +292,7 @@ export function SpeakerDirectory({
       </div>
 
       <Sheet open={selected !== null} onOpenChange={(open) => !open && setSelected(null)}>
-        <SheetContent className="overflow-y-auto sm:max-w-lg">
+        <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
           {selected ? (
             <>
               <SheetHeader>

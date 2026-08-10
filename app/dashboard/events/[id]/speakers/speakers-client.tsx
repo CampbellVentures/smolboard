@@ -215,7 +215,7 @@ export function SpeakersTable({
             value={q}
             onChange={(event_) => setQ(event_.target.value)}
             placeholder="Search speakers…"
-            className="w-64"
+            className="w-full sm:w-64"
             aria-label="Search speakers"
           />
           <Select aria-label="Filter speaker status" value={status} onChange={(event_) => setStatus(event_.target.value)} className="w-40">
