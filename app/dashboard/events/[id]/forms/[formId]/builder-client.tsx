@@ -245,7 +245,10 @@ export function FormBuilder({
             <label className="text-xs font-medium text-zinc-600">Closes ({event.timezone})<Input type="datetime-local" className="mt-1" value={closesAt} onChange={(event) => setClosesAt(event.target.value)} /></label>
           </div>
           <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <span className="break-all text-xs text-zinc-400">
+            <span
+              className="min-w-0 truncate text-xs text-zinc-400"
+              title={`/${orgSlug ?? "…"}/${event.slug}/cfp/${slugify(name) || form.slug}`}
+            >
               Public URL: /{orgSlug ?? "…"}/{event.slug}/cfp/{slugify(name) || form.slug}
             </span>
             <div className="flex items-center gap-3">
@@ -789,7 +792,7 @@ function RoutingEditor({
           {routing.rules.map((r, i) => {
             const target = answerable.find((f) => f.key === r.field);
             return (
-              <li key={i} className="grid gap-2 sm:grid-cols-[auto_minmax(0,1fr)_6rem_minmax(0,1fr)_auto_8rem_auto] sm:items-center">
+              <li key={i} className="grid gap-2 sm:grid-cols-[auto_minmax(7rem,1fr)_6rem_minmax(7rem,1fr)_auto_minmax(6rem,8rem)_auto] sm:items-center">
                 <span className="hidden text-xs text-zinc-400 sm:inline">if</span>
                 <Select
                   value={r.field}

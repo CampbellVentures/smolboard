@@ -607,7 +607,7 @@ function NextStepRow({
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium">{step.title}</p>
         <p className="mt-0.5 text-xs leading-5 text-muted-foreground">{step.description}</p>
-        <div className="mt-1 -ml-2.5">{action}</div>
+        <div className="mt-1 -ml-3">{action}</div>
       </div>
     </div>
   );

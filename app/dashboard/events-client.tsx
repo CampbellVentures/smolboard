@@ -17,7 +17,7 @@ import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/c
 import { Input } from "@/components/ui/input";
 import { CalendarPlus } from "lucide-react";
 import { slugify } from "@/lib/forms";
-import { fmtDate } from "./dashboard-client";
+import { fmtDateRange } from "@/lib/format";
 import type { EventRow } from "@/lib/types";
 
 // Events list: server-seeded, then live. Creating an event is a direct
@@ -218,7 +218,7 @@ export function EventsList({
                 event={ev}
                 orgSlug={orgSlug}
                 submissionCount={submissionCounts[ev.id] ?? 0}
-                dateLabel={ev.startDate ? fmtDate(ev.startDate) : undefined}
+                dateLabel={ev.startDate ? fmtDateRange(ev.startDate, ev.endDate) : undefined}
               />
             </li>
           ))}
