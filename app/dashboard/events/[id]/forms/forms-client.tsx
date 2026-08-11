@@ -30,6 +30,7 @@ import { toast } from "sonner";
 import { ChevronRight, FilePlus2, FileText, ExternalLink, Trash2 } from "lucide-react";
 import { parseFields, slugify } from "@/lib/forms";
 import { useOrgSlug } from "@/components/use-org-slug";
+import { useOptimisticRemoval } from "@/components/use-optimistic-removal";
 import { parseJson } from "@/lib/types";
 import type { EventRow, SubmissionFormRow, SubmissionRow } from "@/lib/types";
 
@@ -82,7 +83,14 @@ export function FormsList({
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => setHydrated(true), []);
   const { data, loading } = db.useQuery<SubmissionFormRow>("SubmissionForm");
-  const rows = !hydrated || loading ? initial : data.filter((f) => f.eventId === event.id);
+  const allRows = !hydrated || loading ? initial : data.filter((f) => f.eventId === event.id);
+  // A confirmed delete leaves the card up for seconds while the replica
+  // catches up — hide it immediately instead.
+  const removal = useOptimisticRemoval();
+  const rows = allRows.filter((f) => !removal.isHidden(f.id));
+  useEffect(() => {
+    removal.settle(allRows.map((f) => f.id));
+  }, [allRows, removal]);
   const submissionQuery = db.useQuery<SubmissionRow>("Submission");
   const submissions = (
     !hydrated || submissionQuery.loading ? initialSubmissions : submissionQuery.data
@@ -97,6 +105,7 @@ export function FormsList({
   async function remove(formId: string, name: string) {
     try {
       await callFn("deleteSubmissionForm", { formId });
+      removal.hide(formId);
       toast.success(`Deleted “${name}”`);
     } catch (caught) {
       toast.error(caught instanceof Error ? caught.message : "Couldn't delete the form.");

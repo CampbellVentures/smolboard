@@ -49,6 +49,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { useOptimisticRemoval } from "@/components/use-optimistic-removal";
 import { fieldsOf } from "@/lib/types";
 import { taskDueState } from "@/lib/tasks";
 import type {
@@ -126,9 +127,14 @@ export function TasksClient({
     (task) => taskDueState(task, templateById.get(task.taskTemplateId) ?? {}, now) === "overdue",
   );
 
+  const removal = useOptimisticRemoval();
+  useEffect(() => {
+    removal.settle(templates.map((t) => t.id));
+  }, [templates, removal]);
   const rows = useMemo(
     () =>
       templates
+        .filter((template) => !removal.isHidden(template.id))
         .slice()
         .sort((a, b) => a.sortOrder - b.sortOrder)
         .map((template) => {
@@ -140,7 +146,7 @@ export function TasksClient({
             overdue: assigned.filter((task) => taskDueState(task, template, now) === "overdue").length,
           };
         }),
-    [templates, tasks],
+    [templates, tasks, removal],
   );
 
   function editTemplate(template: TaskTemplateRow) {
@@ -190,6 +196,7 @@ export function TasksClient({
   async function remove(templateId: string) {
     try {
       await callFn("deleteTaskTemplate", { templateId });
+      removal.hide(templateId);
       toast.success("Task deleted");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not delete the task.");

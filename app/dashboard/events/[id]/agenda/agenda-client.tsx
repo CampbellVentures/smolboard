@@ -24,6 +24,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { useOptimisticRemoval } from "@/components/use-optimistic-removal";
 import { Badge } from "@/components/ui/badge";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -134,7 +135,15 @@ export function AgendaBuilder({
     initial: T[],
   ) => (!hydrated || q.loading ? initial : q.data.filter((r) => r.eventId === event.id));
   const sessions = live(sesQ, initialSessions);
-  const rooms = live(roomQ, initialRooms).slice().sort((a, b) => a.sortOrder - b.sortOrder);
+  const removal = useOptimisticRemoval();
+  const allRooms = live(roomQ, initialRooms);
+  useEffect(() => {
+    removal.settle(allRooms.map((room) => room.id));
+  }, [allRooms, removal]);
+  const rooms = allRooms
+    .filter((room) => !removal.isHidden(room.id))
+    .slice()
+    .sort((a, b) => a.sortOrder - b.sortOrder);
   const tracks = live(trackQ, initialTracks).slice().sort((a, b) => a.sortOrder - b.sortOrder);
   const revisions = live(revisionQ, initialRevisions);
 
@@ -304,7 +313,7 @@ export function AgendaBuilder({
         <PublishToggle event={event} />
         </div>
         <div>
-          <RoomsManager event={event} rooms={rooms} />
+          <RoomsManager event={event} rooms={rooms} onRemoved={removal.hide} />
         </div>
       </DashboardToolbar>
 
@@ -827,9 +836,11 @@ export function PublishToggle({ event }: { event: EventRow }) {
 function RoomsManager({
   event,
   rooms,
+  onRemoved,
 }: {
   event: EventRow;
   rooms: RoomRow[];
+  onRemoved: (roomId: string) => void;
 }) {
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState("");
@@ -871,7 +882,7 @@ function RoomsManager({
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction variant="destructive" onClick={() => void callFn("deleteRoom", { roomId: r.id })}>
+                <AlertDialogAction variant="destructive" onClick={() => { onRemoved(r.id); void callFn("deleteRoom", { roomId: r.id }); }}>
                   Remove room
                 </AlertDialogAction>
               </AlertDialogFooter>
