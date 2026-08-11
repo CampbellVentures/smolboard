@@ -159,7 +159,7 @@ export function BrandingPage({ event }: { event: EventRow }) {
   }
 
   return (
-    <DashboardWidePage className="max-w-6xl">
+    <DashboardWidePage>
       <DashboardHero>
         <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="max-w-xl">
@@ -347,7 +347,7 @@ export function BrandingPage({ event }: { event: EventRow }) {
               src={previewUrl ?? undefined}
               title="Public site preview"
               className="w-full"
-              style={{ height: 640 }}
+              style={{ height: 720 }}
             />
             <p className="border-t bg-muted/40 px-4 py-2 text-center text-[11px] text-muted-foreground">
               Updates as you edit. Save to publish.

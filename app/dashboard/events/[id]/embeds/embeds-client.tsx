@@ -157,7 +157,7 @@ export function EmbedsPage({ event }: { event: EventRow }) {
   const base = orgSlug && origin ? `${origin}/${orgSlug}/${event.slug}` : null;
 
   return (
-    <DashboardWidePage className="max-w-6xl">
+    <DashboardWidePage>
       <DashboardHero>
         <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="max-w-xl">
