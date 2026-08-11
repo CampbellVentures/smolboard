@@ -12,9 +12,15 @@ export function SyncDebug() {
     if (typeof window === "undefined") return;
     if (!new URLSearchParams(window.location.search).has("__syncdebug")) return;
     const w = window as unknown as Record<string, unknown>;
-    w.__syncEngine = db.sync;
+    try {
+      w.__syncEngine = db.sync;
+      w.__syncDebugError = null;
+    } catch (error) {
+      // Record why rather than dying silently inside the effect.
+      w.__syncDebugError = String(error).slice(0, 200);
+    }
     w.__syncReport = () => {
-      const engine = db.sync as unknown as {
+      const engine = (w.__syncEngine ?? {}) as unknown as {
         isMultiTabLeader?: boolean;
         isWebSocketConnected?: () => boolean;
         store?: { list?: (entity: string) => unknown[] };
@@ -26,6 +32,8 @@ export function SyncDebug() {
         rooms = `err ${String(error).slice(0, 40)}`;
       }
       return {
+        attachError: w.__syncDebugError ?? null,
+        engineKeys: Object.getOwnPropertyNames(Object.getPrototypeOf(engine) ?? {}).slice(0, 12),
         isMultiTabLeader: engine.isMultiTabLeader,
         isWebSocketConnected: engine.isWebSocketConnected?.(),
         rooms,
