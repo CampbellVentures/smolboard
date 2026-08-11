@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { callFn, db, useRouter } from "@pylonsync/react";
+import { db, useRouter } from "@pylonsync/react";
+import { callFn } from "@/lib/fn";
 import { useOrgSlug } from "@/components/use-org-slug";
 import { DashboardPage, DashboardPanel } from "@/components/dashboard";
 import { Settings2, TriangleAlert } from "lucide-react";

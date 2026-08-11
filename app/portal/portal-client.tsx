@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { callFn, db } from "@pylonsync/react";
+import { db } from "@pylonsync/react";
+import { callFn } from "@/lib/fn";
 import { sendMagicLink, verifyMagicLink, useAuth } from "@pylonsync/client";
 import { Button } from "@/components/ui/button";
 import { BrandMark } from "@/components/brand";

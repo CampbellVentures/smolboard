@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { callFn } from "@pylonsync/react";
+import { callFn } from "@/lib/fn";
+
 import {
   DashboardIconChip,
   DashboardPanel,

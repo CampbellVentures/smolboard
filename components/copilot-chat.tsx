@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { callFn, db, useRoomMessages } from "@pylonsync/react";
+import { db, useRoomMessages } from "@pylonsync/react";
+import { callFn } from "@/lib/fn";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";

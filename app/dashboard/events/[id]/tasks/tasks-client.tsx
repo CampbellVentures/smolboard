@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { callFn, db, Link } from "@pylonsync/react";
+import { db, Link } from "@pylonsync/react";
+import { callFn } from "@/lib/fn";
 import { ClipboardList, Plus, Trash2 } from "lucide-react";
 import { OverlayHeaderChip } from "@/components/responsive-overlay";
 import { toast } from "sonner";

@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { db, callFn, Link } from "@pylonsync/react";
+import { db, Link } from "@pylonsync/react";
+import { callFn } from "@/lib/fn";
 import {
   DashboardEmptyState,
   DashboardPage,

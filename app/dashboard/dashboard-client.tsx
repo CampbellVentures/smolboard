@@ -12,7 +12,8 @@ import {
   type OrgMember,
   type PendingInvite,
 } from "@pylonsync/client";
-import { callFn, useRouter } from "@pylonsync/react";
+import { useRouter } from "@pylonsync/react";
+import { callFn } from "@/lib/fn";
 import { Building2, Mail, TriangleAlert, UserPlus } from "lucide-react";
 import {
   DashboardEmptyState,

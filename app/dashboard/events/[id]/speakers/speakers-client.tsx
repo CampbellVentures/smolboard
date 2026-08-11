@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { callFn, db } from "@pylonsync/react";
+import { db } from "@pylonsync/react";
+import { callFn } from "@/lib/fn";
 import { toast } from "sonner";
 import { FileSpreadsheet, Mail, Plus, Users } from "lucide-react";
 import {
