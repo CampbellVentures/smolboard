@@ -73,7 +73,7 @@ export function AbstractsView({
   initialSubmissions,
   initialReviews,
   initialRounds,
-  profiles,
+  profiles: initialProfiles,
   forms,
 }: {
   event: EventRow;
@@ -89,12 +89,14 @@ export function AbstractsView({
   const subsQ = db.useQuery<SubmissionRow>("Submission");
   const revQ = db.useQuery<ReviewRow>("Review");
   const roundQ = db.useQuery<ReviewRoundRow>("ReviewRound");
+  const profQ = db.useQuery<SpeakerProfileRow>("SpeakerProfile");
   const live = <T extends { eventId: string }>(
     q: { data: T[]; loading: boolean },
     initial: T[],
   ) => (!hydrated || q.loading ? initial : q.data.filter((r) => r.eventId === event.id));
   const submissions = live(subsQ, initialSubmissions);
   const reviews = live(revQ, initialReviews);
+  const profiles = live(profQ, initialProfiles);
   const rounds = live(roundQ, initialRounds)
     .slice()
     .sort((a, b) => a.roundNumber - b.roundNumber);

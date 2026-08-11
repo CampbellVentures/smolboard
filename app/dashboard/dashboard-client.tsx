@@ -12,7 +12,7 @@ import {
   type OrgMember,
   type PendingInvite,
 } from "@pylonsync/client";
-import { callFn } from "@pylonsync/react";
+import { callFn, useRouter } from "@pylonsync/react";
 import { Building2, Mail, TriangleAlert, UserPlus } from "lucide-react";
 import {
   DashboardEmptyState,
@@ -339,6 +339,7 @@ function SettingsView({
   role: string;
   memberCount: number;
 }) {
+  const router = useRouter();
   const { clearOrg } = useAuth();
   const [name, setName] = useState(org.name);
   const [saving, setSaving] = useState(false);
@@ -357,7 +358,7 @@ function SettingsView({
     try {
       await renameOrg(org.id, name.trim());
       setSaved(true);
-      window.location.reload();
+      router.refresh();
     } catch {
       setError("Couldn't rename — only owners and admins can.");
       setSaving(false);

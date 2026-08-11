@@ -81,7 +81,7 @@ interface NextStep {
 // Event operations stay live after hydration while server data keeps the first
 // render complete and stable.
 export function EventOverview({
-  event,
+  event: eventProp,
   initialSubmissions,
   initialSessions,
   initialSlots,
@@ -109,6 +109,19 @@ export function EventOverview({
 }) {
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => setHydrated(true), []);
+
+  // The event row itself is live too — opening/closing the CFP or edits from
+  // Settings reflect here without a reload.
+  const eventQuery = db.useQuery<EventRow>("Event");
+  const event =
+    (!hydrated || eventQuery.loading
+      ? undefined
+      : eventQuery.data.find((row) => row.id === eventProp.id)) ?? eventProp;
+  const formQuery = db.useQuery<SubmissionFormRow>("SubmissionForm");
+  const liveForms =
+    !hydrated || formQuery.loading
+      ? forms
+      : formQuery.data.filter((row) => row.eventId === eventProp.id);
 
   const submissionQuery = db.useQuery<SubmissionRow>("Submission");
   const profileQuery = db.useQuery<SpeakerProfileRow>("SpeakerProfile");
@@ -145,7 +158,7 @@ export function EventOverview({
   const counts = submissionStatusCounts(submissions);
   const accepted = counts.accepted ?? 0;
   const awaitingReview = (counts.submitted ?? 0) + (counts.in_review ?? 0);
-  const openForms = forms.filter((form) => form.status === "open");
+  const openForms = liveForms.filter((form) => form.status === "open");
   const onboarding = buildOnboardingRows({ submissions, profiles, tasks, templates, files });
   const onboardingComplete = onboarding.filter((row) => row.state === "complete").length;
   const overdueSpeakers = onboarding.filter((row) => row.overdue > 0).length;
@@ -222,7 +235,7 @@ export function EventOverview({
   const nextSteps = [
     ...getNextSteps({
       event,
-      formCount: forms.length,
+      formCount: liveForms.length,
       openFormCount: openForms.length,
       submissionCount: submissions.length,
       awaitingReview,
@@ -244,8 +257,8 @@ export function EventOverview({
   }
 
   async function setCfpStatus(status: string) {
+    // Live queries pick the change up — no reload, the hero recomputes in place.
     await db.update("Event", event.id, { cfpStatus: status });
-    window.location.reload();
   }
 
   async function nudgeSelected() {

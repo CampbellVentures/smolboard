@@ -85,8 +85,8 @@ export function TasksClient({
   event,
   initialTemplates,
   initialTasks,
-  profiles,
-  submissions,
+  profiles: initialProfiles,
+  submissions: initialSubmissions,
 }: {
   event: EventRow;
   initialTemplates: TaskTemplateRow[];
@@ -98,12 +98,20 @@ export function TasksClient({
   useEffect(() => setHydrated(true), []);
   const templateQuery = db.useQuery<TaskTemplateRow>("TaskTemplate");
   const taskQuery = db.useQuery<SpeakerTaskRow>("SpeakerTask");
+  const profileQuery = db.useQuery<SpeakerProfileRow>("SpeakerProfile");
+  const submissionQuery = db.useQuery<SubmissionRow>("Submission");
   const templates = (!hydrated || templateQuery.loading ? initialTemplates : templateQuery.data).filter(
     (row) => row.eventId === event.id,
   );
   const tasks = (!hydrated || taskQuery.loading ? initialTasks : taskQuery.data).filter(
     (row) => row.eventId === event.id,
   );
+  const profiles = (
+    !hydrated || profileQuery.loading ? initialProfiles : profileQuery.data
+  ).filter((row) => row.eventId === event.id);
+  const submissions = (
+    !hydrated || submissionQuery.loading ? initialSubmissions : submissionQuery.data
+  ).filter((row) => row.eventId === event.id);
   const [editor, setEditor] = useState<EditorState | null>(null);
   const [saving, setSaving] = useState(false);
   const [progressFilter, setProgressFilter] = useState<"all" | "pending" | "done">("all");

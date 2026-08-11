@@ -70,6 +70,10 @@ export function FormsList({
   useEffect(() => setHydrated(true), []);
   const { data, loading } = db.useQuery<SubmissionFormRow>("SubmissionForm");
   const rows = !hydrated || loading ? initial : data.filter((f) => f.eventId === event.id);
+  const submissionQuery = db.useQuery<SubmissionRow>("Submission");
+  const submissions = (
+    !hydrated || submissionQuery.loading ? initialSubmissions : submissionQuery.data
+  ).filter((row) => row.eventId === event.id);
   const forms = rows.slice().sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 
   const [creating, setCreating] = useState(false);
@@ -168,7 +172,7 @@ export function FormsList({
         <div className="grid items-start gap-4 md:grid-cols-2">
           {forms.map((f) => {
             const fieldCount = parseFields(parseJson(f.fieldsJson) ?? []).length;
-            const submissionCount = initialSubmissions.filter((s) => s.formId === f.id).length;
+            const submissionCount = submissions.filter((s) => s.formId === f.id).length;
             return (
               <section
                 key={f.id}
