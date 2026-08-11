@@ -66,6 +66,16 @@ function dayLabel(day: string): string {
   return `${DAY_NAMES[d.getUTCDay()]} · ${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}`;
 }
 
+// Day picker reads as a torn-off calendar page: weekday, big date, month.
+function dayParts(day: string) {
+  const d = new Date(`${day}T12:00:00Z`);
+  return {
+    weekday: DAY_NAMES[d.getUTCDay()].slice(0, 3).toUpperCase(),
+    date: d.getUTCDate(),
+    month: MONTHS[d.getUTCMonth()].toUpperCase(),
+  };
+}
+
 export function EventSite({
   event,
   description,
@@ -226,21 +236,47 @@ function ScheduleSection({
       {feed?.published && (
         <>
           <div className="mt-4 flex flex-wrap items-center gap-2">
-            {days.map((d) => (
-              <button
-                key={d}
-                type="button"
-                onClick={() => setDay(d)}
-                className={
-                  "rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-colors " +
-                  (activeDay === d
-                    ? "bg-zinc-900 text-lime-300"
-                    : "bg-white text-zinc-600 shadow-[0_0_0_1px_rgba(0,0,0,0.06)] hover:text-zinc-900")
-                }
-              >
-                {dayLabel(d)}
-              </button>
-            ))}
+            {days.map((d) => {
+              const part = dayParts(d);
+              const active = activeDay === d;
+              return (
+                <button
+                  key={d}
+                  type="button"
+                  onClick={() => setDay(d)}
+                  aria-pressed={active}
+                  aria-label={dayLabel(d)}
+                  className={
+                    "flex w-14 flex-col items-center overflow-hidden rounded-xl text-center transition-shadow " +
+                    (active
+                      ? "shadow-[0_0_0_1px_rgba(0,0,0,0.12),0_1px_3px_rgba(0,0,0,0.12)]"
+                      : "shadow-[0_0_0_1px_rgba(0,0,0,0.06)] hover:shadow-[0_0_0_1px_rgba(0,0,0,0.14)]")
+                  }
+                >
+                  <span
+                    className={
+                      "w-full py-0.5 text-[10px] font-semibold tracking-wide " +
+                      (active ? "bg-zinc-900 text-white" : "bg-zinc-100 text-zinc-500")
+                    }
+                  >
+                    {part.weekday}
+                  </span>
+                  <span className="flex w-full flex-col bg-white pb-1 pt-0.5">
+                    <span
+                      className={
+                        "text-[19px] font-semibold leading-6 tabular-nums " +
+                        (active ? "text-zinc-900" : "text-zinc-500")
+                      }
+                    >
+                      {part.date}
+                    </span>
+                    <span className="text-[9px] font-medium tracking-wide text-zinc-400">
+                      {part.month}
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
