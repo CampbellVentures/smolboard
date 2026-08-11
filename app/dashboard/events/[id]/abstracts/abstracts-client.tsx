@@ -50,7 +50,7 @@ import type {
   SubmissionFormRow,
   SubmissionRow,
 } from "@/lib/types";
-import { ChevronRight, Star, Plus, Inbox } from "lucide-react";
+import { ChevronRight, Star, Plus, Inbox, Bot } from "lucide-react";
 
 // Abstracts: dense table + right detail drawer (row click keeps table
 // context), bulk actions over setSubmissionStatus, per-round scoring. All
@@ -385,6 +385,15 @@ export function AbstractsView({
                       ) : (
                         <span className="text-xs text-zinc-300">unscored</span>
                       )}
+                      {s.triageScore ? (
+                        <span
+                          className="ml-2 inline-flex items-center gap-1 rounded-full bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-600"
+                          title={s.triageSummary}
+                        >
+                          <Bot className="size-3 text-violet-600" aria-hidden="true" />
+                          {s.triageScore.toFixed(1)}
+                        </span>
+                      ) : null}
                     </TableCell>
                     <TableCell>
                       <StatusPill status={s.status} />
@@ -541,6 +550,21 @@ function DetailDrawer({
           </ResponsiveDetailOverlay.Description>
         </ResponsiveDetailOverlay.Header>
         <ResponsiveDetailOverlay.Body className="flex flex-col gap-5">
+          {submission.triageSummary ? (
+            <div className="rounded-lg border border-border bg-muted/30 p-3">
+              <p className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                <Bot className="size-3.5 text-violet-600" aria-hidden="true" />
+                AI first pass
+                {submission.triageScore ? ` · ${submission.triageScore.toFixed(1)} of 5` : ""}
+              </p>
+              <p className="mt-1 text-[13px] leading-relaxed text-zinc-600">
+                {submission.triageSummary}
+              </p>
+              <p className="mt-1.5 text-[11px] text-muted-foreground">
+                Advisory only. It doesn&apos;t count toward reviewer scores or decide anything.
+              </p>
+            </div>
+          ) : null}
           <div className="flex items-center gap-2">
             <StatusPill status={submission.status} />
             {submission.category && (
@@ -1047,6 +1071,7 @@ function ReviewOperations({
   category?: string;
 }) {
   const [note, setNote] = useState<string | null>(null);
+  const [triaging, setTriaging] = useState(false);
   async function assign() {
     const result = await callFn<{ created: number }>("bulkAssignReviews", {
       eventId,
@@ -1080,6 +1105,33 @@ function ReviewOperations({
       <Button type="button" size="sm" variant="outline" onClick={() => void assign()}>Assign reviewers</Button>
       <Button type="button" size="sm" variant="ghost" onClick={() => void remind()}>Remind</Button>
       <Button type="button" size="sm" variant="ghost" onClick={() => void download()}>Export CSV</Button>
+      <Button
+        type="button"
+        size="sm"
+        variant="ghost"
+        disabled={triaging}
+        onClick={async () => {
+          setTriaging(true);
+          try {
+            const result = await callFn<{ scored: number; skipped: number }>("triageSubmissions", {
+              eventId,
+            });
+            toast.success(
+              result.scored > 0
+                ? `AI scored ${result.scored} submission${result.scored === 1 ? "" : "s"}`
+                : "Nothing left to triage",
+              { description: result.skipped ? `${result.skipped} skipped.` : undefined },
+            );
+          } catch (error) {
+            toast.error(error instanceof Error ? error.message : "Triage failed.");
+          } finally {
+            setTriaging(false);
+          }
+        }}
+      >
+        <Bot data-icon="inline-start" />
+        {triaging ? "Scoring…" : "AI triage"}
+      </Button>
       {note ? <span className="text-xs text-muted-foreground">{note}</span> : null}
     </div>
   );

@@ -80,6 +80,9 @@ export interface SubmissionRow {
   category?: string;
   status: string;
   currentRound: number;
+  triageScore?: number;
+  triageSummary?: string;
+  triageAt?: string;
   submittedAt: string;
   updatedAt?: string;
   finalizedAt?: string;

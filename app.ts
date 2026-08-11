@@ -174,6 +174,10 @@ const Submission = entity(
     // "withdrawn". Status changes go through functions so emails can fire.
     status: field.string().default("submitted"),
     currentRound: field.int().default(1),
+    // AI first-pass triage: advisory only, never a decision.
+    triageScore: field.float().optional(),
+    triageSummary: field.string().optional(),
+    triageAt: field.datetime().optional(),
     submittedAt: field.datetime().defaultNow(),
     updatedAt: field.datetime().optional(),
     finalizedAt: field.datetime().optional(),
