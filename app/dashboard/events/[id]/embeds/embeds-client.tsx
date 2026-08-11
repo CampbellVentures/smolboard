@@ -22,6 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { useOrgSlug } from "@/components/use-org-slug";
+import { cn } from "@/lib/utils";
 import type { EventRow } from "@/lib/types";
 
 // Embeds: live widgets organizers paste into their own conference site. The
@@ -139,6 +140,7 @@ export function EmbedsPage({ event }: { event: EventRow }) {
   const [origin, setOrigin] = useState("");
   useEffect(() => setOrigin(window.location.origin), []);
   const [heights, setHeights] = useState<Record<string, number>>({});
+  const [active, setActive] = useState<(typeof WIDGETS)[number]["key"]>("schedule");
 
   const base = orgSlug && origin ? `${origin}/${orgSlug}/${event.slug}` : null;
 
@@ -169,90 +171,112 @@ export function EmbedsPage({ event }: { event: EventRow }) {
         </div>
       </DashboardHero>
 
-      <div className="grid items-start gap-5 xl:grid-cols-2">
+      {/* One widget at a time: five iframes side by side loaded five copies of
+          the public site and left the cards at mismatched heights. */}
+      <div className="flex flex-wrap items-center gap-1 border-b border-border">
         {WIDGETS.map((widget) => {
-          const height = heights[widget.key] ?? widget.defaultHeight;
-          const src = base ? `${base}?embed=${widget.key}` : null;
-          const snippet = src
-            ? `<iframe src="${src}" width="100%" height="${height}" frameborder="0" title="${event.name} ${widget.title.toLowerCase()}"></iframe>`
-            : "";
+          const isActive = widget.key === active;
           return (
-            <section
+            <button
               key={widget.key}
-              className="flex flex-col overflow-hidden rounded-xl border border-border bg-card"
+              type="button"
+              onClick={() => setActive(widget.key)}
+              aria-current={isActive ? "page" : undefined}
+              className={cn(
+                "-mb-px flex items-center gap-2 border-b-2 px-3 py-2 text-[13px] font-medium transition-colors",
+                isActive
+                  ? "border-zinc-900 text-zinc-900"
+                  : "border-transparent text-muted-foreground hover:text-foreground",
+              )}
             >
-              <div className="flex items-start justify-between gap-4 p-4">
-                <div className="flex min-w-0 items-start gap-3">
-                  <DashboardIconChip icon={widget.icon} tone={widget.tone} size="lg" />
-                  <div className="min-w-0">
-                    <h3 className="text-sm font-semibold">{widget.title}</h3>
-                    <p className="mt-0.5 text-pretty text-xs leading-5 text-muted-foreground">
-                      {widget.description}
-                    </p>
-                  </div>
-                </div>
-                <label className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
-                  Height
-                  <Select
-                    aria-label={`${widget.title} embed height`}
-                    value={String(height)}
-                    onChange={(e) =>
-                      setHeights((prev) => ({ ...prev, [widget.key]: Number(e.target.value) }))
-                    }
-                    className="w-auto"
-                  >
-                    {HEIGHTS.map((h) => (
-                      <option key={h} value={h}>
-                        {h}px
-                      </option>
-                    ))}
-                  </Select>
-                </label>
-              </div>
-
-              <div className="px-4">
-                {src ? (
-                  <BrowserFrame url={src.replace(/^https?:\/\//, "")}>
-                    <iframe
-                      src={src}
-                      title={`${widget.title} preview`}
-                      className="w-full"
-                      style={{ height: 380 }}
-                    />
-                  </BrowserFrame>
-                ) : (
-                  <div className="flex h-40 items-center justify-center rounded-xl border border-dashed text-sm text-muted-foreground">
-                    Loading preview…
-                  </div>
-                )}
-              </div>
-
-              {snippet ? (
-                <pre className="mx-4 mt-3 overflow-x-auto rounded-lg bg-muted/60 px-3 py-2 text-[11px] leading-5 text-zinc-600">
-                  {snippet}
-                </pre>
-              ) : null}
-
-              <div className="mt-4 flex items-center justify-between gap-3 border-t bg-muted/40 px-4 py-3">
-                <span className="text-xs text-muted-foreground">
-                  Works on any site that allows iframes.
-                </span>
-                <div className="flex gap-2">
-                  {src ? (
-                    <Button asChild size="sm" variant="ghost">
-                      <a href={src} target="_blank" rel="noreferrer">
-                        <ExternalLink data-icon="inline-start" />
-                        Open
-                      </a>
-                    </Button>
-                  ) : null}
-                  {snippet ? <CopyButton text={snippet} /> : null}
-                </div>
-              </div>
-            </section>
+              <widget.icon className="size-4" aria-hidden="true" />
+              {widget.title}
+            </button>
           );
         })}
       </div>
+
+      {(() => {
+        const widget = WIDGETS.find((w) => w.key === active) ?? WIDGETS[0];
+        const height = heights[widget.key] ?? widget.defaultHeight;
+        const src = base ? `${base}?embed=${widget.key}` : null;
+        const snippet = src
+          ? `<iframe src="${src}" width="100%" height="${height}" frameborder="0" title="${event.name} ${widget.title.toLowerCase()}"></iframe>`
+          : "";
+        return (
+          <section className="flex flex-col overflow-hidden rounded-xl border border-border bg-card">
+            <div className="flex flex-wrap items-start justify-between gap-4 p-4">
+              <div className="flex min-w-0 items-start gap-3">
+                <DashboardIconChip icon={widget.icon} tone={widget.tone} size="lg" />
+                <div className="min-w-0">
+                  <h3 className="text-sm font-semibold">{widget.title}</h3>
+                  <p className="mt-0.5 max-w-xl text-pretty text-xs leading-5 text-muted-foreground">
+                    {widget.description}
+                  </p>
+                </div>
+              </div>
+              <label className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
+                Height
+                <Select
+                  aria-label={`${widget.title} embed height`}
+                  value={String(height)}
+                  onChange={(e) =>
+                    setHeights((prev) => ({ ...prev, [widget.key]: Number(e.target.value) }))
+                  }
+                  className="w-auto"
+                >
+                  {HEIGHTS.map((h) => (
+                    <option key={h} value={h}>
+                      {h}px
+                    </option>
+                  ))}
+                </Select>
+              </label>
+            </div>
+
+            <div className="px-4">
+              {src ? (
+                <BrowserFrame url={src.replace(/^https?:\/\//, "")}>
+                  <iframe
+                    key={src}
+                    src={src}
+                    title={`${widget.title} preview`}
+                    className="w-full"
+                    style={{ height: 460 }}
+                  />
+                </BrowserFrame>
+              ) : (
+                <div className="flex h-40 items-center justify-center rounded-xl border border-dashed text-sm text-muted-foreground">
+                  Loading preview…
+                </div>
+              )}
+            </div>
+
+            {snippet ? (
+              <pre className="mx-4 mt-3 overflow-x-auto rounded-lg bg-muted/60 px-3 py-2 text-[11px] leading-5 text-zinc-600">
+                {snippet}
+              </pre>
+            ) : null}
+
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t bg-muted/40 px-4 py-3">
+              <span className="text-xs text-muted-foreground">
+                Works on any site that allows iframes.
+              </span>
+              <div className="flex gap-2">
+                {src ? (
+                  <Button asChild size="sm" variant="ghost">
+                    <a href={src} target="_blank" rel="noreferrer">
+                      <ExternalLink data-icon="inline-start" />
+                      Open
+                    </a>
+                  </Button>
+                ) : null}
+                {snippet ? <CopyButton text={snippet} /> : null}
+              </div>
+            </div>
+          </section>
+        );
+      })()}
 
       {base ? (
         <section className="flex flex-col items-start justify-between gap-3 rounded-xl border border-border bg-card p-4 sm:flex-row sm:items-center">
