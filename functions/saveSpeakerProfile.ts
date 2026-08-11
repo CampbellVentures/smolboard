@@ -109,9 +109,16 @@ export default mutation({
     if (matches.length > 1) {
       throw ctx.error("CONFLICT", "Multiple legacy accounts match this normalized email.");
     }
+    // An organizer typing this address is vouching for it, so the invited
+    // speaker can sign in and use their portal. Self-registered accounts still
+    // have to prove inbox control before they can submit.
     const userId = matches[0]
       ? (matches[0].id as string)
-      : await ctx.db.unsafe.insert("User", { email, displayName: name });
+      : ((await ctx.db.unsafe.insert("User", {
+          email,
+          displayName: name,
+          emailVerified: new Date().toISOString(),
+        })) as string);
     const id = await ctx.db.unsafe.insert("SpeakerProfile", {
       orgId: event.orgId as string,
       eventId: args.eventId,
