@@ -2,6 +2,7 @@ import React, { use } from "react";
 import { type Metadata, type PageProps } from "@pylonsync/react";
 import { EventSite, type ScheduleFeed, type SpeakersFeed } from "./event-site-client";
 import { PublicEventShell } from "@/components/public-shell";
+import { parseBranding } from "@/lib/branding";
 import { publicEventInfo, resolvePublicEvent } from "@/lib/public-site";
 import type { EventRow, OrgRow, SubmissionFormRow } from "@/lib/types";
 
@@ -13,6 +14,7 @@ export const metadata: Metadata = {
 // description, schedule (#schedule), and speakers (#speakers); the header
 // tabs scroll to the sections. Only the CFP is a separate route.
 export default function EventHomePage({
+  auth,
   params,
   response,
   searchParams,
@@ -32,6 +34,16 @@ export default function EventHomePage({
     return null;
   }
   const { org, event } = resolved;
+  // Draft-branding preview for the Branding page's iframe: ?brandPreview=<json>
+  // overrides the saved branding, but ONLY for an organizer of this org —
+  // anonymous visitors can't restyle the public page via a crafted link.
+  const rawPreview = typeof searchParams.brandPreview === "string" ? searchParams.brandPreview : "";
+  const brandingOverride =
+    rawPreview && auth.tenant_id === org.id ? parseBranding(rawPreview) : null;
+  const eventInfo = {
+    ...publicEventInfo(org, event),
+    ...(brandingOverride ? { branding: brandingOverride } : {}),
+  };
   const cfpOpen =
     event.cfpStatus === "open" &&
     use(formsPromise).some((f) => f.eventId === event.id && f.status === "open");
@@ -48,7 +60,7 @@ export default function EventHomePage({
     return (
       <div className="bg-transparent p-2">
         <EventSite
-          event={publicEventInfo(org, event)}
+          event={eventInfo}
           description={null}
           cfpOpen={false}
           initialSchedule={schedule}
@@ -70,9 +82,9 @@ export default function EventHomePage({
   }
 
   return (
-    <PublicEventShell event={publicEventInfo(org, event)} active="home">
+    <PublicEventShell event={eventInfo} active="home">
       <EventSite
-        event={publicEventInfo(org, event)}
+        event={eventInfo}
         description={event.description ?? null}
         cfpOpen={cfpOpen}
         initialSchedule={schedule}

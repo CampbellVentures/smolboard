@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { callFn, db } from "@pylonsync/react";
 import {
   Check,
@@ -114,11 +114,26 @@ export function BrandingPage({ event }: { event: EventRow }) {
   const [heroUrl, setHeroUrl] = useState(initial.heroUrl ?? "");
   const [tagline, setTagline] = useState(initial.tagline ?? "");
   const [saving, setSaving] = useState(false);
-  // Bumps the iframe key so the preview re-renders with what was saved.
-  const [previewNonce, setPreviewNonce] = useState(0);
 
   const publicUrl = orgSlug ? `/${orgSlug}/${event.slug}` : null;
   const activeAccent = accent || null;
+
+  // The preview reflects the DRAFT, not the save: debounce the fields into a
+  // ?brandPreview= URL the public page honors for organizers of this org.
+  const draftJson = JSON.stringify({
+    accent: activeAccent && isValidAccent(activeAccent) ? activeAccent : null,
+    logoUrl: logoUrl.trim() || null,
+    heroUrl: heroUrl.trim() || null,
+    tagline: tagline.trim() || null,
+  });
+  const [previewJson, setPreviewJson] = useState(draftJson);
+  useEffect(() => {
+    const timer = setTimeout(() => setPreviewJson(draftJson), 400);
+    return () => clearTimeout(timer);
+  }, [draftJson]);
+  const previewUrl = publicUrl
+    ? `${publicUrl}?brandPreview=${encodeURIComponent(previewJson)}`
+    : null;
 
   async function save() {
     if (activeAccent && !isValidAccent(activeAccent)) {
@@ -134,7 +149,6 @@ export function BrandingPage({ event }: { event: EventRow }) {
         heroUrl: heroUrl.trim() || null,
       };
       await db.update("Event", event.id, { brandingJson: JSON.stringify(branding) });
-      setPreviewNonce((n) => n + 1);
       toast.success("Branding saved — the public site is updated.");
     } catch {
       toast.error("Couldn't save branding. Try again.");
@@ -328,14 +342,14 @@ export function BrandingPage({ event }: { event: EventRow }) {
               </span>
             </div>
             <iframe
-              key={previewNonce}
-              src={publicUrl}
+              key={previewJson}
+              src={previewUrl ?? undefined}
               title="Public site preview"
               className="w-full"
               style={{ height: 640 }}
             />
             <p className="border-t bg-muted/40 px-4 py-2 text-center text-[11px] text-muted-foreground">
-              Live preview — updates when you save.
+              Live preview — updates as you edit. Save to publish.
             </p>
           </div>
         ) : null}
