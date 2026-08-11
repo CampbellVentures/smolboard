@@ -14,6 +14,7 @@ import { Progress } from "@/components/ui/progress";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { FormRenderer } from "@/components/form-renderer";
+import { SyncHeartbeat } from "@/components/sync-heartbeat";
 import {
   CalendarDays,
   CheckCircle2,
@@ -318,6 +319,7 @@ export function PortalHome({
         </div>
       </header>
 
+      <SyncHeartbeat />
       <main className="mx-auto max-w-3xl space-y-8 px-6 py-10">
         {claimNotice ? <p className="rounded-lg border bg-white p-4 text-sm">{claimNotice}</p> : null}
         <ScheduleSection sessions={sessions} loading={scheduleLoading} />

@@ -42,6 +42,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { PersonAvatar } from "./person-avatar";
 import { SessionReconcile } from "./session-reconcile";
+import { SyncHeartbeat } from "./sync-heartbeat";
 import { ActivityBell } from "./activity-bell";
 import { CommandPalette, type PaletteDestination } from "./command-palette";
 import { lastEventStorageKey } from "@/lib/dashboard-routing";
@@ -439,6 +440,7 @@ export function AppShell({
   return (
     <div className="flex min-h-screen bg-background text-foreground">
       <SessionReconcile />
+      <SyncHeartbeat />
       {!reviewerMode ? (
         <CommandPalette
           workspaceId={workspaceId}
@@ -663,11 +665,11 @@ function WorkspaceCopilotTeaser({
           </span>
           <div className="min-w-0 pt-1">
             <p className="text-pretty text-sm leading-6 text-foreground">
-              I can help run {eventName ?? "your workspace"} from here—review submissions,
-              schedule sessions, and follow up with speakers.
+              I can help run {eventName ?? "your workspace"} from here. Ask me to review
+              submissions, schedule sessions, or follow up with speakers.
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Open an event to put me to work — my tools are event-scoped.
+              Open an event to put me to work. My tools are event-scoped.
             </p>
           </div>
         </div>

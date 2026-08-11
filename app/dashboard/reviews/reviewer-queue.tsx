@@ -5,6 +5,7 @@ import { callFn } from "@/lib/fn";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { StarRating } from "@/components/star-rating";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import type { NormalizedReviewCriterion } from "@/lib/reviews";
@@ -117,12 +118,11 @@ function CriterionField({ criterion, value, onChange }: { criterion: NormalizedR
     <label className="block text-sm">
       <span className="mb-1 block font-medium">{criterion.label}{criterion.required ? " *" : ""}</span>
       {criterion.type === "numeric" ? (
-        <Input
-          type="number"
-          min={criterion.min}
-          max={criterion.max}
-          value={typeof value === "number" ? value : ""}
-          onChange={(event) => onChange(event.target.value === "" ? "" : Number(event.target.value))}
+        <StarRating
+          label={criterion.label}
+          value={typeof value === "number" ? value : null}
+          max={criterion.max ?? 5}
+          onChange={(next) => onChange(next)}
         />
       ) : criterion.type === "select" ? (
         <Select value={typeof value === "string" ? value : ""} onChange={(event) => onChange(event.target.value)}>
