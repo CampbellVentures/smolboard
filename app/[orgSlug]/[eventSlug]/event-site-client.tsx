@@ -13,7 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ArrowRight, CalendarDays, Loader2, Send } from "lucide-react";
-import { InitialsAvatar, type PublicEventInfo } from "@/components/public-shell";
+import { type PublicEventInfo } from "@/components/public-shell";
 import { PersonAvatar } from "@/components/person-avatar";
 
 // The whole public event site is ONE page: description, schedule, speakers —
@@ -341,7 +341,7 @@ function ScheduleSection({
                         <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
                           {s.speakers.map((sp) => (
                             <span key={sp.name} className="flex items-center gap-1.5 font-medium text-zinc-700">
-                              <InitialsAvatar name={sp.name} />
+                              <PersonAvatar name={sp.name} src={sp.headshotUrl} size="xs" />
                               {sp.name}
                               {sp.company ? <span className="font-normal text-zinc-400"> · {sp.company}</span> : null}
                             </span>
