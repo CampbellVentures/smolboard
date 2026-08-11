@@ -57,27 +57,44 @@ export default function EventHomePage({
   // Widget mode: ?embed=schedule|speakers renders one section, chrome-less,
   // sized for an iframe on the organizer's own site.
   const embed = typeof searchParams.embed === "string" ? searchParams.embed : "";
+  // Embed appearance is configured through the snippet's query string.
+  const theme = searchParams.theme === "dark" ? "dark" : searchParams.theme === "auto" ? "auto" : "light";
+  const accentParam = typeof searchParams.accent === "string" ? searchParams.accent : "";
+  const embedAccent = /^[0-9a-fA-F]{6}$/.test(accentParam)
+    ? `#${accentParam}`
+    : parseBranding(event.brandingJson).accent;
+  const hideBranding = searchParams.branding === "0";
+  const embedShell = [
+    "p-2",
+    theme === "dark" ? "dark bg-zinc-950" : theme === "auto" ? "bg-transparent" : "bg-transparent",
+  ].join(" ");
   // Standalone widget surfaces beyond the two site sections.
   if (embed === "sessions" || embed === "itinerary" || embed === "gallery") {
     return (
-      <div className="bg-transparent p-2">
+      <div
+        className={embedShell}
+        style={embedAccent ? ({ "--event-accent": embedAccent } as React.CSSProperties) : undefined}
+      >
         <PublicWidget
           kind={embed}
           schedule={schedule}
           speakers={speakers}
           eventSlug={params.eventSlug}
           icsHref={`/${params.orgSlug}/${params.eventSlug}/calendar.ics`}
+          accent={embedAccent}
         />
-        <p className="mt-4 text-center text-[11px] text-zinc-400">
-          <a
-            href={`/${params.orgSlug}/${params.eventSlug}`}
-            target="_blank"
-            rel="noreferrer"
-            className="hover:text-zinc-600"
-          >
-            Powered by smolboard
-          </a>
-        </p>
+        {hideBranding ? null : (
+          <p className="mt-4 text-center text-[11px] text-zinc-400">
+            <a
+              href={`/${params.orgSlug}/${params.eventSlug}`}
+              target="_blank"
+              rel="noreferrer"
+              className="hover:text-zinc-600"
+            >
+              Powered by smolboard
+            </a>
+          </p>
+        )}
       </div>
     );
   }

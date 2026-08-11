@@ -21,6 +21,7 @@ import {
 } from "@/components/dashboard";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { useOrgSlug } from "@/components/use-org-slug";
 import { cn } from "@/lib/utils";
 import type { EventRow } from "@/lib/types";
@@ -153,6 +154,10 @@ export function EmbedsPage({ event }: { event: EventRow }) {
   useEffect(() => setOrigin(window.location.origin), []);
   const [heights, setHeights] = useState<Record<string, number>>({});
   const [active, setActive] = useState<(typeof WIDGETS)[number]["key"]>("schedule");
+  const [theme, setTheme] = useState<"light" | "dark" | "auto">("light");
+  const [accent, setAccent] = useState("");
+  const [showBranding, setShowBranding] = useState(true);
+  const [format, setFormat] = useState<"iframe" | "url" | "json">("iframe");
 
   const base = orgSlug && origin ? `${origin}/${orgSlug}/${event.slug}` : null;
 
@@ -215,10 +220,23 @@ export function EmbedsPage({ event }: { event: EventRow }) {
       {(() => {
         const widget = WIDGETS.find((w) => w.key === active) ?? WIDGETS[0];
         const height = heights[widget.key] ?? widget.defaultHeight;
-        const src = base ? `${base}?embed=${widget.key}` : null;
-        const snippet = src
-          ? `<iframe src="${src}" width="100%" height="${height}" frameborder="0" title="${event.name} ${widget.title.toLowerCase()}"></iframe>`
-          : "";
+        // The snippet carries its own appearance, so an embed can be themed
+        // without the host page restyling an iframe it can't reach into.
+        const params = new URLSearchParams({ embed: widget.key });
+        if (theme !== "light") params.set("theme", theme);
+        if (/^#?[0-9a-fA-F]{6}$/.test(accent)) params.set("accent", accent.replace("#", ""));
+        if (!showBranding) params.set("branding", "0");
+        const src = base ? `${base}?${params.toString()}` : null;
+        const feedUrl = base
+          ? `${origin}/api/fn/${widget.key === "gallery" || widget.key === "speakers" ? "getPublicSpeakers" : "getPublicSchedule"}`
+          : null;
+        const snippet = !src
+          ? ""
+          : format === "url"
+            ? src
+            : format === "json"
+              ? `curl -X POST ${feedUrl} \\\n  -H 'Content-Type: application/json' \\\n  -d '{"orgSlug":"${orgSlug}","eventSlug":"${event.slug}"}'`
+              : `<iframe src="${src}" width="100%" height="${height}" frameborder="0" title="${event.name} ${widget.title.toLowerCase()}"></iframe>`;
         return (
           <section className="flex flex-col overflow-hidden rounded-xl border border-border bg-card">
             <div className="flex flex-wrap items-start justify-between gap-4 p-4">
@@ -250,7 +268,56 @@ export function EmbedsPage({ event }: { event: EventRow }) {
               </label>
             </div>
 
-            <div className="px-4">
+            <div className="flex flex-wrap items-end gap-3 border-t bg-muted/20 px-4 py-3">
+              <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+                Theme
+                <Select
+                  aria-label="Embed theme"
+                  value={theme}
+                  onChange={(e) => setTheme(e.target.value as typeof theme)}
+                  className="w-auto"
+                >
+                  <option value="light">Light</option>
+                  <option value="dark">Dark</option>
+                  <option value="auto">Match page</option>
+                </Select>
+              </label>
+              <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+                Accent
+                <Input
+                  aria-label="Accent color"
+                  value={accent}
+                  onChange={(e) => setAccent(e.target.value)}
+                  placeholder="#7c3aed"
+                  className="w-28 font-mono text-xs"
+                  spellCheck={false}
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+                Output
+                <Select
+                  aria-label="Output format"
+                  value={format}
+                  onChange={(e) => setFormat(e.target.value as typeof format)}
+                  className="w-auto"
+                >
+                  <option value="iframe">iframe snippet</option>
+                  <option value="url">Direct URL</option>
+                  <option value="json">JSON feed</option>
+                </Select>
+              </label>
+              <label className="flex items-center gap-2 pb-2 text-xs text-muted-foreground">
+                <input
+                  type="checkbox"
+                  checked={showBranding}
+                  onChange={(e) => setShowBranding(e.target.checked)}
+                  className="size-3.5"
+                />
+                Show &ldquo;Powered by smolboard&rdquo;
+              </label>
+            </div>
+
+            <div className="px-4 pt-4">
               {src ? (
                 <BrowserFrame url={src.replace(/^https?:\/\//, "")}>
                   <iframe

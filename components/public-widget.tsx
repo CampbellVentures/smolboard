@@ -16,16 +16,18 @@ export function PublicWidget({
   speakers,
   eventSlug,
   icsHref,
+  accent,
 }: {
   kind: "sessions" | "itinerary" | "gallery";
   schedule: ScheduleFeed | null;
   speakers: SpeakersFeed | null;
   eventSlug: string;
   icsHref: string;
+  accent?: string | null;
 }) {
-  if (kind === "sessions") return <SessionsListWidget feed={schedule} />;
+  if (kind === "sessions") return <SessionsListWidget feed={schedule} accent={accent} />;
   if (kind === "itinerary") {
-    return <ItineraryWidget feed={schedule} eventSlug={eventSlug} icsHref={icsHref} />;
+    return <ItineraryWidget feed={schedule} eventSlug={eventSlug} icsHref={icsHref} accent={accent} />;
   }
   return <SpeakerGalleryWidget feed={speakers} />;
 }

@@ -53,7 +53,13 @@ function Empty({ label }: { label: string }) {
 
 /* ------------------------------ Sessions list ------------------------------ */
 
-export function SessionsListWidget({ feed }: { feed: ScheduleFeed | null }) {
+export function SessionsListWidget({
+  feed,
+  accent,
+}: {
+  feed: ScheduleFeed | null;
+  accent?: string | null;
+}) {
   const [q, setQ] = useState("");
   const [track, setTrack] = useState("");
   const [format, setFormat] = useState("");
@@ -237,10 +243,12 @@ export function ItineraryWidget({
   feed,
   eventSlug,
   icsHref,
+  accent,
 }: {
   feed: ScheduleFeed | null;
   eventSlug: string;
   icsHref: string;
+  accent?: string | null;
 }) {
   const tz = feed?.event?.timezone ?? "UTC";
   const [stars, setStars] = useState<Set<string>>(new Set());
@@ -283,6 +291,7 @@ export function ItineraryWidget({
             type="button"
             onClick={() => setDay(d)}
             aria-pressed={activeDay === d}
+            style={activeDay === d && accent ? { background: accent } : undefined}
             className={
               "rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-colors " +
               (activeDay === d
