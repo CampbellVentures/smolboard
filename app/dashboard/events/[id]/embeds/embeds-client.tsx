@@ -86,6 +86,18 @@ const WIDGETS: {
 
 const HEIGHTS = [500, 700, 900, 1200];
 
+// Each widget's tone shows up on its tab: colored border and icon when active,
+// neutral otherwise. Backgrounds stay white — the color belongs to the glyph
+// and the outline, never a filled chip.
+const TAB_TONES: Record<DashboardChipTone, { active: string; icon: string }> = {
+  violet: { active: "border-violet-400 text-violet-950", icon: "text-violet-600" },
+  sky: { active: "border-sky-400 text-sky-950", icon: "text-sky-600" },
+  amber: { active: "border-amber-400 text-amber-950", icon: "text-amber-600" },
+  emerald: { active: "border-emerald-400 text-emerald-950", icon: "text-emerald-600" },
+  pink: { active: "border-pink-400 text-pink-950", icon: "text-pink-600" },
+  zinc: { active: "border-zinc-400 text-zinc-900", icon: "text-zinc-600" },
+};
+
 function CopyButton({
   text,
   label = "Copy embed code",
@@ -173,23 +185,27 @@ export function EmbedsPage({ event }: { event: EventRow }) {
 
       {/* One widget at a time: five iframes side by side loaded five copies of
           the public site and left the cards at mismatched heights. */}
-      <div className="flex flex-wrap items-center gap-1 border-b border-border">
+      <div className="flex flex-wrap items-center gap-2">
         {WIDGETS.map((widget) => {
           const isActive = widget.key === active;
+          const tone = TAB_TONES[widget.tone];
           return (
             <button
               key={widget.key}
               type="button"
               onClick={() => setActive(widget.key)}
-              aria-current={isActive ? "page" : undefined}
+              aria-pressed={isActive}
               className={cn(
-                "-mb-px flex items-center gap-2 border-b-2 px-3 py-2 text-[13px] font-medium transition-colors",
+                "flex items-center gap-2 rounded-full border bg-card px-3.5 py-2 text-[13px] font-medium transition-[color,border-color,box-shadow] duration-150",
                 isActive
-                  ? "border-zinc-900 text-zinc-900"
-                  : "border-transparent text-muted-foreground hover:text-foreground",
+                  ? `${tone.active} shadow-[0_1px_2px_rgba(0,0,0,0.05)]`
+                  : "border-border text-muted-foreground hover:text-foreground",
               )}
             >
-              <widget.icon className="size-4" aria-hidden="true" />
+              <widget.icon
+                className={cn("size-4", isActive ? tone.icon : "text-muted-foreground")}
+                aria-hidden="true"
+              />
               {widget.title}
             </button>
           );
