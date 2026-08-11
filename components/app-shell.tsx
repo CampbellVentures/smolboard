@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Link, usePathname, useRoom, useRouter, type RoomPeer } from "@pylonsync/react";
+import { db, Link, usePathname, useRoom, useRouter, type RoomPeer } from "@pylonsync/react";
 import { useAuth, OrganizationSwitcher } from "@pylonsync/client";
 import {
   LayoutDashboard,
@@ -26,6 +26,7 @@ import {
   Send,
   Palette,
   Code2,
+  Check,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -203,28 +204,67 @@ function eventNav(eventId: string): NavEntry<EventNavKey>[] {
   ];
 }
 
-function EventContextLink({
+// Event switcher: the same shape as the workspace switcher directly above it,
+// so the sidebar reads workspace → event → sections. Sibling events come from
+// a live query, and picking one lands on the equivalent section.
+function EventSwitcher({
   event,
+  workspaceId,
+  activeSection,
   onNavigate,
 }: {
   event: { id: string; name: string };
+  workspaceId: string;
+  activeSection?: string;
   onNavigate?: () => void;
 }) {
+  const { data, loading } = db.useQuery<{ id: string; name: string; orgId: string; startDate?: string }>(
+    "Event",
+  );
+  const events = (loading ? [] : data)
+    .filter((row) => row.orgId === workspaceId)
+    .sort((a, b) => ((a.startDate ?? "") < (b.startDate ?? "") ? 1 : -1));
+  const section = activeSection && activeSection !== "overview" ? activeSection : "overview";
+
   return (
-    <Link
-      href="/dashboard/events"
-      onClick={onNavigate}
-      className="flex h-12 w-full items-center gap-2.5 rounded-lg bg-background/70 px-2.5 transition-[background-color,scale] duration-150 ease-out hover:bg-background active:scale-[0.98] motion-reduce:transform-none"
-    >
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border bg-muted/60 text-foreground shadow-sm">
-        <CalendarDays className="size-4" aria-hidden="true" />
-      </span>
-      <span className="min-w-0 flex-1 text-left">
-        <span className="block truncate text-[13px] font-semibold">{event.name}</span>
-        <span className="block text-[10px] text-muted-foreground">Event</span>
-      </span>
-      <ChevronsUpDown className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
-    </Link>
+    <details className="group relative">
+      <summary className="flex h-12 w-full cursor-pointer select-none list-none items-center gap-2.5 rounded-lg bg-background/70 px-2.5 transition-[background-color,scale] duration-150 ease-out hover:bg-background active:scale-[0.98] marker:hidden motion-reduce:transform-none [&::-webkit-details-marker]:hidden">
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border bg-muted/60 text-foreground shadow-sm">
+          <CalendarDays className="size-4" aria-hidden="true" />
+        </span>
+        <span className="min-w-0 flex-1 text-left">
+          <span className="block truncate text-[13px] font-semibold">{event.name}</span>
+          <span className="block text-[10px] text-muted-foreground">Event</span>
+        </span>
+        <ChevronsUpDown className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+      </summary>
+      <div className="absolute left-0 right-0 top-[3.25rem] z-40 overflow-hidden rounded-lg border border-border bg-popover shadow-lg">
+        <ul className="max-h-72 overflow-y-auto py-1">
+          {events.map((row) => (
+            <li key={row.id}>
+              <Link
+                href={`/dashboard/events/${row.id}/${row.id === event.id ? section : "overview"}`}
+                onClick={onNavigate}
+                className="flex items-center gap-2 px-2.5 py-2 text-[13px] hover:bg-muted/70"
+              >
+                <span className="min-w-0 flex-1 truncate">{row.name}</span>
+                {row.id === event.id ? (
+                  <Check className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+                ) : null}
+              </Link>
+            </li>
+          ))}
+        </ul>
+        <Link
+          href="/dashboard/events"
+          onClick={onNavigate}
+          className="flex items-center gap-2 border-t px-2.5 py-2 text-[13px] text-muted-foreground hover:bg-muted/70 hover:text-foreground"
+        >
+          <LayoutDashboard className="size-3.5" aria-hidden="true" />
+          All events
+        </Link>
+      </div>
+    </details>
   );
 }
 
@@ -408,17 +448,20 @@ export function AppShell({
       ) : null}
       {/* ---------- Pane 1: nav sidebar ---------- */}
       <aside className="hidden w-60 shrink-0 flex-col border-r border-border/70 bg-muted/35 md:flex">
-        <div className="px-3 pb-2 pt-3">
-          {event ? (
-            <EventContextLink event={event} />
-          ) : (
+        <div className="flex flex-col gap-1.5 px-3 pb-2 pt-3">
             <OrganizationSwitcher
               hidePersonal
               initialActiveName={orgName}
               onSwitched={() => router.push("/dashboard")}
               className="w-full [&>button]:h-12 [&>button]:w-full [&>button]:justify-start [&>button]:rounded-lg [&>button]:border-0 [&>button]:bg-background/70 [&>button]:px-2.5 [&>button]:shadow-none [&>button]:transition-[background-color,scale] [&>button]:duration-150 [&>button]:ease-out [&>button]:hover:bg-background [&>button]:active:scale-[0.96] [&>button>span:first-child]:size-8 [&>button>span:first-child]:rounded-lg [&>button>span:nth-child(2)]:min-w-0 [&>button>span:nth-child(2)]:flex-1 [&>button>span:nth-child(2)]:text-left"
             />
-          )}
+          {event ? (
+            <EventSwitcher
+              event={event}
+              workspaceId={workspaceId}
+              activeSection={active}
+            />
+          ) : null}
         </div>
 
         {event ? (
@@ -472,13 +515,7 @@ export function AppShell({
                   <SheetDescription>Navigate the workspace and current event.</SheetDescription>
                 </SheetHeader>
                 <div className="flex h-full flex-col bg-muted/35">
-                  <div className="px-3 pb-2 pt-3">
-                    {event ? (
-                      <EventContextLink
-                        event={event}
-                        onNavigate={() => setMobileNavOpen(false)}
-                      />
-                    ) : (
+                  <div className="flex flex-col gap-1.5 px-3 pb-2 pt-3">
                       <OrganizationSwitcher
                         hidePersonal
                         initialActiveName={orgName}
@@ -488,7 +525,14 @@ export function AppShell({
                         }}
                         className="w-full [&>button]:h-10 [&>button]:w-full [&>button]:justify-start [&>button]:rounded-lg [&>button]:border-0 [&>button]:bg-background/70 [&>button]:px-2.5 [&>button]:shadow-none"
                       />
-                    )}
+                    {event ? (
+                      <EventSwitcher
+                        event={event}
+                        workspaceId={workspaceId}
+                        activeSection={active}
+                        onNavigate={() => setMobileNavOpen(false)}
+                      />
+                    ) : null}
                   </div>
                   <GroupedNav
                     items={event ? eventNav(event.id) : reviewerMode ? REVIEWER_NAV : WORKSPACE_NAV}
