@@ -26,6 +26,7 @@ import {
   Send,
   Palette,
   Code2,
+  UserRound,
   Check,
   type LucideIcon,
 } from "lucide-react";
@@ -774,6 +775,13 @@ function UserMenu({
             {email || "Signed in"}
           </div>
         </div>
+        <Link
+          href="/dashboard/profile"
+          className="flex items-center gap-2 px-3 py-2 text-[13px] text-foreground hover:bg-muted/70"
+        >
+          <UserRound className="size-3.5 text-muted-foreground" aria-hidden="true" />
+          Your profile
+        </Link>
         <a
           href="/"
           className="flex min-h-10 items-center gap-2 rounded-lg px-2.5 py-2 text-[13px] text-foreground transition-[background-color] hover:bg-muted"
