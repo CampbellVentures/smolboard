@@ -43,6 +43,7 @@ import { cn } from "@/lib/utils";
 import { PersonAvatar } from "./person-avatar";
 import { SessionReconcile } from "./session-reconcile";
 import { SyncHeartbeat } from "./sync-heartbeat";
+import { SyncDebug } from "./sync-debug";
 import { ActivityBell } from "./activity-bell";
 import { CommandPalette, type PaletteDestination } from "./command-palette";
 import { lastEventStorageKey } from "@/lib/dashboard-routing";
@@ -441,6 +442,7 @@ export function AppShell({
     <div className="flex min-h-screen bg-background text-foreground">
       <SessionReconcile />
       <SyncHeartbeat />
+      <SyncDebug />
       {!reviewerMode ? (
         <CommandPalette
           workspaceId={workspaceId}
