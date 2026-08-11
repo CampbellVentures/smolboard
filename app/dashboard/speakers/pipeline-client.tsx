@@ -291,6 +291,26 @@ function ContactDetail({
           </div>
         </ResponsiveFormOverlay.Body>
         <ResponsiveFormOverlay.Footer>
+          <Button
+            type="button"
+            variant="ghost"
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true);
+              try {
+                await callFn("deleteContact", { contactId: contact.id });
+                toast.success(`Removed ${contact.name}`);
+                onClose();
+              } catch (error) {
+                toast.error(error instanceof Error ? error.message : "Couldn't remove.");
+              } finally {
+                setBusy(false);
+              }
+            }}
+            className="mr-auto text-destructive hover:text-destructive"
+          >
+            Remove
+          </Button>
           <Button type="button" variant="outline" onClick={onClose}>Close</Button>
           <Button type="button" disabled={busy} onClick={save}>Save contact</Button>
         </ResponsiveFormOverlay.Footer>
