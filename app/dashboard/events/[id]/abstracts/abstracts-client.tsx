@@ -36,7 +36,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { fieldsOf, parseJson } from "@/lib/types";
-import { aggregateSubmissionScore, reviewRoundForNumber } from "@/lib/reviews";
+import { aggregateSubmissionScore, normalizeCriteria, reviewRoundForNumber } from "@/lib/reviews";
+import { ScorecardEditor, keyFor, type DraftCriterion } from "@/components/scorecard-editor";
+import { ResponsiveFormOverlay } from "@/components/responsive-overlay";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 import { parseParticipantSnapshot } from "@/lib/submission-participants";
 import type {
   EventRow,
@@ -694,10 +698,9 @@ function ScorePanel({
   currentUserId: string;
   event: EventRow;
 }) {
-  const criteria = round
-    ? (parseJson<{ key: string; label: string; max: number }[]>(round.criteriaJson) ??
-      DEFAULT_CRITERIA)
-    : DEFAULT_CRITERIA;
+  const criteria = normalizeCriteria(
+    round ? parseJson(round.criteriaJson) ?? DEFAULT_CRITERIA : DEFAULT_CRITERIA,
+  );
 
   const roundReviews = round ? reviews.filter((r) => r.roundId === round.id) : [];
   const mine = roundReviews.find((r) => r.reviewerUserId === currentUserId);
@@ -757,34 +760,79 @@ function ScorePanel({
         Your score {round ? `· ${round.name}` : `· Round ${submission.currentRound}`}
       </h4>
       <div className="mt-2 space-y-2.5">
-        {criteria.map((c) => (
-          <div key={c.key} className="flex items-center justify-between gap-2">
-            <span className="text-[13px] text-zinc-600">{c.label}</span>
-            <div className="flex gap-0.5">
-              {Array.from({ length: c.max }, (_, i) => i + 1).map((v) => (
-                <button
-                  key={v}
-                  type="button"
-                  aria-label={`${c.label}: ${v} of ${c.max}`}
-                  onClick={() => {
-                    setScores((s) => ({ ...s, [c.key]: v }));
+        {criteria.map((c) => {
+          // A round's scorecard can mix ratings, dropdowns, and free text.
+          if (c.type === "select") {
+            return (
+              <div key={c.key} className="flex items-center justify-between gap-2">
+                <span className="text-[13px] text-zinc-600">{c.label}</span>
+                <Select
+                  aria-label={c.label}
+                  className="w-40"
+                  value={typeof scores[c.key] === "string" ? (scores[c.key] as unknown as string) : ""}
+                  onChange={(e) => {
+                    setScores((s) => ({ ...s, [c.key]: e.target.value as unknown as number }));
                     setSaved(false);
                   }}
-                  className="p-0.5"
                 >
-                  <Star
-                    className={
-                      "size-4 " +
-                      ((scores[c.key] ?? 0) >= v
-                        ? "fill-amber-400 text-amber-400"
-                        : "text-zinc-300 hover:text-zinc-400")
-                    }
-                  />
-                </button>
-              ))}
+                  <option value="">Select…</option>
+                  {(c.options ?? []).map((option) => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </Select>
+              </div>
+            );
+          }
+          if (c.type === "text") {
+            return (
+              <div key={c.key} className="flex flex-col gap-1">
+                <span className="text-[13px] text-zinc-600">{c.label}</span>
+                <Textarea
+                  aria-label={c.label}
+                  rows={2}
+                  className="resize-none bg-white"
+                  value={typeof scores[c.key] === "string" ? (scores[c.key] as unknown as string) : ""}
+                  onChange={(e) => {
+                    setScores((s) => ({ ...s, [c.key]: e.target.value as unknown as number }));
+                    setSaved(false);
+                  }}
+                />
+              </div>
+            );
+          }
+          const max = c.max ?? 5;
+          return (
+            <div key={c.key} className="flex items-center justify-between gap-2">
+              <span className="text-[13px] text-zinc-600">
+                {c.label}
+                {c.weight > 1 ? <span className="ml-1 text-zinc-400">×{c.weight}</span> : null}
+              </span>
+              <div className="flex gap-0.5">
+                {Array.from({ length: max }, (_, i) => i + 1).map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    aria-label={`${c.label}: ${v} of ${max}`}
+                    onClick={() => {
+                      setScores((s) => ({ ...s, [c.key]: v }));
+                      setSaved(false);
+                    }}
+                    className="p-0.5"
+                  >
+                    <Star
+                      className={
+                        "size-4 " +
+                        ((Number(scores[c.key]) || 0) >= v
+                          ? "fill-amber-400 text-amber-400"
+                          : "text-zinc-300 hover:text-zinc-400")
+                      }
+                    />
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
         <div className="flex gap-1.5">
           {["accept", "neutral", "reject"].map((r) => (
             <button
@@ -856,30 +904,136 @@ function ScorePanel({
 /* ====================== Rounds management ====================== */
 // (Kept minimal: rounds are auto-created on first score; explicit multi-round
 // setup happens by advancing submissions — a new ReviewRound row is created
-// lazily when scoring at a round number with no row yet. A dedicated rounds
-// editor can come with M3 polish if organizers ask for custom criteria per
-// round.)
+// lazily when scoring at a round number with no row yet.)
+
+// Round settings: name, anonymization, and the scorecard reviewers fill in.
+function RoundEditor({
+  event,
+  round,
+  nextNumber,
+  onClose,
+}: {
+  event: EventRow;
+  round?: ReviewRoundRow;
+  nextNumber: number;
+  onClose: () => void;
+}) {
+  const [name, setName] = useState(round?.name ?? `Round ${nextNumber}`);
+  const [anonymized, setAnonymized] = useState(Boolean(round?.anonymized));
+  const [criteria, setCriteria] = useState<DraftCriterion[]>(() =>
+    round ? normalizeCriteria(parseJson(round.criteriaJson)) : normalizeCriteria(DEFAULT_CRITERIA),
+  );
+  const [saving, setSaving] = useState(false);
+
+  async function save(formEvent: React.FormEvent) {
+    formEvent.preventDefault();
+    const taken = new Set<string>();
+    const cleaned = criteria
+      .filter((c) => c.label.trim())
+      .map((c) => {
+        const key = c.key || keyFor(c.label, taken);
+        taken.add(key);
+        return { ...c, key, label: c.label.trim() };
+      });
+    if (cleaned.length === 0) {
+      toast.error("Add at least one criterion.");
+      return;
+    }
+    setSaving(true);
+    try {
+      await callFn("saveReviewRound", {
+        eventId: event.id,
+        roundId: round?.id,
+        roundNumber: round?.roundNumber ?? nextNumber,
+        name: name.trim() || `Round ${round?.roundNumber ?? nextNumber}`,
+        criteriaJson: cleaned,
+        status: round?.status ?? "open",
+        anonymized,
+      });
+      toast.success(round ? "Round updated" : `Round ${nextNumber} created`);
+      onClose();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Couldn't save the round.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <ResponsiveFormOverlay.Root open onOpenChange={(open) => !open && onClose()}>
+      <ResponsiveFormOverlay.Content className="sm:max-w-2xl">
+        <form onSubmit={save} className="contents">
+          <ResponsiveFormOverlay.Header icon={Star}>
+            <ResponsiveFormOverlay.Title>
+              {round ? `Edit ${round.name}` : `New review round`}
+            </ResponsiveFormOverlay.Title>
+            <ResponsiveFormOverlay.Description>
+              Reviewers see these questions when they score a submission in this round.
+            </ResponsiveFormOverlay.Description>
+          </ResponsiveFormOverlay.Header>
+          <ResponsiveFormOverlay.Body>
+            <div className="flex flex-col gap-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="round-name">Round name</Label>
+                  <Input
+                    id="round-name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    autoComplete="off"
+                  />
+                </div>
+                <label className="flex items-end gap-2 pb-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={anonymized}
+                    onChange={(e) => setAnonymized(e.target.checked)}
+                    className="size-4"
+                  />
+                  Hide speaker identity from reviewers
+                </label>
+              </div>
+              <div>
+                <p className="mb-2 text-sm font-medium">Scorecard</p>
+                <ScorecardEditor criteria={criteria} onChange={setCriteria} />
+              </div>
+            </div>
+          </ResponsiveFormOverlay.Body>
+          <ResponsiveFormOverlay.Footer>
+            <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+            <Button type="submit" disabled={saving}>
+              {saving ? "Saving…" : round ? "Save round" : "Create round"}
+            </Button>
+          </ResponsiveFormOverlay.Footer>
+        </form>
+      </ResponsiveFormOverlay.Content>
+    </ResponsiveFormOverlay.Root>
+  );
+}
 
 export function AddRoundButton({ event, rounds }: { event: EventRow; rounds: ReviewRoundRow[] }) {
   const next = (rounds[rounds.length - 1]?.roundNumber ?? 0) + 1;
-  async function add() {
-    await callFn("saveReviewRound", {
-      eventId: event.id,
-      roundNumber: next,
-      name: `Round ${next}`,
-      criteriaJson: DEFAULT_CRITERIA,
-      status: "open",
-    });
-  }
+  const [editing, setEditing] = useState<"new" | ReviewRoundRow | null>(null);
+  const latest = rounds[rounds.length - 1];
   return (
-    <Button
-      type="button"
-      size="sm"
-      variant="ghost"
-      onClick={add}
-    >
-      <Plus data-icon="inline-start" /> Add round {next}
-    </Button>
+    <>
+      {latest ? (
+        <Button type="button" size="sm" variant="ghost" onClick={() => setEditing(latest)}>
+          Scorecard
+        </Button>
+      ) : null}
+      <Button type="button" size="sm" variant="ghost" onClick={() => setEditing("new")}>
+        <Plus data-icon="inline-start" /> Add round {next}
+      </Button>
+      {editing ? (
+        <RoundEditor
+          event={event}
+          round={editing === "new" ? undefined : editing}
+          nextNumber={next}
+          onClose={() => setEditing(null)}
+        />
+      ) : null}
+    </>
   );
 }
 
