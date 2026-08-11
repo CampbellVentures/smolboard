@@ -462,3 +462,37 @@ export interface CopilotMessageRow {
   toolCallsJson?: CopilotToolCall[];
   createdAt: string;
 }
+
+export interface ContactRow {
+  id: string;
+  orgId: string;
+  name: string;
+  email: string;
+  company?: string;
+  jobTitle?: string;
+  headshotUrl?: string;
+  bio?: string;
+  stage: string;
+  tagsJson?: string[];
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ContactStageEventRow {
+  id: string;
+  orgId: string;
+  contactId: string;
+  fromStage?: string;
+  toStage: string;
+  actorName?: string;
+  createdAt: string;
+}
+
+export interface ContactSegmentRow {
+  id: string;
+  orgId: string;
+  name: string;
+  filtersJson?: { q?: string; tag?: string; stage?: string; company?: string };
+  createdAt: string;
+}

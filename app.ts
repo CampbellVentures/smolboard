@@ -694,6 +694,57 @@ const SpeakerNote = entity(
   { indexes: [{ name: "by_org_email", fields: ["orgId", "email"], unique: false }] },
 );
 
+const Contact = entity(
+  "Contact",
+  {
+    orgId: field.id("Org").readonly(),
+    name: field.string(),
+    email: field.string(),
+    company: field.string().optional(),
+    jobTitle: field.string().optional(),
+    headshotUrl: field.string().optional(),
+    bio: field.string().optional(),
+    // Sourcing pipeline: "prospect" | "contacted" | "invited" | "confirmed" | "declined".
+    stage: field.string().default("prospect"),
+    tagsJson: field.json().optional(),
+    notes: field.string().optional(),
+    createdAt: field.datetime().defaultNow(),
+    updatedAt: field.datetime().defaultNow(),
+  },
+  {
+    indexes: [
+      { name: "by_org", fields: ["orgId"], unique: false },
+      { name: "by_org_email", fields: ["orgId", "email"], unique: true },
+    ],
+  },
+);
+
+// Stage moves are the CRM's audit trail, so they're rows, not a JSON blob.
+const ContactStageEvent = entity(
+  "ContactStageEvent",
+  {
+    orgId: field.id("Org").readonly(),
+    contactId: field.id("Contact").readonly(),
+    fromStage: field.string().optional().readonly(),
+    toStage: field.string().readonly(),
+    actorName: field.string().optional().readonly(),
+    createdAt: field.datetime().defaultNow(),
+  },
+  { indexes: [{ name: "by_contact", fields: ["contactId"], unique: false }] },
+);
+
+// A saved segment is a named filter over the directory.
+const ContactSegment = entity(
+  "ContactSegment",
+  {
+    orgId: field.id("Org").readonly(),
+    name: field.string(),
+    filtersJson: field.json(),
+    createdAt: field.datetime().defaultNow(),
+  },
+  { indexes: [{ name: "by_org", fields: ["orgId"], unique: false }] },
+);
+
 const ActivityLog = entity(
   "ActivityLog",
   {
@@ -1029,6 +1080,31 @@ const speakerNotePolicy = policy({
   allowDelete: "false",
 });
 
+const contactPolicy = policy({
+  name: "contact_access",
+  entity: "Contact",
+  allowRead: 'auth.tenantId == data.orgId && auth.hasAnyRole("owner", "admin")',
+  allowInsert: "false",
+  allowUpdate: "false",
+  allowDelete: "false",
+});
+const contactStageEventPolicy = policy({
+  name: "contact_stage_event_access",
+  entity: "ContactStageEvent",
+  allowRead: 'auth.tenantId == data.orgId && auth.hasAnyRole("owner", "admin")',
+  allowInsert: "false",
+  allowUpdate: "false",
+  allowDelete: "false",
+});
+const contactSegmentPolicy = policy({
+  name: "contact_segment_access",
+  entity: "ContactSegment",
+  allowRead: 'auth.tenantId == data.orgId && auth.hasAnyRole("owner", "admin")',
+  allowInsert: "false",
+  allowUpdate: "false",
+  allowDelete: "false",
+});
+
 const activityLogPolicy = policy({
   name: "activity_log_access",
   entity: "ActivityLog",
@@ -1081,6 +1157,9 @@ const manifest = buildManifest({
     EmailTemplate,
     EmailLog,
     SpeakerNote,
+    Contact,
+    ContactStageEvent,
+    ContactSegment,
     ActivityLog,
     CalendarInvite,
     CopilotThread,
@@ -1117,6 +1196,9 @@ const manifest = buildManifest({
     emailTemplatePolicy,
     emailLogPolicy,
     speakerNotePolicy,
+    contactPolicy,
+    contactStageEventPolicy,
+    contactSegmentPolicy,
     activityLogPolicy,
     calendarInvitePolicy,
     copilotThreadPolicy,

@@ -34,7 +34,22 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import type { EventRow, SpeakerNoteRow, SpeakerProfileRow, SubmissionRow } from "@/lib/types";
+import type {
+  ContactRow,
+  ContactSegmentRow,
+  ContactStageEventRow,
+  EventRow,
+  SpeakerNoteRow,
+  SpeakerProfileRow,
+  SubmissionRow,
+} from "@/lib/types";
+import {
+  BulkEmailDialog,
+  ContactPipeline,
+  CrmMetrics,
+  DuplicatesPanel,
+  ImportContactsDialog,
+} from "./pipeline-client";
 
 // Workspace-wide speaker CRM: one row per person across every event, built
 // from the per-event profiles (identity = email). Read-mostly by design —
@@ -145,10 +160,24 @@ export function SpeakerDirectory({
 
   const [q, setQ] = useState("");
   const [tag, setTag] = useState("all");
+  const [company, setCompany] = useState("all");
   const [selected, setSelected] = useState<SpeakerPerson | null>(null);
+  const [view, setView] = useState<"directory" | "pipeline">("directory");
+  const [importing, setImporting] = useState(false);
+  const [emailing, setEmailing] = useState(false);
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+
+  const contactQ = db.useQuery<ContactRow>("Contact");
+  const stageQ = db.useQuery<ContactStageEventRow>("ContactStageEvent");
+  const segmentQ = db.useQuery<ContactSegmentRow>("ContactSegment");
+  const contacts = (contactQ.loading ? [] : contactQ.data).filter((row) => row.orgId === orgId);
+  const stageEvents = (stageQ.loading ? [] : stageQ.data).filter((row) => row.orgId === orgId);
+  const segments = (segmentQ.loading ? [] : segmentQ.data).filter((row) => row.orgId === orgId);
+  const liveEvents = events.filter((row) => row.orgId === orgId);
 
   let rows = people;
   if (tag !== "all") rows = rows.filter((person) => person.tags.includes(tag));
+  if (company !== "all") rows = rows.filter((person) => (person.company ?? "") === company);
   if (q.trim()) {
     const needle = q.trim().toLowerCase();
     rows = rows.filter(
@@ -181,6 +210,107 @@ export function SpeakerDirectory({
           {people.length === 1 ? "person" : "people"} so far.
         </p>
       </DashboardHero>
+      <CrmMetrics contacts={contacts} />
+
+      <div className="flex flex-wrap items-center gap-2">
+        {(["directory", "pipeline"] as const).map((key) => (
+          <button
+            key={key}
+            type="button"
+            aria-pressed={view === key}
+            onClick={() => setView(key)}
+            className={
+              "rounded-full border px-3.5 py-1.5 text-[13px] font-medium capitalize transition-colors " +
+              (view === key
+                ? "border-zinc-900 text-zinc-900"
+                : "border-border text-muted-foreground hover:text-foreground")
+            }
+          >
+            {key}
+          </button>
+        ))}
+        <div className="ml-auto flex flex-wrap gap-2">
+          <Button type="button" size="sm" variant="outline" onClick={() => setImporting(true)}>
+            Import CSV
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={picked.size === 0}
+            onClick={() => setEmailing(true)}
+          >
+            Email {picked.size > 0 ? `(${picked.size})` : ""}
+          </Button>
+        </div>
+      </div>
+
+      {view === "pipeline" ? (
+        <>
+          <ContactPipeline
+            orgId={orgId}
+            contacts={contacts}
+            stageEvents={stageEvents}
+            events={liveEvents}
+            selected={picked}
+            onToggleSelect={(id) =>
+              setPicked((prev) => {
+                const next = new Set(prev);
+                if (next.has(id)) next.delete(id);
+                else next.add(id);
+                return next;
+              })
+            }
+          />
+          <DuplicatesPanel orgId={orgId} contacts={contacts} />
+          <div className="rounded-xl border border-border bg-card p-4">
+            <p className="text-sm font-medium">Select contacts to email</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {contacts.map((contact) => (
+                <button
+                  key={contact.id}
+                  type="button"
+                  aria-pressed={picked.has(contact.id)}
+                  onClick={() =>
+                    setPicked((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(contact.id)) next.delete(contact.id);
+                      else next.add(contact.id);
+                      return next;
+                    })
+                  }
+                  className={
+                    "rounded-full border px-2.5 py-1 text-xs transition-colors " +
+                    (picked.has(contact.id)
+                      ? "border-zinc-900 text-zinc-900"
+                      : "border-border text-muted-foreground hover:text-foreground")
+                  }
+                >
+                  {contact.name}
+                </button>
+              ))}
+              {contacts.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  Import contacts to start building a pipeline.
+                </p>
+              ) : null}
+            </div>
+          </div>
+        </>
+      ) : null}
+
+      {importing ? (
+        <ImportContactsDialog orgId={orgId} onClose={() => setImporting(false)} />
+      ) : null}
+      {emailing ? (
+        <BulkEmailDialog
+          orgId={orgId}
+          contacts={contacts.filter((c) => picked.has(c.id))}
+          onClose={() => setEmailing(false)}
+        />
+      ) : null}
+
+      {view === "directory" ? (
       <DashboardToolbar>
         <div className="flex flex-wrap items-center gap-2">
           <Input
@@ -191,6 +321,27 @@ export function SpeakerDirectory({
             aria-label="Search speakers"
             autoComplete="off"
           />
+          <Select
+            aria-label="Filter by company"
+            value={company}
+            onChange={(event) => setCompany(event.target.value)}
+            className="w-44"
+          >
+            <option value="all">All companies</option>
+            {[...new Set(people.map((p) => p.company).filter(Boolean))].sort().map((value) => (
+              <option key={value} value={value as string}>{value}</option>
+            ))}
+          </Select>
+          {(q || tag !== "all" || company !== "all") ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={() => { setQ(""); setTag("all"); setCompany("all"); }}
+            >
+              Clear
+            </Button>
+          ) : null}
           {allTags.length > 0 ? (
             <Select
               aria-label="Filter by tag"
@@ -211,7 +362,9 @@ export function SpeakerDirectory({
           {rows.length} of {people.length} speakers
         </span>
       </DashboardToolbar>
+      ) : null}
 
+      {view === "directory" ? (
       <div className="overflow-x-auto rounded-xl border border-border bg-card">
         <Table>
           <TableHeader>
@@ -292,6 +445,7 @@ export function SpeakerDirectory({
           </TableBody>
         </Table>
       </div>
+      ) : null}
 
       <Sheet open={selected !== null} onOpenChange={(open) => !open && setSelected(null)}>
         <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
