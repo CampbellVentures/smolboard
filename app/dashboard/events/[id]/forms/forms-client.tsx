@@ -15,7 +15,19 @@ import { ResponsiveFormOverlay } from "@/components/responsive-overlay";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { ChevronRight, FilePlus2, FileText, ExternalLink } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
+import { ChevronRight, FilePlus2, FileText, ExternalLink, Trash2 } from "lucide-react";
 import { parseFields, slugify } from "@/lib/forms";
 import { useOrgSlug } from "@/components/use-org-slug";
 import { parseJson } from "@/lib/types";
@@ -81,6 +93,15 @@ export function FormsList({
   const [name, setName] = useState("Call for speakers");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  async function remove(formId: string, name: string) {
+    try {
+      await callFn("deleteSubmissionForm", { formId });
+      toast.success(`Deleted “${name}”`);
+    } catch (caught) {
+      toast.error(caught instanceof Error ? caught.message : "Couldn't delete the form.");
+    }
+  }
 
   async function create(e: React.FormEvent) {
     e.preventDefault();
@@ -209,12 +230,46 @@ export function FormsList({
                   </div>
                 </dl>
                 <div className="mt-auto flex items-center justify-between gap-2 border-t bg-muted/40 px-4 py-2.5">
-                  <Button asChild size="sm" variant="ghost">
-                    <Link href={`/dashboard/events/${event.id}/forms/${f.id}`}>
-                      Edit form
-                      <ChevronRight data-icon="inline-end" />
-                    </Link>
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button asChild size="sm" variant="ghost">
+                      <Link href={`/dashboard/events/${event.id}/forms/${f.id}`}>
+                        Edit form
+                        <ChevronRight data-icon="inline-end" />
+                      </Link>
+                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          aria-label={`Delete ${f.name}`}
+                        >
+                          <Trash2 data-icon="inline-start" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete “{f.name}”?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            {submissionCount > 0
+                              ? `This form has ${submissionCount} submission${submissionCount === 1 ? "" : "s"}. Close it from the builder instead — deleting would orphan those proposals.`
+                              : "The public CFP page for this form stops working immediately."}
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            variant="destructive"
+                            disabled={submissionCount > 0}
+                            onClick={() => void remove(f.id, f.name)}
+                          >
+                            Delete form
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
                   {f.status === "open" && orgSlug ? (
                     <Button asChild size="sm" variant="outline">
                       <a
