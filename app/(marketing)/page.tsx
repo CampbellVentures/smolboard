@@ -1,6 +1,7 @@
 import React from "react";
 import { Link, type Metadata, type PageProps } from "@pylonsync/react";
 import { siteConfig } from "@/lib/site.config";
+import { HeroShowcase } from "./hero-showcase";
 
 // `/` — the smolboard landing. Self-contained copy (the Acme template's
 // product-catalog sections don't apply to a single-product tool); SEO strings
@@ -8,6 +9,25 @@ import { siteConfig } from "@/lib/site.config";
 export const metadata: Metadata = {
   title: siteConfig.seo.title,
   description: siteConfig.seo.description,
+  openGraph: {
+    title: siteConfig.seo.title,
+    description: siteConfig.seo.description,
+    siteName: "smolboard",
+    type: "website",
+    url: "https://www.smolboard.app/",
+    image: "https://www.smolboard.app/assets/img/og.png",
+    imageType: "image/png",
+    imageWidth: 2400,
+    imageHeight: 1260,
+    imageAlt: "smolboard: open-source speaker and CFP management, with the event dashboard.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: siteConfig.seo.title,
+    description: siteConfig.seo.description,
+    image: "https://www.smolboard.app/assets/img/og.png",
+    imageAlt: "smolboard: open-source speaker and CFP management, with the event dashboard.",
+  },
 };
 
 const FEATURES: { title: string; body: string }[] = [
@@ -44,43 +64,42 @@ export default function LandingPage({ auth }: PageProps) {
   return (
     <div className="bg-white">
       {/* ---------------- Hero: one line, one CTA, the product ---------------- */}
-      <section className="mx-auto max-w-5xl px-6 pt-16">
-        <div className="mx-auto max-w-2xl text-center">
-          <h1 className="text-balance text-4xl font-semibold tracking-tight text-zinc-900 sm:text-[44px] sm:leading-[1.1]">
-            Open-source speaker &amp; CFP management
-          </h1>
-          <div className="mt-7 flex items-center justify-center gap-3">
-            <Link
-              href={primaryHref}
-              className="inline-flex h-10 items-center rounded-full bg-zinc-900 px-5 text-[14px] font-medium text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition-colors hover:bg-zinc-700"
-            >
-              {signedIn ? "Open dashboard" : "Get started free"}
-            </Link>
-            <a
-              href="/ai-engineer/ai-engineer-sandbox"
-              className="inline-flex h-10 items-center rounded-full px-4 text-[14px] font-medium text-zinc-600 transition-colors hover:text-zinc-900"
-            >
-              See a live schedule →
-            </a>
-          </div>
+      <section className="relative overflow-hidden px-6 pt-16">
+        {/* A faint halo behind the headline. Kept narrow and low-opacity on
+            purpose: the dark gradient frame below is the page's color, and two
+            loud gradients would fight. */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute left-1/2 top-0 h-[340px] w-[820px] max-w-[110vw] -translate-x-1/2"
+        >
+          <div className="absolute left-1/2 top-[-150px] size-[380px] -translate-x-[85%] rounded-full bg-violet-300/20 blur-3xl" />
+          <div className="absolute left-1/2 top-[-130px] size-[340px] -translate-x-[15%] rounded-full bg-sky-300/[0.18] blur-3xl" />
+          <div className="absolute left-1/2 top-[-160px] size-[300px] translate-x-[45%] rounded-full bg-amber-200/20 blur-3xl" />
+          <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-b from-transparent to-white" />
         </div>
 
-        {/* The event dashboard, full-bleed. Bottom edge fades so the hero
-            hands off to the features band without a hard cut. */}
-        <div className="relative mt-12">
-          <div className="overflow-hidden rounded-xl shadow-[0_0_0_1px_rgba(0,0,0,0.08),0_24px_60px_-24px_rgba(0,0,0,0.25)]">
-            <img
-              src="/assets/img/hero-dashboard.png"
-              alt="The smolboard event dashboard: a submissions table with speakers, categories, review scores, and statuses, next to the event navigation."
-              width={2720}
-              height={1720}
-              className="block w-full"
-            />
+        <div className="relative mx-auto max-w-5xl">
+          <div className="mx-auto max-w-2xl text-center">
+            <h1 className="text-balance text-4xl font-semibold tracking-tight text-zinc-900 sm:text-[44px] sm:leading-[1.1]">
+              Open-source speaker &amp; CFP management
+            </h1>
+            <div className="mt-7 flex items-center justify-center gap-3">
+              <Link
+                href={primaryHref}
+                className="inline-flex h-10 items-center rounded-full bg-zinc-900 px-5 text-[14px] font-medium text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition-colors hover:bg-zinc-700"
+              >
+                {signedIn ? "Open dashboard" : "Get started free"}
+              </Link>
+              <a
+                href="/ai-engineer/ai-engineer-sandbox"
+                className="inline-flex h-10 items-center rounded-full px-4 text-[14px] font-medium text-zinc-600 transition-colors hover:text-zinc-900"
+              >
+                See a live schedule →
+              </a>
+            </div>
           </div>
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-white to-transparent"
-          />
+
+          <HeroShowcase />
         </div>
       </section>
 

@@ -136,7 +136,7 @@ export const siteConfig: SiteConfig = {
   colors: { brand: "#1a1a1a", brandSoft: "#f4f4f5", paper: "#fafafa" },
 
   seo: {
-    title: "smolboard — open-source speaker & CFP management",
+    title: "smolboard: open-source speaker & CFP management",
     description:
       "Run your call for speakers, reviews, agenda, and speaker onboarding from one open-source app. Conditional CFP forms, real calendar invites, a drag-and-drop agenda with conflict detection, and an event copilot with MCP.",
   },
@@ -670,7 +670,7 @@ export const siteConfig: SiteConfig = {
       summary: "The rules for using Acme, in plain language.",
       sections: [
         { title: "Using Acme", body: "Use it for lawful work; don't abuse the service or other customers." },
-        { title: "Your content", body: "You own your data — you grant us only what's needed to run the product for you." },
+        { title: "Your content", body: "You own your data. You grant us only what's needed to run the product for you." },
         { title: "Changes & cancellation", body: "Cancel anytime; we give notice before any material change to these terms." },
       ],
     },

@@ -11,7 +11,7 @@ import type {
 } from "@/lib/types";
 
 export const metadata: Metadata = {
-  title: "Submissions - smolboard",
+  title: "Submissions · smolboard",
   robots: "noindex",
 };
 

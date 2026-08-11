@@ -4,7 +4,7 @@ import { EmbedsPage } from "./embeds-client";
 import type { EventRow } from "@/lib/types";
 
 export const metadata: Metadata = {
-  title: "Embeds — smolboard",
+  title: "Embeds · smolboard",
   robots: "noindex",
 };
 

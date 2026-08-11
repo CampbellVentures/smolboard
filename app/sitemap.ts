@@ -1,6 +1,4 @@
 import type { Sitemap } from "@pylonsync/react";
-import { PRODUCTS } from "@/lib/products";
-import { SOLUTIONS, RESOURCES, COMPANY, COMPARISONS } from "@/lib/site";
 
 // app/sitemap.ts → served at /sitemap.xml. Enumerates every public, indexable
 // page. The marketing pages are driven by the SAME data modules the nav,
@@ -21,13 +19,12 @@ export default async function sitemap(): Promise<Sitemap> {
       priority: 0.7,
     }));
 
+  // Only smolboard's own pages. The starter template's product-catalog routes
+  // (/products, /solutions, /resources, /compare) still resolve but describe a
+  // different, fictional product, so they are deliberately not advertised.
   return [
     { url: `${SITE}/`, changeFrequency: "weekly", priority: 1 },
-    ...collection("/products", PRODUCTS.map((p) => p.slug)),
-    ...collection("/solutions", SOLUTIONS.map((s) => s.slug)),
-    ...collection("/resources", RESOURCES.map((r) => r.slug)),
-    ...collection("/company", COMPANY.map((c) => c.slug)),
-    ...collection("/compare", COMPARISONS.map((c) => c.slug)),
+    ...collection("/company", ["terms", "privacy"]),
   ];
 
   // The export is async, so you can also enumerate pages from a DB read:

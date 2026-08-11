@@ -3,7 +3,7 @@ import { type Metadata, type PageProps } from "@pylonsync/react";
 import { SpeakerDirectory } from "./directory-client";
 import type { EventRow, SpeakerNoteRow, SpeakerProfileRow, SubmissionRow } from "@/lib/types";
 
-export const metadata: Metadata = { title: "Speakers — smolboard", robots: "noindex" };
+export const metadata: Metadata = { title: "Speakers · smolboard", robots: "noindex" };
 
 // `/dashboard/speakers` — the workspace-wide speaker CRM. One row per person
 // (keyed by email) across every event in the org, with their full history.

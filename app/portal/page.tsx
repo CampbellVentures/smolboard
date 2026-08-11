@@ -17,7 +17,7 @@ import type {
 } from "@/lib/types";
 
 export const metadata: Metadata = {
-  title: "Speaker portal — smolboard",
+  title: "Speaker portal · smolboard",
   robots: "noindex",
 };
 

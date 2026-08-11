@@ -4,7 +4,7 @@ import { FormsList } from "./forms-client";
 import type { EventRow, SubmissionFormRow, SubmissionRow } from "@/lib/types";
 
 export const metadata: Metadata = {
-  title: "Forms — smolboard",
+  title: "Forms · smolboard",
   robots: "noindex",
 };
 

@@ -37,7 +37,7 @@ function mcpTools(): McpTool[] {
   return [
     {
       name: "list_events",
-      description: "List your workspace's events with their eventIds — call this first.",
+      description: "List your workspace's events with their eventIds. Call this first.",
       inputSchema: { type: "object", properties: {} },
     },
     ...AGENT_TOOLS.map((t) => ({

@@ -3,7 +3,7 @@ import { Link, type Metadata } from "@pylonsync/react";
 import { AuthForm } from "../auth-form";
 
 export const metadata: Metadata = {
-  title: "Create your account — smolboard",
+  title: "Create your account · smolboard",
   robots: "noindex",
 };
 

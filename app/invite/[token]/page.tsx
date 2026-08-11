@@ -2,7 +2,7 @@ import React from "react";
 import { type Metadata, type PageProps } from "@pylonsync/react";
 import { AcceptInvite } from "./accept-client";
 
-export const metadata: Metadata = { title: "Accept invite — smolboard", robots: "noindex" };
+export const metadata: Metadata = { title: "Accept invite · smolboard", robots: "noindex" };
 
 // `/invite/[token]` — the clickable landing for org invites. The framework's
 // accept endpoint is POST-only, so a link needs this page to do the POST for

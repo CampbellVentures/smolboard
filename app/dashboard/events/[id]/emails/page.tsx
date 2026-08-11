@@ -3,7 +3,7 @@ import { type Metadata, type PageProps } from "@pylonsync/react";
 import { EmailsClient } from "./emails-client";
 import type { EmailLogRow, EmailTemplateRow, EventRow, SpeakerProfileRow } from "@/lib/types";
 
-export const metadata: Metadata = { title: "Emails — smolboard", robots: "noindex" };
+export const metadata: Metadata = { title: "Emails · smolboard", robots: "noindex" };
 
 export default function EmailsPage({ auth, params, response, serverData }: PageProps<{ id: string }>) {
   if (!auth.tenant_id) {

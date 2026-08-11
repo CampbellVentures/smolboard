@@ -48,7 +48,7 @@ export default mutation<{ orgId: string }, { eventId: string }>({
       name: "DevSummit Sample",
       slug: `devsummit-sample-${Math.random().toString(36).slice(2, 7)}`,
       description:
-        "A sample event so you can explore smolboard with real-looking data — submissions mid-review, a published schedule, and speakers in every state. Delete it any time from Settings.",
+        "A sample event so you can explore smolboard with real-looking data: submissions mid-review, a published schedule, and speakers in every state. Delete it any time from Settings.",
       startDate: `${day1}T00:00:00.000Z`,
       endDate: `${day2}T00:00:00.000Z`,
       timezone: "America/Los_Angeles",
@@ -183,7 +183,7 @@ export default mutation<{ orgId: string }, { eventId: string }>({
           scoresJson: { relevance: score, clarity: score - 1 },
           comment:
             status === "accepted"
-              ? "Clear narrative with concrete takeaways — strong fit."
+              ? "Clear narrative with concrete takeaways. Strong fit."
               : "Promising, but the outline needs a sharper second half.",
           recommendation: status === "accepted" ? "accept" : "neutral",
         });

@@ -6,7 +6,7 @@ import { submissionCountsByEvent } from "@/lib/dashboard-events";
 import type { EventRow, SubmissionRow } from "@/lib/types";
 
 export const metadata: Metadata = {
-  title: "Events — smolboard",
+  title: "Events · smolboard",
   robots: "noindex",
 };
 

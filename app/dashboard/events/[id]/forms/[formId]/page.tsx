@@ -4,7 +4,7 @@ import { FormBuilder } from "./builder-client";
 import type { EventRow, SubmissionFormRow, SubmissionRow, TrackRow } from "@/lib/types";
 
 export const metadata: Metadata = {
-  title: "Form builder — smolboard",
+  title: "Form builder · smolboard",
   robots: "noindex",
 };
 

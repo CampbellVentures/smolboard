@@ -4,7 +4,7 @@ import { BrandingPage } from "./branding-client";
 import type { EventRow } from "@/lib/types";
 
 export const metadata: Metadata = {
-  title: "Branding — smolboard",
+  title: "Branding · smolboard",
   robots: "noindex",
 };
 

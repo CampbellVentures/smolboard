@@ -134,7 +134,7 @@ export function EventSite({
           <Send className="size-5 shrink-0 text-zinc-400" aria-hidden="true" />
           <div className="min-w-0 flex-1">
             <div className="text-[15px] font-semibold text-zinc-900">Call for speakers</div>
-            <p className="text-[13px] text-zinc-500">Submit a talk — the CFP is open.</p>
+            <p className="text-[13px] text-zinc-500">Submit a talk. The CFP is open.</p>
           </div>
           <ArrowRight className="size-4 shrink-0 text-zinc-400" aria-hidden="true" />
         </Link>

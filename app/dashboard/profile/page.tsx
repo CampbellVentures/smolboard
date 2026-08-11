@@ -3,7 +3,7 @@ import { type Metadata, type PageProps } from "@pylonsync/react";
 import { ProfileClient } from "./profile-client";
 
 export const metadata: Metadata = {
-  title: "Your profile — smolboard",
+  title: "Your profile · smolboard",
   robots: "noindex",
 };
 

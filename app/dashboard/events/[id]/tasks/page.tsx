@@ -9,7 +9,7 @@ import type {
   TaskTemplateRow,
 } from "@/lib/types";
 
-export const metadata: Metadata = { title: "Speaker tasks — smolboard", robots: "noindex" };
+export const metadata: Metadata = { title: "Speaker tasks · smolboard", robots: "noindex" };
 
 export default function TasksPage({ auth, params, response, serverData }: PageProps<{ id: string }>) {
   if (!auth.tenant_id) {

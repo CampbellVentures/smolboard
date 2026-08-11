@@ -68,12 +68,12 @@ export const DEFAULT_TEMPLATES: { key: string; subject: string; body: string }[]
   {
     key: "submission_received",
     subject: "We got your talk: {{talk_title}}",
-    body: "Hi {{speaker_name}},\n\nThanks for submitting **{{talk_title}}** to {{event_name}}. Our review team will take it from here — you can track status, update your profile, and upload materials any time in your speaker portal:\n\n[Open your speaker portal]({{portal_link}})\n\n— the {{event_name}} team",
+    body: "Hi {{speaker_name}},\n\nThanks for submitting **{{talk_title}}** to {{event_name}}. Our review team will take it from here. You can track status, update your profile, and upload materials any time in your speaker portal:\n\n[Open your speaker portal]({{portal_link}})\n\n— the {{event_name}} team",
   },
   {
     key: "accepted",
     subject: "🎉 {{talk_title}} is accepted for {{event_name}}",
-    body: "Hi {{speaker_name}},\n\nGreat news — **{{talk_title}}** has been accepted for {{event_name}}!\n\nYour speaker portal has onboarding tasks (bio, headshot, slides). Please complete them so we can announce you:\n\n[Open your speaker portal]({{portal_link}})\n\n— the {{event_name}} team",
+    body: "Hi {{speaker_name}},\n\nGreat news. **{{talk_title}}** has been accepted for {{event_name}}!\n\nYour speaker portal has onboarding tasks (bio, headshot, slides). Please complete them so we can announce you:\n\n[Open your speaker portal]({{portal_link}})\n\n— the {{event_name}} team",
   },
   {
     key: "rejected",

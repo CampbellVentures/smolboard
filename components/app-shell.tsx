@@ -577,12 +577,17 @@ export function AppShell({
               <span className="xl:hidden">Ask</span>
             </Button> : null}
             {!reviewerMode ? <ActivityBell workspaceId={workspaceId} /> : null}
-            <PresenceIndicator
-              roomId={presenceRoomId}
-              userId={userId}
-              userName={userName}
-              scopeName={presenceScopeName}
-            />
+            {/* Presence is desktop-only. Below md the account avatar sits in
+                this same bar, and two round avatars side by side read as one
+                control duplicated rather than "them" next to "you". */}
+            <div className="hidden md:block">
+              <PresenceIndicator
+                roomId={presenceRoomId}
+                userId={userId}
+                userName={userName}
+                scopeName={presenceScopeName}
+              />
+            </div>
             {/* Sidebar (and its account card) is hidden below md; the top bar
                 carries the account menu on small screens only. */}
             <div className="md:hidden">

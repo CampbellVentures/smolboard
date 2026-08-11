@@ -3,7 +3,7 @@ import { type Metadata, type PageProps } from "@pylonsync/react";
 import { Members } from "../dashboard-client";
 
 export const metadata: Metadata = {
-  title: "Team — smolboard",
+  title: "Team · smolboard",
   robots: "noindex",
 };
 

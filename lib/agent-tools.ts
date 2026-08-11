@@ -53,7 +53,7 @@ export const AGENT_TOOLS: AgentToolDef[] = [
   {
     name: "set_submission_status",
     description:
-      "Accept, reject, or waitlist a submission. Accepting/rejecting emails the speaker (templated) and accepting materializes their onboarding tasks. Use after the organizer's intent is clear — this notifies a real person.",
+      "Accept, reject, or waitlist a submission. Accepting/rejecting emails the speaker (templated) and accepting materializes their onboarding tasks. Use after the organizer's intent is clear, because this notifies a real person.",
     input_schema: {
       type: "object",
       properties: {

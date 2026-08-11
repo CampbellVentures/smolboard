@@ -10,7 +10,7 @@ import type {
 } from "@/lib/types";
 
 export const metadata: Metadata = {
-  title: "Content — smolboard",
+  title: "Content · smolboard",
   robots: "noindex",
 };
 

@@ -4,7 +4,7 @@ import { EventSettings } from "./settings-client";
 import type { EventRow } from "@/lib/types";
 
 export const metadata: Metadata = {
-  title: "Event settings — smolboard",
+  title: "Event settings · smolboard",
   robots: "noindex",
 };
 

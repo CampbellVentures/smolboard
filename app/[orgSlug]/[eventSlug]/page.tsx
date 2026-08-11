@@ -1,5 +1,5 @@
 import React, { use } from "react";
-import { type Metadata, type PageProps } from "@pylonsync/react";
+import { type GenerateMetadata, type PageProps } from "@pylonsync/react";
 import { EventSite, type ScheduleFeed, type SpeakersFeed } from "./event-site-client";
 import { PublicEventShell } from "@/components/public-shell";
 import { PublicWidget } from "@/components/public-widget";
@@ -7,8 +7,27 @@ import { parseBranding } from "@/lib/branding";
 import { publicEventInfo, resolvePublicEvent } from "@/lib/public-site";
 import type { EventRow, OrgRow, SubmissionFormRow } from "@/lib/types";
 
-export const metadata: Metadata = {
-  title: "Event",
+// The tab title and share preview carry the event's own name, not a generic
+// label — this page is the one an attendee bookmarks and shares.
+export const generateMetadata: GenerateMetadata<{
+  orgSlug: string;
+  eventSlug: string;
+}> = async ({ params, serverData }) => {
+  const [orgs, events] = await Promise.all([
+    serverData.list<OrgRow>("Org"),
+    serverData.list<EventRow>("Event"),
+  ]);
+  const resolved = resolvePublicEvent(orgs, events, params.orgSlug, params.eventSlug);
+  if (!resolved) return { title: "Event not found" };
+  const { org, event } = resolved;
+  const description =
+    event.description?.trim() ||
+    `The schedule, speakers, and call for speakers for ${event.name}.`;
+  return {
+    title: `${event.name} · ${org.name}`,
+    description,
+    openGraph: { title: event.name, description },
+  };
 };
 
 // The event's public site is ONE page: /<org-slug>/<event-slug> holds the

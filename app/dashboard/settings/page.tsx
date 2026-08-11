@@ -7,7 +7,7 @@ import {
 } from "../dashboard-client";
 
 export const metadata: Metadata = {
-  title: "Settings — smolboard",
+  title: "Settings · smolboard",
   robots: "noindex",
 };
 

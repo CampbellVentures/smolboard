@@ -25,6 +25,6 @@ export default mutation<Record<string, never>, { slug: string }>({
       await ctx.db.unsafe.update("Org", orgId, { slug: candidate });
       return { slug: candidate };
     }
-    throw ctx.error("CONFLICT", "Could not find a free URL handle — set one in workspace settings.");
+    throw ctx.error("CONFLICT", "Could not find a free URL handle. Set one in workspace settings.");
   },
 });
