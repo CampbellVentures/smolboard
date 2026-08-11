@@ -132,7 +132,7 @@ export function CfpForm({
         await persistDraft(true);
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Submission failed — try again.";
+      const message = err instanceof Error ? err.message : "Submission failed. Try again.";
       setTopError(message);
       setNeedsLogin(message.includes("speaker account"));
       setBusy(false);

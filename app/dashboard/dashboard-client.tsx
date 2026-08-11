@@ -153,7 +153,7 @@ function MembersList({
       setNote(`Invite sent to ${value}.`);
       void load();
     } catch {
-      setNote("Couldn't send that invite — check the address and your role.");
+      setNote("Couldn't send that invite. Check the address and your role.");
     } finally {
       setInviting(false);
     }
@@ -361,7 +361,7 @@ function SettingsView({
       setSaved(true);
       router.refresh();
     } catch {
-      setError("Couldn't rename — only owners and admins can.");
+      setError("Only owners and admins can rename the workspace.");
       setSaving(false);
     }
   }

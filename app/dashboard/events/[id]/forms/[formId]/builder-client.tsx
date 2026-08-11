@@ -439,7 +439,7 @@ function HandoffMappingEditor({
       <div>
         <label className="text-xs font-medium">Format source field</label>
         <Select className="mt-1" value={value.formatFieldKey ?? ""} onChange={(event) => onChange({ ...value, formatFieldKey: event.target.value || null })}>
-          <option value="">No source field — default to talk</option>
+          <option value="">No source field, default to talk</option>
           {sourceFields.map((field) => <option key={field.key} value={field.key}>{field.label}</option>)}
         </Select>
         {formatValues.map((source) => (
@@ -455,7 +455,7 @@ function HandoffMappingEditor({
       <div>
         <label className="text-xs font-medium">Track source field</label>
         <Select className="mt-1" value={value.trackFieldKey ?? ""} onChange={(event) => onChange({ ...value, trackFieldKey: event.target.value || null })}>
-          <option value="">No source field — no track</option>
+          <option value="">No source field, no track</option>
           {sourceFields.map((field) => <option key={field.key} value={field.key}>{field.label}</option>)}
         </Select>
         {trackValues.map((source) => (

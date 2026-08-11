@@ -37,7 +37,7 @@ const WIDGETS: {
     key: "schedule",
     title: "Schedule",
     description:
-      "The full agenda, grouped by day and track. Updates the moment a session moves.",
+      "The full agenda, grouped by day and track. Updates when a session moves.",
     icon: CalendarDays,
     tone: "violet",
     defaultHeight: 900,
@@ -121,8 +121,8 @@ export function EmbedsPage({ event }: { event: EventRow }) {
               Put {event.name} on your own site
             </h2>
             <p className="mt-1 text-pretty text-sm text-muted-foreground">
-              Paste one line of HTML and the widget stays in sync with your program —
-              accept a talk, move a session, and every embed updates itself.
+              Paste one line of HTML. The widget stays in sync with your program, so
+              accepting a talk or moving a session updates every embed.
             </p>
           </div>
           {base ? (

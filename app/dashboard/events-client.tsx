@@ -200,7 +200,7 @@ export function EventsList({
         <DashboardEmptyState
           icon={CalendarPlus}
           title="No events yet"
-          description="Create your first event to open a call for speakers — or load a sample event to explore with real-looking data."
+          description="Create your first event to open a call for speakers, or load a sample event with real-looking data."
         >
           <Button
             type="button"

@@ -84,12 +84,12 @@ export function ActivityBell({ workspaceId }: { workspaceId: string }) {
         <div className="flex items-center justify-between border-b bg-muted/40 px-4 py-2.5">
           <span className="text-sm font-semibold">Activity</span>
           <span className="text-[11px] text-muted-foreground">
-            Everything that happens, tracked
+            Newest first
           </span>
         </div>
         {rows.length === 0 ? (
           <p className="px-4 py-8 text-center text-sm text-muted-foreground">
-            Nothing yet — new submissions, uploads, and decisions land here.
+            Nothing here yet. New submissions, uploads, and decisions will show up.
           </p>
         ) : (
           <ul className="max-h-96 divide-y divide-border/70 overflow-y-auto overscroll-contain">

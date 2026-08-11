@@ -68,7 +68,7 @@ export function PortalLogin() {
       await sendMagicLink(email.trim().toLowerCase());
       setStage("code");
     } catch {
-      setError("Couldn't send a code — check the address and try again in a minute.");
+      setError("Couldn't send a code. Check the address and try again in a minute.");
     } finally {
       setBusy(false);
     }
@@ -82,7 +82,7 @@ export function PortalLogin() {
       await verifyMagicLink(email.trim().toLowerCase(), code.trim());
       window.location.reload();
     } catch {
-      setError("That code didn't work — it may have expired. Request a new one.");
+      setError("That code didn't work. It may have expired, so request a new one.");
       setBusy(false);
     }
   }

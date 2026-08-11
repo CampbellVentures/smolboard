@@ -150,7 +150,7 @@ export function BrandingPage({ event }: { event: EventRow }) {
         heroUrl: heroUrl.trim() || null,
       };
       await db.update("Event", event.id, { brandingJson: JSON.stringify(branding) });
-      toast.success("Branding saved — the public site is updated.");
+      toast.success("Branding saved. The public site is updated.");
     } catch {
       toast.error("Couldn't save branding. Try again.");
     } finally {
@@ -168,7 +168,7 @@ export function BrandingPage({ event }: { event: EventRow }) {
             </h2>
             <p className="mt-1 text-pretty text-sm text-muted-foreground">
               Accent color, logo, and tagline show up on your event site, CFP, and
-              schedule — everywhere attendees and speakers see {event.name}.
+              schedule, everywhere attendees and speakers see {event.name}.
             </p>
           </div>
           {publicUrl ? (
@@ -282,7 +282,7 @@ export function BrandingPage({ event }: { event: EventRow }) {
 
           <DashboardPanel
             title="Header image"
-            description="Full-bleed background behind the event name — think ai.engineer. A dark scrim keeps the text readable, so most photos work."
+            description="Full-bleed background behind the event name. A dark scrim keeps the text readable, so most photos work."
             icon={Mountain}
             tone="emerald"
             variant="subtle"
@@ -310,7 +310,7 @@ export function BrandingPage({ event }: { event: EventRow }) {
 
           <DashboardPanel
             title="Tagline"
-            description="One line under the event name — what this event is about."
+            description="One line under the event name saying what this event is about."
             icon={Type}
             tone="amber"
             variant="subtle"
@@ -350,7 +350,7 @@ export function BrandingPage({ event }: { event: EventRow }) {
               style={{ height: 640 }}
             />
             <p className="border-t bg-muted/40 px-4 py-2 text-center text-[11px] text-muted-foreground">
-              Live preview — updates as you edit. Save to publish.
+              Updates as you edit. Save to publish.
             </p>
           </div>
         ) : null}

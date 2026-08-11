@@ -39,7 +39,7 @@ export function AcceptInvite({ token, signedIn }: { token: string; signedIn: boo
           });
         }
       })
-      .catch(() => active && setState({ kind: "error", message: "Network error — try again." }));
+      .catch(() => active && setState({ kind: "error", message: "Network error. Try again." }));
     return () => {
       active = false;
     };

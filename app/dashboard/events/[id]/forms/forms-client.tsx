@@ -128,7 +128,7 @@ export function FormsList({
       });
       router.push(`/dashboard/events/${event.id}/forms/${result.id}`);
     } catch {
-      setError("Couldn't create the form — a form with that name may already exist.");
+      setError("Couldn't create the form. A form with that name may already exist.");
       setBusy(false);
     }
   }
@@ -140,8 +140,8 @@ export function FormsList({
           <div className="max-w-lg">
             <h2 className="text-balance text-lg font-semibold tracking-tight">Submission forms</h2>
             <p className="mt-1 text-pretty text-sm text-muted-foreground">
-              Each form is a public CFP page — share the link and submissions land in
-              review the moment speakers hit send.
+              Each form is a public CFP page. Share the link and submissions arrive in
+              review as speakers send them.
             </p>
           </div>
         <ResponsiveFormOverlay.Root

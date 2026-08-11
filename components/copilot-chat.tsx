@@ -103,7 +103,7 @@ export function CopilotChat({ eventId, eventName }: { eventId: string; eventName
       });
       if (!threadId) selectThread(res.threadId);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "The copilot hit an error — try again.");
+      setError(e instanceof Error ? e.message : "The copilot hit an error. Try again.");
     } finally {
       setBusy(false);
       setStreamText("");

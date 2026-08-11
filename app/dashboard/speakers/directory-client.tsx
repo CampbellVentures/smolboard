@@ -176,7 +176,7 @@ export function SpeakerDirectory({
       <DashboardHero>
         <h2 className="text-balance text-lg font-semibold tracking-tight">Speaker directory</h2>
         <p className="mt-1 max-w-lg text-pretty text-sm text-muted-foreground">
-          Everyone who submits or speaks across your events builds a history here —{" "}
+          Everyone who submits or speaks across your events builds a history here.{" "}
           <span className="tabular-nums">{people.length}</span>{" "}
           {people.length === 1 ? "person" : "people"} so far.
         </p>

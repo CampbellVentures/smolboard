@@ -274,13 +274,13 @@ function messageFor(err: unknown): string {
       case "INVALID_CREDENTIALS":
         return "Wrong email or password.";
       case "USER_EXISTS":
-        return "That email is already in use — sign in instead.";
+        return "That email is already in use. Sign in instead.";
       case "WEAK_PASSWORD":
-        return "Pick a longer password — at least 10 characters.";
+        return "Pick a longer password, at least 10 characters.";
       case "PWNED_PASSWORD":
         return "That password has appeared in a known data breach. Choose a different one.";
       case "RATE_LIMITED":
-        return "Too many attempts — try again in a minute.";
+        return "Too many attempts. Try again in a minute.";
       default:
         return err.message;
     }

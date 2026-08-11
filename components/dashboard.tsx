@@ -48,8 +48,14 @@ export function DashboardWidePage({
   );
 }
 
+// THE brand gradient. Every surface that wants the app's color uses this
+// string: the page hero's aurora, the bulk-action bar, checked checkboxes.
+// Defined once so a new surface can't invent its own palette.
+export const BRAND_GRADIENT =
+  "bg-[linear-gradient(110deg,#18181b_0%,#2b2440_28%,#1f3350_55%,#1d3f44_78%,#18181b_100%)]";
+
 // THE page hero. A card with a soft aurora gradient pooling in the top-right
-// corner — the one place a page gets real color. Pass the whole header layout
+// corner, the one place a page gets real color. Pass the whole header layout
 // as children; the shell only owns the surface.
 export function DashboardHero({
   className,

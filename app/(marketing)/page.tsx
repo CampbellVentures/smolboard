@@ -13,11 +13,11 @@ export const metadata: Metadata = {
 const FEATURES: { title: string; body: string }[] = [
   {
     title: "CFP forms with conditional logic",
-    body: "A visual builder with show-when rules and category routing. The server re-validates everything — including conditionally required fields.",
+    body: "A visual builder with show-when rules and category routing. The server re-validates everything, including conditionally required fields.",
   },
   {
     title: "Self-service speaker portal",
-    body: "Speakers are created on submission and sign in with a 6-digit email code. Status, profile, uploads, and onboarding tasks — all live, no refresh.",
+    body: "Speakers are created on submission and sign in with a 6-digit email code. Status, profile, uploads, and onboarding tasks all update live.",
   },
   {
     title: "Emails and real calendar invites",
@@ -29,7 +29,7 @@ const FEATURES: { title: string; body: string }[] = [
   },
   {
     title: "Drag-and-drop agenda",
-    body: "Day-by-room grid with 15-minute slots. Conflicts — room overlaps, double-booked speakers — surface the moment you create them.",
+    body: "Day-by-room grid with 15-minute slots. Room overlaps and double-booked speakers surface the moment you create them.",
   },
   {
     title: "Live dashboard",

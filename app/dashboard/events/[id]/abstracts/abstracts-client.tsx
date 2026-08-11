@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { db, Link } from "@pylonsync/react";
 import { callFn } from "@/lib/fn";
 import {
+  BRAND_GRADIENT,
   DashboardEmptyState,
   DashboardPage,
   DashboardStatusBadge,
@@ -293,7 +294,7 @@ export function AbstractsView({
 
         {/* Bulk bar */}
         {selected.size > 0 && (
-          <div className="flex items-center gap-2 rounded-lg border border-zinc-900 bg-zinc-900 px-3 py-2 text-white">
+          <div className={`flex items-center gap-2 rounded-lg border border-zinc-900 px-3 py-2 text-white ${BRAND_GRADIENT}`}>
             <span className="text-[13px] font-medium">{selected.size} selected</span>
             <div className="ml-auto flex items-center gap-1.5">
               <BulkBtn onClick={() => setBulkConfirmStatus("accepted")} disabled={busy}>
