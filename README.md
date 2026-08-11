@@ -5,6 +5,35 @@ Open-source speaker & CFP management — a [Sessionboard](https://www.sessionboa
 **Live demo:** https://www.smolboard.app
 **Public schedule example:** https://www.smolboard.app/ai-engineer/ai-engineer-sandbox
 
+## For graders
+
+**Organizer:** sign in at `/login` with email + password (or Google). A seeded
+organizer account is in the submission notes; it owns a populated event with
+submissions across every status, two open CFP forms, a published two-day
+agenda, a review round with scores, and an approved deck.
+
+**Speakers sign in with a 6-digit code emailed to them. There is no speaker
+password.** A browser agent has no inbox, so the speaker persona must be
+authenticated once by hand before speaker-portal, deliverables, and
+speaker-scoping scenarios can run:
+
+```bash
+pnpm run sbek -- auth --persona speaker   # sbek; opens a real browser window
+```
+
+Point `personaEmails.speaker` at an inbox you control, request the code at
+`/portal`, and paste it in that window. Without this the agent gets
+`FORBIDDEN: verify your email` on submit, and every scenario downstream of a
+speaker account fails for a reason that isn't the app.
+
+Scenarios write into whichever event you drive. Two are seeded, both populated
+and both fine to use:
+
+| Event | Public site | Use |
+|---|---|---|
+| AI Engineer Sandbox Event | `/ai-engineer/ai-engineer-sandbox` | branded demo, used in the video |
+| Grading Sandbox | `/ai-engineer/grading-sandbox` | scratch space, write freely |
+
 ## What it does
 
 The six requirements from the brief, all working end to end:
