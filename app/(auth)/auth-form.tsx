@@ -7,6 +7,7 @@ import {
   passwordRegister,
   persistSession,
   createOrg,
+  listOrgs,
   ApiError,
 } from "@pylonsync/client";
 
@@ -65,6 +66,15 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         // Adopt the real identity locally before navigating — otherwise a
         // leftover guest token shadows this session on the sync engine's calls.
         persistSession(session);
+        // Pick the active org here rather than letting /dashboard discover it's
+        // missing and reload: without this, every login paid a second full
+        // document load plus a flash of the workspace-provisioning spinner.
+        try {
+          const orgs = await listOrgs();
+          if (orgs[0]) await db.sync.selectOrg(orgs[0].id);
+        } catch {
+          // The dashboard's provisioning fallback still covers this.
+        }
         // Full navigation: the SSR dashboard re-renders with the new cookie.
         window.location.assign(next);
       } else {
