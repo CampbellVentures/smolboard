@@ -2,6 +2,7 @@ import React, { use } from "react";
 import { type Metadata, type PageProps } from "@pylonsync/react";
 import { EventSite, type ScheduleFeed, type SpeakersFeed } from "./event-site-client";
 import { PublicEventShell } from "@/components/public-shell";
+import { PublicWidget } from "@/components/public-widget";
 import { parseBranding } from "@/lib/branding";
 import { publicEventInfo, resolvePublicEvent } from "@/lib/public-site";
 import type { EventRow, OrgRow, SubmissionFormRow } from "@/lib/types";
@@ -56,6 +57,30 @@ export default function EventHomePage({
   // Widget mode: ?embed=schedule|speakers renders one section, chrome-less,
   // sized for an iframe on the organizer's own site.
   const embed = typeof searchParams.embed === "string" ? searchParams.embed : "";
+  // Standalone widget surfaces beyond the two site sections.
+  if (embed === "sessions" || embed === "itinerary" || embed === "gallery") {
+    return (
+      <div className="bg-transparent p-2">
+        <PublicWidget
+          kind={embed}
+          schedule={schedule}
+          speakers={speakers}
+          eventSlug={params.eventSlug}
+          icsHref={`/${params.orgSlug}/${params.eventSlug}/calendar.ics`}
+        />
+        <p className="mt-4 text-center text-[11px] text-zinc-400">
+          <a
+            href={`/${params.orgSlug}/${params.eventSlug}`}
+            target="_blank"
+            rel="noreferrer"
+            className="hover:text-zinc-600"
+          >
+            Powered by smolboard
+          </a>
+        </p>
+      </div>
+    );
+  }
   if (embed === "schedule" || embed === "speakers") {
     return (
       <div className="bg-transparent p-2">

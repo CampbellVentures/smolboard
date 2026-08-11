@@ -7,6 +7,9 @@ import {
   Copy,
   ExternalLink,
   Globe,
+  LayoutGrid,
+  ListChecks,
+  Star,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -26,7 +29,7 @@ import type { EventRow } from "@/lib/types";
 // previews here are the real thing, not screenshots.
 
 const WIDGETS: {
-  key: "schedule" | "speakers";
+  key: "schedule" | "speakers" | "sessions" | "itinerary" | "gallery";
   title: string;
   description: string;
   icon: LucideIcon;
@@ -43,13 +46,40 @@ const WIDGETS: {
     defaultHeight: 900,
   },
   {
-    key: "speakers",
-    title: "Speaker gallery",
+    key: "sessions",
+    title: "Sessions list",
     description:
-      "Headshots, names, and titles for every published speaker. New accepts appear automatically.",
+      "Every session as a card with speakers, room, and times. Search by title or speaker; filter by track, format, or location.",
+    icon: ListChecks,
+    tone: "sky",
+    defaultHeight: 900,
+  },
+  {
+    key: "itinerary",
+    title: "Schedule itinerary",
+    description:
+      "A chronological day-by-day agenda. Attendees star sessions to build a personal schedule that survives a reload.",
+    icon: Star,
+    tone: "amber",
+    defaultHeight: 900,
+  },
+  {
+    key: "speakers",
+    title: "Speakers list",
+    description:
+      "Speaker directory with headshot, name, job title, and company. New accepts appear automatically.",
     icon: Users,
     tone: "pink",
     defaultHeight: 700,
+  },
+  {
+    key: "gallery",
+    title: "Speaker gallery",
+    description:
+      "A photo grid ordered by surname, searchable by name, with a detail card for bio and sessions.",
+    icon: LayoutGrid,
+    tone: "emerald",
+    defaultHeight: 800,
   },
 ];
 
