@@ -10,8 +10,13 @@ export const metadata: Metadata = {
   robots: "noindex",
 };
 
-export default function EventsPage({ auth, serverData }: PageProps) {
+export default function EventsPage({ auth, response, serverData }: PageProps) {
   if (!auth.tenant_id) {
+    const surface = use(serverData.fn<{ isSpeaker: boolean }>("getMySurface", {}));
+    if (surface?.isSpeaker) {
+      response.redirect("/portal");
+      return null;
+    }
     return <ProvisionWorkspace />;
   }
 
