@@ -120,7 +120,11 @@ export function CopilotChat({ eventId, eventName }: { eventId: string; eventName
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       {/* Thread strip */}
-      <div className="flex items-center gap-1.5 overflow-x-auto border-b border-border/60 px-3 py-2">
+      <div
+        // Fades the trailing edge so a cut-off thread chip reads as "scroll for
+        // more" instead of a broken layout.
+        className="flex items-center gap-1.5 overflow-x-auto border-b border-border/60 px-3 py-2 [mask-image:linear-gradient(to_right,black_calc(100%-2rem),transparent)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
         <button
           type="button"
           onClick={() => selectThread(null)}
@@ -160,9 +164,9 @@ export function CopilotChat({ eventId, eventName }: { eventId: string; eventName
                 <Bot className="size-4" aria-hidden="true" />
               </span>
               <p className="min-w-0 pt-1 text-pretty text-sm leading-6">
-                I can run {eventName} from here — review submissions, schedule
-                sessions, and follow up with speakers. My changes land in the
-                tables next to you, live.
+                I can run {eventName} from here. Ask me to review submissions,
+                schedule sessions, or follow up with speakers. My changes land in
+                the tables next to you, live.
               </p>
             </div>
             <div className="mt-auto flex flex-col gap-2 pt-8">
