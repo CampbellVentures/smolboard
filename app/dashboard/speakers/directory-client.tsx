@@ -254,8 +254,9 @@ export function SpeakerDirectory({
                       .filter((profile) => eventById.has(profile.eventId))
                       .slice(0, 3)
                       .map((profile) => (
-                        <Badge key={profile.id} variant="outline" className="max-w-36 truncate">
-                          {eventById.get(profile.eventId)!.name}
+                        <Badge key={profile.id} variant="outline" className="max-w-36">
+                          {/* Badge is inline-flex; the child must carry truncate for a real ellipsis. */}
+                          <span className="truncate">{eventById.get(profile.eventId)!.name}</span>
                         </Badge>
                       ))}
                     {person.profiles.length > 3 ? (

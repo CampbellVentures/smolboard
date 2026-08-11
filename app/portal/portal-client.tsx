@@ -343,13 +343,23 @@ export function PortalHome({
               Submit to an open call for speakers and it will show up here.
             </p>
             {(() => {
-              const openCalls = forms
-                .filter((form) => form.status === "open")
+              const openForms = forms.filter((form) => form.status === "open");
+              const formsPerEvent = new Map<string, number>();
+              for (const form of openForms) {
+                formsPerEvent.set(form.eventId, (formsPerEvent.get(form.eventId) ?? 0) + 1);
+              }
+              const openCalls = openForms
                 .map((form) => {
                   const event = events.find((candidate) => candidate.id === form.eventId);
                   const org = event ? orgs.find((candidate) => candidate.id === event.orgId) : undefined;
+                  // Two open forms on one event would render identical labels —
+                  // qualify with the form name when it's ambiguous.
+                  const name =
+                    event && (formsPerEvent.get(form.eventId) ?? 0) > 1
+                      ? `${event.name} · ${form.name}`
+                      : event?.name ?? "";
                   return event && event.cfpStatus === "open" && org?.slug
-                    ? { key: form.id, name: event.name, href: `/${org.slug}/${event.slug}/cfp/${form.slug}` }
+                    ? { key: form.id, name, href: `/${org.slug}/${event.slug}/cfp/${form.slug}` }
                     : null;
                 })
                 .filter((call): call is NonNullable<typeof call> => call !== null)
