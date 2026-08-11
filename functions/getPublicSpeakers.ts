@@ -18,6 +18,7 @@ export default query<
       jobTitle: string | null;
       headshotUrl: string | null;
       talks: string[];
+      sessions: { title: string; startTime: string | null; endTime: string | null; room: string | null }[];
     }[];
   }
 >({
@@ -49,12 +50,29 @@ export default query<
     const profiles = (await ctx.db.unsafe.query("SpeakerProfile", { eventId })).filter(
       (profile) => profile.orgId === event.orgId && profile.eventId === eventId,
     );
-    const bySpeaker = new Map<string, string[]>();
+    const rooms = (await ctx.db.unsafe.query("Room", { eventId })).filter(
+      (room) => room.orgId === event.orgId && room.eventId === eventId,
+    );
+    const roomName = (id: unknown) =>
+      (rooms.find((room) => room.id === id)?.name as string | undefined) ?? null;
+    type SpeakerSession = {
+      title: string;
+      startTime: string | null;
+      endTime: string | null;
+      room: string | null;
+    };
+    const bySpeaker = new Map<string, SpeakerSession[]>();
     for (const session of sessions.filter((row) => row.orgId === event.orgId && row.eventId === eventId)) {
       const content = approvedContent(session as unknown as SessionRow, revisions);
       if (!content) continue;
+      const detail: SpeakerSession = {
+        title: content.title,
+        startTime: (session.startTime as string) ?? null,
+        endTime: (session.endTime as string) ?? null,
+        room: roomName(session.roomId),
+      };
       for (const uid of Array.isArray(content.speakerUserIdsJson) ? content.speakerUserIdsJson : []) {
-        bySpeaker.set(uid, [...(bySpeaker.get(uid) ?? []), content.title]);
+        bySpeaker.set(uid, [...(bySpeaker.get(uid) ?? []), detail]);
       }
     }
     return {
@@ -71,7 +89,8 @@ export default query<
             company: (p.company as string) ?? null,
             jobTitle: (p.jobTitle as string) ?? null,
             headshotUrl: (p.headshotUrl as string) ?? null,
-            talks,
+            talks: talks.map((t) => t.title),
+            sessions: talks,
           };
         })
         .filter((s): s is NonNullable<typeof s> => !!s)

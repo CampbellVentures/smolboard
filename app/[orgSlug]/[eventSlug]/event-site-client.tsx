@@ -55,6 +55,7 @@ export interface SpeakersFeed {
     jobTitle: string | null;
     headshotUrl: string | null;
     talks: string[];
+    sessions?: { title: string; startTime: string | null; endTime: string | null; room: string | null }[];
   }[];
 }
 
@@ -511,19 +512,50 @@ function SpeakersSection({
   feed: SpeakersFeed | null;
   embedded?: boolean;
 }) {
+  const [q, setQ] = useState("");
+  const [open, setOpen] = useState<SpeakersFeed["speakers"][number] | null>(null);
   // The unpublished case is already covered by the schedule empty state; an
   // extra "no speakers yet" box would just repeat it.
   if (!feed?.published || feed.speakers.length === 0) return null;
+
+  const needle = q.trim().toLowerCase();
+  // Directories are read by surname, so sort that way rather than by first name.
+  const people = feed.speakers
+    .filter(
+      (sp) =>
+        !needle ||
+        sp.name.toLowerCase().includes(needle) ||
+        (sp.company ?? "").toLowerCase().includes(needle),
+    )
+    .slice()
+    .sort((a, b) => speakerSurname(a.name).localeCompare(speakerSurname(b.name)));
+
   return (
     <section id="speakers" className={embedded ? "" : "scroll-mt-6 pt-12"}>
-      {embedded ? null : (
-        <h2 className="text-xl font-semibold tracking-tight text-zinc-900">Speakers</h2>
-      )}
-      <div className="mt-4 grid gap-4 sm:grid-cols-2">
-        {feed.speakers.map((sp) => (
-          <article
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        {embedded ? <span /> : (
+          <h2 className="text-xl font-semibold tracking-tight text-zinc-900">Speakers</h2>
+        )}
+        <label className="relative">
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search speakers…"
+            aria-label="Search speakers"
+            className="h-8 w-44 rounded-full bg-white px-3.5 text-[13px] text-zinc-600 shadow-[0_0_0_1px_rgba(0,0,0,0.06)] outline-none placeholder:text-zinc-400 focus:shadow-[0_0_0_1px_rgba(0,0,0,0.15)]"
+          />
+        </label>
+      </div>
+      <p className="mt-2 text-[12.5px] text-zinc-500" aria-live="polite">
+        {people.length} of {feed.speakers.length} speakers
+      </p>
+      <div className="mt-3 grid gap-4 sm:grid-cols-2">
+        {people.map((sp) => (
+          <button
             key={sp.name}
-            className="min-w-0 rounded-xl bg-white p-5 shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.04)]"
+            type="button"
+            onClick={() => setOpen(sp)}
+            className="min-w-0 rounded-xl bg-white p-5 text-left shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.04)] transition-shadow hover:shadow-[0_0_0_1px_rgba(0,0,0,0.12),0_2px_6px_rgba(0,0,0,0.06)]"
           >
             <div className="flex items-center gap-3">
               <PersonAvatar name={sp.name} src={sp.headshotUrl} size="xl" />
@@ -546,9 +578,84 @@ function SpeakersSection({
                 ))}
               </div>
             )}
-          </article>
+          </button>
         ))}
       </div>
+      {people.length === 0 ? (
+        <p className="mt-3 rounded-xl border border-dashed border-zinc-200 px-6 py-8 text-center text-sm text-zinc-400">
+          No speakers match that search.
+        </p>
+      ) : null}
+
+      {open ? (
+        <SpeakerDetailDialog speaker={open} onClose={() => setOpen(null)} />
+      ) : null}
     </section>
+  );
+}
+
+function speakerSurname(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  return (parts.at(-1) ?? name).toLowerCase();
+}
+
+// Drill-in for a speakers-list entry: bio plus where and when they speak.
+function SpeakerDetailDialog({
+  speaker,
+  onClose,
+}: {
+  speaker: SpeakersFeed["speakers"][number];
+  onClose: () => void;
+}) {
+  const sessions = speaker.sessions ?? speaker.talks.map((title) => ({
+    title,
+    startTime: null,
+    endTime: null,
+    room: null,
+  }));
+  return (
+    <Dialog open onOpenChange={(next) => !next && onClose()}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <div className="flex items-center gap-3">
+            <PersonAvatar name={speaker.name} src={speaker.headshotUrl} size="xl" />
+            <div className="min-w-0 text-left">
+              <DialogTitle className="truncate">{speaker.name}</DialogTitle>
+              <DialogDescription className="truncate">
+                {[speaker.jobTitle, speaker.company].filter(Boolean).join(", ") || speaker.tagline || ""}
+              </DialogDescription>
+            </div>
+          </div>
+        </DialogHeader>
+        {speaker.bio ? (
+          <p className="text-[13.5px] leading-relaxed text-zinc-600">{speaker.bio}</p>
+        ) : null}
+        {sessions.length > 0 ? (
+          <div className="border-t border-zinc-100 pt-3">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-400">Sessions</p>
+            <ul className="mt-1.5 flex flex-col gap-2">
+              {sessions.map((session) => (
+                <li key={session.title}>
+                  <p className="text-[13.5px] font-medium text-zinc-800">{session.title}</p>
+                  {session.startTime ? (
+                    <p className="text-[12.5px] text-zinc-500">
+                      {new Date(session.startTime).toLocaleString(undefined, {
+                        month: "short",
+                        day: "numeric",
+                        hour: "numeric",
+                        minute: "2-digit",
+                      })}
+                      {session.room ? ` · ${session.room}` : ""}
+                    </p>
+                  ) : session.room ? (
+                    <p className="text-[12.5px] text-zinc-500">{session.room}</p>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+      </DialogContent>
+    </Dialog>
   );
 }

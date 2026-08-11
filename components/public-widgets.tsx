@@ -434,12 +434,27 @@ export function SpeakerGalleryWidget({ feed }: { feed: SpeakersFeed | null }) {
             {open.bio ? (
               <p className="mt-3 text-[13px] leading-relaxed text-zinc-600">{open.bio}</p>
             ) : null}
-            {open.talks.length > 0 ? (
+            {(open.sessions ?? []).length > 0 || open.talks.length > 0 ? (
               <div className="mt-3 border-t border-zinc-100 pt-3">
                 <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-400">Sessions</p>
-                {open.talks.map((t) => (
-                  <p key={t} className="mt-1 text-[13px] font-medium text-zinc-700">{t}</p>
-                ))}
+                {(open.sessions ?? open.talks.map((title) => ({ title, startTime: null, room: null }))).map(
+                  (session) => (
+                    <div key={session.title} className="mt-1.5">
+                      <p className="text-[13px] font-medium text-zinc-700">{session.title}</p>
+                      {session.startTime ? (
+                        <p className="text-[12px] text-zinc-500">
+                          {new Date(session.startTime).toLocaleString(undefined, {
+                            month: "short",
+                            day: "numeric",
+                            hour: "numeric",
+                            minute: "2-digit",
+                          })}
+                          {session.room ? ` · ${session.room}` : ""}
+                        </p>
+                      ) : null}
+                    </div>
+                  ),
+                )}
               </div>
             ) : null}
           </div>
