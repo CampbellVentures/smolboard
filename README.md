@@ -12,19 +12,23 @@ organizer account is in the submission notes; it owns a populated event with
 submissions across every status, two open CFP forms, a published two-day
 agenda, a review round with scores, and an approved deck.
 
-**Speakers sign in with a 6-digit code emailed to them. There is no speaker
-password.** A browser agent has no inbox, so the speaker persona must be
-authenticated once by hand before speaker-portal, deliverables, and
-speaker-scoping scenarios can run:
+**Speaker (no inbox required):** `demo.speaker@smolboard.dev` /
+`demo-speaker-Kx7RtQ2wLp`. Sign in at `/login` like any other account; a
+speaker lands in `/portal`, not the organizer dashboard. This account can
+submit proposals, complete tasks, and upload deliverables straight away.
 
-```bash
-pnpm run sbek -- auth --persona speaker   # sbek; opens a real browser window
-```
+Speakers normally sign in with a 6-digit emailed code, which a browser agent
+can't complete. Two ways around it, in order of convenience:
 
-Point `personaEmails.speaker` at an inbox you control, request the code at
-`/portal`, and paste it in that window. Without this the agent gets
-`FORBIDDEN: verify your email` on submit, and every scenario downstream of a
-speaker account fails for a reason that isn't the app.
+1. Use the seeded speaker above. Nothing to set up.
+2. Use your own address: set `personaEmails.speaker` to an inbox you control
+   and run `pnpm run sbek -- auth --persona speaker`, then request the code at
+   `/portal` and paste it into that window.
+
+New self-registered accounts must still verify their email before they can
+submit, which is deliberate: it stops anyone registering someone else's
+address and submitting as them. Speakers an organizer adds are vouched for by
+that organizer and skip the step.
 
 Scenarios write into whichever event you drive. Two are seeded, both populated
 and both fine to use:
