@@ -462,11 +462,13 @@ export function AppShell({
     ...WORKSPACE_NAV,
   ].map((entry) => ({ label: entry.label, href: entry.href, group: "Go to", icon: entry.Icon }));
   return (
-    // From md up the shell is exactly one viewport tall and each pane scrolls
-    // inside itself, so the copilot composer and the account card stay put
-    // instead of sitting at the bottom of however long the page happens to be.
-    // Below md there are no side panes, so the document scrolls normally.
-    <div className="flex min-h-dvh bg-background text-foreground md:h-dvh md:overflow-hidden">
+    // The DOCUMENT scrolls, deliberately. An earlier version made the shell one
+    // viewport tall with each pane scrolling internally, which pinned the
+    // copilot composer but broke End / PageDown / window.scrollBy — the content
+    // pane stopped responding to every normal way of scrolling a page. The side
+    // panes are sticky instead: they stay pinned to the viewport with their own
+    // internal scroll, and the page scrolls the way a page should.
+    <div className="flex min-h-dvh bg-background text-foreground">
       <Analytics />
       <SessionReconcile />
       <SyncHeartbeat />
@@ -479,7 +481,7 @@ export function AppShell({
         />
       ) : null}
       {/* ---------- Pane 1: nav sidebar ---------- */}
-      <aside className="hidden w-60 shrink-0 flex-col border-r border-border/70 bg-muted/35 md:flex md:min-h-0">
+      <aside className="hidden w-60 shrink-0 flex-col border-r border-border/70 bg-muted/35 md:sticky md:top-0 md:flex md:h-dvh">
         <div className="flex flex-col gap-1.5 px-3 pb-2 pt-3">
             <OrganizationSwitcher
               hidePersonal
@@ -523,8 +525,8 @@ export function AppShell({
       />
 
       {/* ---------- Pane 3: content ---------- */}
-      <div className="flex min-w-0 flex-1 flex-col md:min-h-0">
-        <header className="flex h-14 shrink-0 items-center justify-between border-b border-border/60 px-3 sm:px-4 lg:px-6">
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center justify-between border-b border-border/60 bg-background px-3 sm:px-4 lg:px-6">
           <div className="flex min-w-0 items-center gap-1.5">
             <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
               <SheetTrigger asChild>
@@ -635,7 +637,7 @@ export function AppShell({
             </div>
           </div>
         </header>
-        <main className="min-w-0 flex-1 overflow-x-auto p-4 md:min-h-0 md:overflow-y-auto md:p-5 xl:p-6">
+        <main className="min-w-0 flex-1 overflow-x-auto p-4 md:p-5 xl:p-6">
           {children}
         </main>
       </div>
@@ -664,7 +666,7 @@ function CopilotPane({
   const prompts = ["Summarize this workspace", "What needs attention?", "Help me plan an event"];
 
   return (
-    <aside className="hidden w-80 shrink-0 flex-col border-l border-border/60 bg-background shadow-[0_16px_48px_-16px_rgba(0,0,0,0.22)] md:fixed md:inset-y-0 md:right-0 md:z-40 md:flex md:min-h-0 xl:static xl:z-auto xl:border-l-0 xl:border-r xl:shadow-none">
+    <aside className="hidden w-80 shrink-0 flex-col border-l border-border/60 bg-background shadow-[0_16px_48px_-16px_rgba(0,0,0,0.22)] md:fixed md:inset-y-0 md:right-0 md:z-40 md:flex xl:sticky xl:inset-y-auto xl:top-0 xl:z-auto xl:h-dvh xl:border-l-0 xl:border-r xl:shadow-none">
       <div className="flex h-14 items-center justify-between border-b border-border/60 px-4">
         <div className="flex min-w-0 items-center gap-2 text-[13.5px] font-semibold">
           <Bot className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
