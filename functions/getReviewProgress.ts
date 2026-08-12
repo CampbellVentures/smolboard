@@ -29,6 +29,30 @@ export default query({
         recused: mine.filter((assignment) => assignment.status === "recused").length,
       });
     }
-    return { roundId: args.roundId, ...assignmentProgress(assignments as never), reviewers };
+    // The round's roster, so an organizer can curate WHO reviews this round
+    // rather than inheriting the whole org every time. Every active org
+    // reviewer is listed; inRound says whether they are on this one.
+    const memberships = (await ctx.db.unsafe.query("ReviewerMembership", { orgId: event.orgId }))
+      .filter((row) => row.status === "active");
+    const poolRows = (await ctx.db.unsafe.query("ReviewRoundReviewer", { roundId: args.roundId }))
+      .filter(
+        (row) =>
+          row.orgId === event.orgId && row.eventId === args.eventId && row.status === "active",
+      );
+    const inRound = new Set(poolRows.map((row) => row.reviewerUserId as string));
+    const pool = [];
+    for (const membership of memberships) {
+      const userId = membership.userId as string;
+      const user = await ctx.db.unsafe.get("User", userId);
+      pool.push({
+        userId,
+        name: user?.displayName,
+        email: user?.email,
+        inRound: inRound.has(userId),
+      });
+    }
+    pool.sort((a, b) => String(a.name || a.email).localeCompare(String(b.name || b.email)));
+
+    return { roundId: args.roundId, ...assignmentProgress(assignments as never), reviewers, pool };
   },
 });

@@ -1247,6 +1247,7 @@ interface ReviewProgress {
     percent: number;
     recused: number;
   }[];
+  pool: { userId: string; name?: string; email?: string; inRound: boolean }[];
 }
 
 function ReviewOperations({
@@ -1378,6 +1379,63 @@ function ReviewOperations({
               </li>
             ) : null}
           </ul>
+
+          {/* Who reviews THIS round. Assignment falls back to every active org
+              reviewer only while this is empty, so a reviewer on round 1 is
+              not automatically on round 2. */}
+          <div className="mt-2 border-t border-border pt-3">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+              Reviewers in this round
+            </p>
+            <div className="mt-1.5 max-h-40 overflow-y-auto">
+              {(progress?.pool ?? []).map((person) => (
+                <label
+                  key={person.userId}
+                  className="flex cursor-pointer items-center gap-2.5 py-1.5 text-sm hover:bg-muted/50"
+                >
+                  <input
+                    type="checkbox"
+                    checked={person.inRound}
+                    onChange={async (e) => {
+                      const next = e.target.checked;
+                      setProgress((prev) =>
+                        prev
+                          ? {
+                              ...prev,
+                              pool: prev.pool.map((row) =>
+                                row.userId === person.userId ? { ...row, inRound: next } : row,
+                              ),
+                            }
+                          : prev,
+                      );
+                      try {
+                        await callFn("setReviewRoundReviewer", {
+                          eventId,
+                          roundId: round.id,
+                          reviewerUserId: person.userId,
+                          active: next,
+                        });
+                      } catch (error) {
+                        toast.error(
+                          error instanceof Error ? error.message : "Couldn't update the round pool.",
+                        );
+                        await showProgress();
+                      }
+                    }}
+                    className="size-4 rounded border-zinc-300 accent-zinc-900"
+                  />
+                  <span className="min-w-0 flex-1 truncate">
+                    {person.name || person.email || "Reviewer"}
+                  </span>
+                </label>
+              ))}
+              {progress && progress.pool.length === 0 ? (
+                <p className="py-2 text-sm text-muted-foreground">
+                  No active reviewers in this workspace yet. Add them under Team.
+                </p>
+              ) : null}
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

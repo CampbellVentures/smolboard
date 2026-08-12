@@ -15,9 +15,27 @@ export default mutation({
     if (!round || round.eventId !== args.eventId || round.orgId !== event.orgId) {
       throw ctx.error("NOT_FOUND", "Review round not found.");
     }
+    // Reviewer selection, most specific first:
+    //   1. whoever the caller named,
+    //   2. this ROUND's own pool, if it has been curated,
+    //   3. every active reviewer in the org.
+    // Step 2 is what makes pools per-round: a reviewer on round 1 is not
+    // automatically on round 2. Without it the pool was always org-wide and
+    // the ReviewRoundReviewer rows were a record of past assignment rather
+    // than a roster anyone could set.
+    const roundPool = (await ctx.db.unsafe.query("ReviewRoundReviewer", { roundId: args.roundId }))
+      .filter(
+        (row) =>
+          row.orgId === event.orgId &&
+          row.eventId === args.eventId &&
+          row.status === "active",
+      )
+      .map((row) => row.reviewerUserId as string);
     const requested = args.reviewerUserIds?.length
       ? [...new Set(args.reviewerUserIds)].sort()
-      : await activeReviewerUserIds(ctx, event.orgId as string);
+      : roundPool.length > 0
+        ? [...new Set(roundPool)].sort()
+        : await activeReviewerUserIds(ctx, event.orgId as string);
     if (requested.length === 0) throw ctx.error("INVALID_ARGS", "Select at least one active reviewer.");
     const active = await ctx.db.unsafe.query("ReviewerMembership", {
       orgId: event.orgId,
@@ -74,15 +92,24 @@ export default mutation({
     const perSubmission = Math.max(1, Math.min(args.assignmentsPerSubmission ?? 1, requested.length));
     let created = 0;
     for (const submission of submissions) {
-      const already = new Set(
-        existing
-          .filter((assignment) => assignment.submissionId === submission.id)
-          .map((assignment) => assignment.reviewerUserId as string),
+      const forSubmission = existing.filter(
+        (assignment) => assignment.submissionId === submission.id,
       );
+      // Never hand the same submission back to someone who already has it —
+      // including someone who RECUSED, since they recused for a reason.
+      const already = new Set(forSubmission.map((assignment) => assignment.reviewerUserId as string));
+      // But a recused assignment is not coverage. Counting it toward
+      // perSubmission left the submission with no active reviewer and made
+      // "Assign reviewers" a no-op afterwards, so a recusal was a dead end:
+      // nobody could ever pick that submission up. (The `loads` map above
+      // already made this distinction; this line did not.)
+      const activeCoverage = forSubmission.filter(
+        (assignment) => assignment.status !== "recused",
+      ).length;
       const candidates = requested
         .filter((userId) => !already.has(userId))
         .sort((a, b) => (loads.get(a) ?? 0) - (loads.get(b) ?? 0) || a.localeCompare(b));
-      const needed = Math.max(0, perSubmission - already.size);
+      const needed = Math.max(0, perSubmission - activeCoverage);
       for (const reviewerUserId of candidates.slice(0, needed)) {
         await ctx.db.unsafe.insert("ReviewAssignment", {
           orgId: event.orgId,

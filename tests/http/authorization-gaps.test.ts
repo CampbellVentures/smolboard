@@ -3,6 +3,8 @@ import {
   anonymousClient,
   callFn,
   createTwoOrgFixture,
+  entityList,
+  entityUpdate,
   jsonRequest,
   type TestIdentity,
 } from "../helpers/http-fixtures";
@@ -135,4 +137,88 @@ test("vouching still works for a shell account the organizer created", async () 
   });
   expect(vouch.verified).toBe(true);
   expect(vouch.email).toBe(email.toLowerCase());
+});
+
+test("a round's own pool scopes assignment, and a recusal can be picked up by someone else", async () => {
+  const fixture = await createTwoOrgFixture(server.baseUrl, "round-pool");
+  const { owner, eventId } = fixture.a;
+
+  // Two active org reviewers. Both must be org members, so the second is the
+  // owner rather than a speaker.
+  const second = fixture.a.owner;
+  for (const userId of [fixture.a.reviewer.userId, second.userId]) {
+    await callFn(owner, "setReviewerMembership", { orgId: fixture.a.id, userId, active: true });
+  }
+
+  const round = await callFn<{ id: string }>(owner, "saveReviewRound", {
+    eventId,
+    roundNumber: 2,
+    name: "Round 2",
+    status: "open",
+  });
+
+  // Assignment only covers submissions that have reached the round, so move
+  // one up to round 2.
+  await entityUpdate(owner, "Submission", fixture.a.submissionIds[0], { currentRound: 2 });
+
+  // Curate the pool down to ONE of them. Assignment must respect that rather
+  // than falling back to every active reviewer in the org.
+  await callFn(owner, "setReviewRoundReviewer", {
+    eventId,
+    roundId: round.id,
+    reviewerUserId: fixture.a.reviewer.userId,
+    active: true,
+  });
+  await callFn(owner, "bulkAssignReviews", {
+    eventId,
+    roundId: round.id,
+    assignmentsPerSubmission: 1,
+  });
+
+  const assignedTo = async () => {
+    const rows = await entityList<{ roundId: string; reviewerUserId: string; status: string }>(
+      owner,
+      "ReviewAssignment",
+    );
+    return rows.filter((r) => r.roundId === round.id);
+  };
+  const first = await assignedTo();
+  expect(first.length).toBeGreaterThan(0);
+  expect(first.every((r) => r.reviewerUserId === fixture.a.reviewer.userId)).toBe(true);
+
+  // The pooled reviewer recuses from one submission.
+  const target = first[0];
+  await callFn(fixture.a.reviewer, "recuseReview", {
+    assignmentId: (target as unknown as { id: string }).id,
+    reason: "I work with this speaker.",
+  });
+
+  // Widen the pool and re-run: the recused submission must find a new
+  // reviewer. It used to stay uncovered forever, because a recused
+  // assignment still counted as coverage.
+  await callFn(owner, "setReviewRoundReviewer", {
+    eventId,
+    roundId: round.id,
+    reviewerUserId: second.userId,
+    active: true,
+  });
+  await callFn(owner, "bulkAssignReviews", {
+    eventId,
+    roundId: round.id,
+    assignmentsPerSubmission: 1,
+  });
+
+  const after = await assignedTo();
+  const forThatSubmission = after.filter(
+    (r) =>
+      (r as unknown as { submissionId: string }).submissionId ===
+      (target as unknown as { submissionId: string }).submissionId,
+  );
+  expect(forThatSubmission.some((r) => r.status === "recused")).toBe(true);
+  // Someone else now actively holds it.
+  expect(
+    forThatSubmission.some(
+      (r) => r.status !== "recused" && r.reviewerUserId !== fixture.a.reviewer.userId,
+    ),
+  ).toBe(true);
 });
