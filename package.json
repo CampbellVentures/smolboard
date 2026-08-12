@@ -7,7 +7,8 @@
     "dev": "pylon dev",
     "deploy": "pylon deploy",
     "check": "tsc --noEmit",
-    "test": "pylon test"
+    "test": "pylon test",
+    "smoke": "node scripts/smoke.mjs"
   },
   "dependencies": {
     "@pylonsync/client": "^0.4.2",
