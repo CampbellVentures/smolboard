@@ -75,7 +75,24 @@ export default function EventHomePage({
 
   // Widget mode: ?embed=schedule|speakers renders one section, chrome-less,
   // sized for an iframe on the organizer's own site.
-  const embed = typeof searchParams.embed === "string" ? searchParams.embed : "";
+  const rawEmbed = typeof searchParams.embed === "string" ? searchParams.embed : "";
+  // "agenda" is what the schedule widget is called everywhere except this
+  // parameter, so accept it rather than silently serving the whole page to
+  // someone who guessed the obvious name.
+  const embed = rawEmbed === "agenda" ? "schedule" : rawEmbed;
+
+  // An embed is meant to be iframed onto the organizer's own site. The runtime
+  // sends X-Frame-Options: SAMEORIGIN on every response, which makes exactly
+  // that fail — the snippet renders blank on any other origin. frame-ancestors
+  // supersedes X-Frame-Options wherever both are present, so widget responses
+  // opt back in. Only embed URLs get this; the dashboard keeps the default.
+  //
+  // Must run in the synchronous shell render: the HTTP head commits before any
+  // suspended subtree resolves.
+  if (embed) {
+    response.setHeader("content-security-policy", "frame-ancestors *");
+    response.setHeader("x-frame-options", "ALLOWALL");
+  }
   // Embed appearance is configured through the snippet's query string.
   const theme = searchParams.theme === "dark" ? "dark" : searchParams.theme === "auto" ? "auto" : "light";
   const accentParam = typeof searchParams.accent === "string" ? searchParams.accent : "";
