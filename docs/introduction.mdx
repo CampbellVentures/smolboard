@@ -55,8 +55,9 @@ but not permitted, `NOT_FOUND` for a missing row or an internal function, and
 `CONFLICT` when the operation contradicts current state.
 
 <Note>
-  This reference is generated from the running application's manifest with
-  `pylon codegen openapi`, not written by hand. If an endpoint is listed here,
-  the router serves it; functions marked internal are excluded because the
-  router refuses external calls to them.
+  This reference is read live from
+  [/api/openapi.json](https://www.smolboard.app/api/openapi.json), which the
+  running application generates from its own manifest. It cannot drift from the
+  code: if an endpoint is listed here, the router serves it. Functions marked
+  internal are excluded, because the router refuses external calls to them.
 </Note>
