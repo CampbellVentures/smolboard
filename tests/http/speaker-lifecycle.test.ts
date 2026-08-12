@@ -124,17 +124,38 @@ test("owner-controlled speaker lifecycle is tenant-safe, claimable, idempotent, 
     linksJson: { linkedin: "https://linkedin.example.test/priya" },
   });
 
+  // A task that applies to every speaker, created before the import runs.
+  const everyoneTask = await callFn<{ id: string }>(fixture.a.owner, "saveTaskTemplate", {
+    eventId: fixture.a.eventId,
+    title: "Confirm your travel dates",
+    kind: "confirm",
+    appliesTo: "all",
+  });
+
   const csv = [
     "name,email,title,company,bio,status",
     "Priya Lifecycle,priya.lifecycle@example.test,Principal Engineer,Latticework Systems,Duplicate,confirmed",
     "Dana Kowalski,dana.lifecycle@example.test,Engineering Manager,Northstar Labs,Imported speaker,invited",
   ].join("\r\n");
-  const imported = await callFn<{ created: unknown[]; duplicates: unknown[] }>(fixture.a.owner, "importSpeakers", {
-    eventId: fixture.a.eventId,
-    csv,
-  });
+  const imported = await callFn<{ created: { id: string; email: string }[]; duplicates: unknown[] }>(
+    fixture.a.owner,
+    "importSpeakers",
+    { eventId: fixture.a.eventId, csv },
+  );
   expect(imported.created).toHaveLength(1);
   expect(imported.duplicates).toHaveLength(1);
+
+  // An imported speaker used to land with an empty portal while the tasks page
+  // said this task applied to all of them.
+  const importedProfile = (await entityList<{ id: string; userId: string; email: string }>(
+    fixture.a.owner,
+    "SpeakerProfile",
+  )).find((row) => row.email === "dana.lifecycle@example.test")!;
+  const importedTasks = (await entityList<{ taskTemplateId: string; speakerUserId: string }>(
+    fixture.a.owner,
+    "SpeakerTask",
+  )).filter((row) => row.speakerUserId === importedProfile.userId);
+  expect(importedTasks.map((row) => row.taskTemplateId)).toContain(everyoneTask.id);
   const repeated = await callFn<{ created: unknown[]; duplicates: unknown[] }>(fixture.a.owner, "importSpeakers", {
     eventId: fixture.a.eventId,
     csv,

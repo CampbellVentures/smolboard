@@ -1,5 +1,6 @@
 import { mutation, v } from "@pylonsync/functions";
 import { normalizeSpeakerEmail, parseSpeakerCsv, SpeakerCsvError } from "../lib/speakers";
+import { assignEventTasks } from "./_taskAssignment";
 
 export default mutation({
   args: { eventId: v.id("Event"), csv: v.string() },
@@ -58,6 +59,12 @@ export default mutation({
         updatedAt: new Date().toISOString(),
       });
       existingEmails.add(row.email);
+      // An imported speaker is on the event, so they get the event's checklist.
+      await assignEventTasks(ctx, {
+        orgId: event.orgId as string,
+        eventId: args.eventId,
+        speakerUserId: userId,
+      });
       created.push({ id, email: row.email });
     }
     return { created, duplicates, totalRows: rows.length };

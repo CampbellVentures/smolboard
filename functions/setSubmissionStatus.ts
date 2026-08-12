@@ -1,6 +1,7 @@
 import { mutation, v } from "@pylonsync/functions";
 import { matchesEventAnchor } from "../lib/tenantAnchors";
 import { logActivity } from "../lib/activity";
+import { assignEventTasks } from "./_taskAssignment";
 
 const STATUSES = ["submitted", "in_review", "accepted", "rejected", "waitlisted", "withdrawn"];
 
@@ -36,35 +37,13 @@ export default mutation<
 
     let tasksCreated = 0;
     if (args.status === "accepted") {
-      // Materialize onboarding tasks for this speaker (idempotent: skip rows
-      // that already exist from a prior accept).
-      // ctx.db.unsafe: membership verified above; templates/tasks are org rows.
-      const templates = await ctx.db.unsafe.query("TaskTemplate", {
-        eventId: sub.eventId as string,
-      });
-      const existing = await ctx.db.unsafe.query("SpeakerTask", {
+      // ctx.db.unsafe inside: membership verified above; templates and tasks
+      // are org rows.
+      tasksCreated = await assignEventTasks(ctx, {
+        orgId: sub.orgId as string,
         eventId: sub.eventId as string,
         speakerUserId: sub.speakerUserId as string,
       });
-      const have = new Set(
-        existing
-          .filter((task) => task.eventId === sub.eventId && task.orgId === sub.orgId)
-          .map((task) => task.taskTemplateId as string),
-      );
-      for (const t of templates.filter((template) => template.orgId === sub.orgId)) {
-        if (t.appliesTo === "all" || t.appliesTo === "accepted") {
-          if (!have.has(t.id as string)) {
-            await ctx.db.unsafe.insert("SpeakerTask", {
-              orgId: sub.orgId as string,
-              eventId: sub.eventId as string,
-              taskTemplateId: t.id as string,
-              speakerUserId: sub.speakerUserId as string,
-              status: "pending",
-            });
-            tasksCreated++;
-          }
-        }
-      }
     }
 
     let emailQueued = false;

@@ -1,5 +1,6 @@
 import { mutation, v } from "@pylonsync/functions";
 import { normalizeSpeakerEmail } from "../lib/speakers";
+import { assignEventTasks } from "./_taskAssignment";
 
 // CRM → event handoff: turn a directory contact into that event's speaker,
 // carrying the profile fields across so nobody retypes them. Idempotent by
@@ -45,6 +46,14 @@ export default mutation<
       status: "invited",
       claimStatus: "unclaimed",
     })) as string;
+
+    // A contact pushed onto the event is a speaker on it, so they get the
+    // event's checklist rather than an empty portal.
+    await assignEventTasks(ctx, {
+      orgId: contact.orgId as string,
+      eventId: args.eventId,
+      speakerUserId: userId,
+    });
 
     if (contact.stage !== "invited" && contact.stage !== "confirmed") {
       await ctx.db.unsafe.update("Contact", args.contactId, {
