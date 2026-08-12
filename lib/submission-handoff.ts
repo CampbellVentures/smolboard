@@ -24,7 +24,7 @@ export interface MaterializedSessionData {
   kind: string;
 }
 
-const SESSION_KINDS = new Set(["talk", "keynote", "workshop", "panel", "break"]);
+export const SESSION_KINDS = new Set(["talk", "keynote", "workshop", "panel", "break"]);
 
 export function parseHandoffConfig(raw: unknown): SubmissionHandoffConfig | undefined {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return undefined;

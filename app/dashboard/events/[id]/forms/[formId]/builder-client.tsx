@@ -244,17 +244,15 @@ export function FormBuilder({
 
   // Autosave. Reordering a field then refreshing used to throw the change
   // away, because persisting was a button nothing pointed you at.
-  useEffect(() => {
-    if (snapshot === savedSnapshot.current) return;
-    const timer = setTimeout(() => void save(), 700);
-    return () => clearTimeout(timer);
-  }, [snapshot, save]);
-
-  // A save in flight when the last edit lands would otherwise leave that edit
-  // unwritten until the next keystroke.
+  //
+  // One timer, not two. A second short-delay effect meant to flush an edit
+  // that landed mid-save fired on every change as well, so it won the race
+  // and the debounce was really 200ms: a write per keystroke pause. Waiting
+  // on `saving` here covers the same case, since the effect re-runs when the
+  // in-flight save finishes.
   useEffect(() => {
     if (saving || snapshot === savedSnapshot.current) return;
-    const timer = setTimeout(() => void save(), 200);
+    const timer = setTimeout(() => void save(), 700);
     return () => clearTimeout(timer);
   }, [saving, snapshot, save]);
 

@@ -1,5 +1,5 @@
 import { mutation, v } from "@pylonsync/functions";
-import { parseHandoffConfig } from "../lib/submission-handoff";
+import { parseHandoffConfig, SESSION_KINDS } from "../lib/submission-handoff";
 import { logActivity } from "../lib/activity";
 
 const STATUSES = ["draft", "open", "closed"];
@@ -42,6 +42,16 @@ export default mutation({
       const trackIds = new Set(tracks.map((track) => track.id as string));
       if (Object.values(handoff.trackValues).some((trackId) => !trackIds.has(trackId))) {
         throw ctx.error("NOT_FOUND", "A mapped track does not belong to this event.");
+      }
+      // Track ids were checked but format values were not, so a mapping could
+      // be saved pointing at a kind no session can have. It then read as
+      // "Unresolved" in the builder with nothing explaining why.
+      const badKind = Object.values(handoff.formatValues).find((kind) => !SESSION_KINDS.has(kind));
+      if (badKind) {
+        throw ctx.error(
+          "INVALID_ARGS",
+          `"${badKind}" is not a session format. Use one of: ${[...SESSION_KINDS].join(", ")}.`,
+        );
       }
     }
 
