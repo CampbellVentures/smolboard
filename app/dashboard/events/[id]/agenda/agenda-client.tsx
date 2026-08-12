@@ -1302,25 +1302,77 @@ function TracksManager({ event, tracks }: { event: EventRow; tracks: TrackRow[] 
     });
     setName("");
   }
+  async function remove(track: TrackRow) {
+    try {
+      await callFn("deleteTrack", { trackId: track.id });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Couldn't remove that track.");
+    }
+  }
   return (
-    <form onSubmit={add} className="flex items-center gap-2">
-      <Input
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        placeholder="New track name…"
-        className="w-44"
-        aria-label="New track name"
-        autoComplete="off"
-      />
-      <Button
-        type="submit"
-        size="sm"
-        variant="outline"
-        disabled={!name.trim()}
-      >
-        <Plus data-icon="inline-start" /> Add track
-      </Button>
-    </form>
+    <div className="flex flex-wrap items-center gap-2">
+      {/* Tracks used to be create-only, so a typo lived forever — and showed
+          in the PUBLIC track filter. Removing one only detaches the label;
+          its sessions keep their slot. */}
+      {tracks.map((track) => (
+        <span
+          key={track.id}
+          className="flex items-center gap-1.5 rounded-full bg-zinc-100 py-1 pl-2.5 pr-1 text-[13px] text-zinc-700"
+        >
+          <span
+            aria-hidden="true"
+            className="size-1.5 shrink-0 rounded-full"
+            style={{ backgroundColor: track.color ?? "#a1a1aa" }}
+          />
+          {track.name}
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                className="size-6"
+                aria-label={`Remove ${track.name}`}
+              >
+                <X className="size-3.5" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Remove {track.name}?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Sessions on this track keep their time and room. They just lose the label.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction variant="destructive" onClick={() => void remove(track)}>
+                  Remove track
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </span>
+      ))}
+      <form onSubmit={add} className="flex items-center gap-2">
+        <Input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="New track name…"
+          className="w-44"
+          aria-label="New track name"
+          autoComplete="off"
+        />
+        <Button
+          type="submit"
+          size="sm"
+          variant="outline"
+          disabled={!name.trim()}
+        >
+          <Plus data-icon="inline-start" /> Add track
+        </Button>
+      </form>
+    </div>
   );
 }
 

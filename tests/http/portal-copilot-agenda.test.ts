@@ -250,3 +250,57 @@ test("a scheduled session can be unscheduled, and deleting a room frees its sess
   expect(freed?.roomId ?? null).toBeNull();
   expect(freed?.startTime ?? null).toBeNull();
 });
+
+test("a track can be removed, and its sessions keep their slot", async () => {
+  const fixture = await createTwoOrgFixture(server.baseUrl, "track-delete");
+  const { owner, eventId, sessionId } = fixture.a;
+
+  const track = await callFn<{ id: string }>(owner, "saveTrack", {
+    eventId,
+    name: "Typo Trakc",
+    color: "#2563eb",
+    sortOrder: 0,
+  });
+  const room = await callFn<{ id: string }>(owner, "saveRoom", {
+    eventId,
+    name: "Track Test Hall",
+    sortOrder: 0,
+  });
+  await callFn(owner, "saveSession", {
+    eventId,
+    sessionId,
+    data: {
+      trackId: track.id,
+      roomId: room.id,
+      startTime: "2027-05-12T17:00:00.000Z",
+      endTime: "2027-05-12T17:30:00.000Z",
+    },
+  });
+
+  // Another org cannot delete it.
+  const cross = await failCode(fixture.b.owner, "deleteTrack", { trackId: track.id });
+  expect(cross.status).toBeGreaterThanOrEqual(400);
+
+  const result = await callFn<{ deleted: boolean; sessionsDetached: number }>(
+    owner,
+    "deleteTrack",
+    { trackId: track.id },
+  );
+  expect(result.deleted).toBe(true);
+  expect(result.sessionsDetached).toBe(1);
+
+  const tracks = await entityList<{ id: string }>(owner, "Track");
+  expect(tracks.some((t) => t.id === track.id)).toBe(false);
+
+  // The session loses the label but keeps its place on the grid.
+  const sessions = await entityList<{
+    id: string;
+    trackId?: string | null;
+    roomId?: string | null;
+    startTime?: string | null;
+  }>(owner, "Session");
+  const kept = sessions.find((s) => s.id === sessionId);
+  expect(kept?.trackId ?? null).toBeNull();
+  expect(kept?.roomId).toBe(room.id);
+  expect(kept?.startTime).toBeTruthy();
+});
