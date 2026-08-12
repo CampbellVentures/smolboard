@@ -113,6 +113,14 @@ export function AbstractsView({
   const [categoryFilter, setCategoryFilter] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [openId, setOpenId] = useState<string | null>(null);
+
+  // Deep link: /abstracts?submission=<id> opens that proposal directly, so a
+  // row on the overview can point at the proposal instead of the whole list.
+  // Read once on mount; after that the drawer is ordinary local state.
+  useEffect(() => {
+    const wanted = new URLSearchParams(window.location.search).get("submission");
+    if (wanted) setOpenId(wanted);
+  }, []);
   const [busy, setBusy] = useState(false);
   const [bulkConfirmStatus, setBulkConfirmStatus] = useState<string | null>(null);
 

@@ -458,7 +458,7 @@ export function EventOverview({
               .map((submission) => (
                 <Link
                   key={submission.id}
-                  href={`/dashboard/events/${event.id}/abstracts`}
+                  href={`/dashboard/events/${event.id}/abstracts?submission=${submission.id}`}
                   className="group flex items-center gap-3 rounded-lg py-3 transition-colors hover:bg-muted/40"
                 >
                   <DashboardIconChip icon={Inbox} tone="zinc" />
@@ -530,7 +530,14 @@ export function EventOverview({
                       />
                     </TableCell>
                     <TableCell>
-                      <div className="font-medium">{row.name}</div>
+                      {/* The name links rather than the whole row, so the
+                          select checkbox next to it stays clickable. */}
+                      <Link
+                        href={`/dashboard/events/${event.id}/speakers?speaker=${row.userId}`}
+                        className="font-medium underline-offset-2 hover:underline"
+                      >
+                        {row.name}
+                      </Link>
                       <div className="text-xs text-muted-foreground">{row.email}</div>
                     </TableCell>
                     <TableCell className="min-w-36">

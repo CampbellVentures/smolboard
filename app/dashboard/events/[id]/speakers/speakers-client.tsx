@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { db } from "@pylonsync/react";
 import { callFn } from "@/lib/fn";
 import { toast } from "sonner";
@@ -138,6 +138,21 @@ export function SpeakersTable({
       linkedin: links.linkedin ?? "",
     });
   }
+
+  // Deep link: /speakers?speaker=<profileId>. Waits for the rows to arrive,
+  // then opens that speaker once — the overview's onboarding list links here.
+  const deepLinked = useRef(false);
+  useEffect(() => {
+    if (deepLinked.current) return;
+    const wanted = new URLSearchParams(window.location.search).get("speaker");
+    if (!wanted) return;
+    // Accept either a profile id or the speaker's user id: the overview's
+    // onboarding table keys its rows by userId.
+    const match = profiles.find((row) => row.id === wanted || row.userId === wanted);
+    if (!match) return;
+    deepLinked.current = true;
+    openProfile(match);
+  }, [profiles]);
 
   async function saveSpeaker(event_: React.FormEvent) {
     event_.preventDefault();
