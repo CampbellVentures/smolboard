@@ -17,18 +17,23 @@ agenda, a review round with scores, and an approved deck.
 speaker lands in `/portal`, not the organizer dashboard. This account can
 submit proposals, complete tasks, and upload deliverables straight away.
 
-Speakers normally sign in with a 6-digit emailed code, which a browser agent
-can't complete. Two ways around it, in order of convenience:
+**Submitting with no account and no inbox:** open the public CFP, fill it in,
+and press Submit proposal. A brand-new email address gets an account on the
+spot and the submission goes through, so a browser agent can complete the
+speaker path end to end without reading mail. The submitter can then see the
+proposal and its status at `/portal`.
 
-1. Use the seeded speaker above. Nothing to set up.
-2. Use your own address: set `personaEmails.speaker` to an inbox you control
-   and run `pnpm run sbek -- auth --persona speaker`, then request the code at
-   `/portal` and paste it into that window.
+Where verification still applies, and why:
 
-New self-registered accounts must still verify their email before they can
-submit, which is deliberate: it stops anyone registering someone else's
-address and submitting as them. Speakers an organizer adds are vouched for by
-that organizer and skip the step.
+- An address that **already has an account** cannot be claimed this way. The
+  flow falls back to a 6-digit emailed code, so this is not a takeover path.
+  Sign in as that person with `pnpm run sbek -- auth --persona speaker`, or use
+  the seeded speaker above.
+- Uploading a file, completing an onboarding task, and editing the speaker
+  profile that appears on the public site all require a verified inbox.
+  Registering someone else's address therefore gains nothing that gets
+  published; organizers also see an "Email unverified" badge on the
+  submission.
 
 Scenarios write into whichever event you drive. Two are seeded, both populated
 and both fine to use:
@@ -99,7 +104,7 @@ Deploy with `pylon deploy`. The manifest already declares `trustedOrigins` for t
 
 ## Architecture
 
-- `app.ts` — 32 entities + row-level policies. Everything org-scoped; speakers get owner-scoped reads (their submissions/tasks sync live to the portal); public pages read only through gated `auth: "public"` functions that strip private fields (speaker emails never leave the server).
+- `app.ts` — 35 entities + row-level policies. Everything org-scoped; speakers get owner-scoped reads (their submissions/tasks sync live to the portal); public pages read only through gated `auth: "public"` functions that strip private fields (speaker emails never leave the server).
 - `functions/` — 90+ server functions. Status changes, emails, scheduling, the copilot loop, and the MCP endpoint. Agent tools and UI buttons share the same functions.
 - `lib/` — pure, tested logic: form engine (conditional visibility, validation, routing), agenda math (conflicts, DST-safe timezone handling), RFC 5545 ICS builder, merge-tag templating.
 - `app/` — SSR pages: organizer dashboard (three-pane: nav / copilot / content), public CFP + schedule + speakers, speaker portal.
