@@ -41,11 +41,19 @@ export default mutation({
       throw ctx.error("INVALID_ARGS", "Session title is required.");
     }
     const payload = cleanPayload(data);
-    const contentChanged = ["title", "description", "speakerUserIdsJson"].some((key) => key in data);
+    // Every content change is versioned, but only a TEXT change needs a fresh
+    // editorial decision. Assigning a speaker is an operational act by the same
+    // person who would approve it, so re-drafting on a checkbox click silently
+    // pulled the session off the published schedule and made the organizer
+    // re-approve their own edit — with nothing on screen explaining why the
+    // talk had vanished from the public site.
+    const textChanged = ["title", "description"].some((key) => key in data);
+    const speakersChanged = "speakerUserIdsJson" in data;
+    const contentChanged = textChanged || speakersChanged;
     if (args.sessionId) {
       await ctx.db.unsafe.update("Session", args.sessionId, {
         ...payload,
-        ...(contentChanged
+        ...(textChanged
           ? {
               contentStatus: "draft",
               approvedRevisionId: undefined,
@@ -65,7 +73,20 @@ export default mutation({
             ? payload.speakerUserIdsJson
             : existing!.speakerUserIdsJson) as string[] | undefined,
         });
-        await ctx.db.unsafe.update("Session", args.sessionId, { currentRevisionId: revisionId });
+        // A speakers-only edit keeps its approval and moves it onto the new
+        // revision, so the public schedule follows the change instead of
+        // dropping the session. A text edit leaves it drafted above.
+        await ctx.db.unsafe.update("Session", args.sessionId, {
+          currentRevisionId: revisionId,
+          ...(textChanged
+            ? {}
+            : {
+                approvedRevisionId: revisionId,
+                contentStatus: "approved",
+                approvedAt: new Date().toISOString(),
+                approvedByUserId: ctx.auth.userId,
+              }),
+        });
       }
       return { id: args.sessionId };
     }

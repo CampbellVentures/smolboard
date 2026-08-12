@@ -225,7 +225,9 @@ export default mutation<{ orgId: string }, { eventId: string }>({
         sessionId,
         revisionNumber: 1,
         title,
-        description: isBreak ? undefined : "Session details confirmed with the speaker.",
+        // Must match the session row above; these disagreed, so restoring
+        // revision 1 silently rewrote the visible abstract.
+        description: isBreak ? undefined : `With ${SPEAKERS[talk![2]][0]} ${SPEAKERS[talk![2]][1]}.`,
         speakerUserIdsJson: speakers,
         editorUserId: ctx.auth.userId,
         editorName: "Sample data",

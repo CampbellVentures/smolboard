@@ -410,3 +410,49 @@ test("a newly scheduled session reaches the public schedule, and an edit pulls i
   await callFn(owner, "approveSessionContent", { sessionId: created.id, approved: true });
   expect(await publicTitles()).toContain("Retitled after publishing");
 });
+
+test("assigning a speaker keeps the session published; editing its text does not", async () => {
+  const fixture = await createTwoOrgFixture(server.baseUrl, "speaker-publish");
+  const { owner, eventId, eventSlug, slug: orgSlug, sessionId } = fixture.a;
+  await entityUpdate(owner, "Event", eventId, { schedulePublished: true, cfpStatus: "open" });
+
+  const room = await callFn<{ id: string }>(owner, "saveRoom", {
+    eventId, name: "Speaker Hall", sortOrder: 0,
+  });
+  await callFn(owner, "saveSession", {
+    eventId, sessionId,
+    data: { roomId: room.id, startTime: "2027-05-12T17:00:00.000Z", endTime: "2027-05-12T17:30:00.000Z" },
+  });
+
+  const publicTitles = async () => {
+    const { body } = await publicFn<{ sessions?: Array<{ title: string }> }>(
+      server.baseUrl, "getPublicSchedule", { orgSlug, eventSlug },
+    );
+    return (body.sessions ?? []).map((s) => s.title);
+  };
+  const before = await publicTitles();
+  expect(before.length).toBeGreaterThan(0);
+
+  // Assigning a speaker is operational, not editorial. It used to re-draft the
+  // session, which pulled a live talk off the public schedule on a checkbox
+  // click and made the organizer re-approve their own edit.
+  await callFn(owner, "saveSession", {
+    eventId, sessionId,
+    data: { speakerUserIdsJson: [fixture.a.speakers[0].userId] },
+  });
+  expect(await publicTitles()).toEqual(before);
+
+  // The speaker change is still versioned, and the approval moved onto it.
+  const sessions = await entityList<{ id: string; contentStatus?: string; approvedRevisionId?: string; currentRevisionId?: string }>(owner, "Session");
+  const row = sessions.find((s) => s.id === sessionId);
+  expect(row?.contentStatus).toBe("approved");
+  expect(row?.approvedRevisionId).toBe(row?.currentRevisionId);
+
+  // A TEXT edit still requires a fresh decision.
+  await callFn(owner, "saveSession", {
+    eventId, sessionId, data: { title: "Retitled by the organizer" },
+  });
+  const afterText = await publicTitles();
+  expect(afterText).not.toContain("Retitled by the organizer");
+  expect(afterText.length).toBe(before.length - 1);
+});
