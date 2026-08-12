@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { callFn, db, Link } from "@pylonsync/react";
+import { toast } from "sonner";
 import { PersonAvatar } from "@/components/person-avatar";
 import { fmtDate } from "@/lib/format";
 import { BookUser, ExternalLink, Trash2 } from "lucide-react";
@@ -189,6 +190,14 @@ export function SpeakerDirectory({
   const [importing, setImporting] = useState(false);
   const [emailing, setEmailing] = useState(false);
   const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [savingSegment, setSavingSegment] = useState(false);
+  const suggestedSegmentName = [
+    company !== "all" ? company : null,
+    tag !== "all" ? tag : null,
+    q.trim() || null,
+  ]
+    .filter(Boolean)
+    .join(" · ") || "Saved view";
 
   const stageQ = db.useQuery<ContactStageEventRow>("ContactStageEvent");
   const segmentQ = db.useQuery<ContactSegmentRow>("ContactSegment");
@@ -354,14 +363,45 @@ export function SpeakerDirectory({
             ))}
           </Select>
           {(q || tag !== "all" || company !== "all") ? (
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              onClick={() => { setQ(""); setTag("all"); setCompany("all"); }}
-            >
-              Clear
-            </Button>
+            <>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => { setQ(""); setTag("all"); setCompany("all"); }}
+              >
+                Clear
+              </Button>
+              {/* A filter you had to rebuild by hand every time is not a
+                  segment. ContactSegment and its save/delete functions already
+                  existed; nothing rendered them. */}
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={savingSegment}
+                onClick={async () => {
+                  const name = window.prompt("Name this segment", suggestedSegmentName);
+                  if (!name?.trim()) return;
+                  setSavingSegment(true);
+                  try {
+                    await callFn("saveContactSegment", {
+                      orgId,
+                      name: name.trim(),
+                      filters: { q, tag, company },
+                    });
+                  } catch (error) {
+                    toast.error(
+                      error instanceof Error ? error.message : "Couldn't save that segment.",
+                    );
+                  } finally {
+                    setSavingSegment(false);
+                  }
+                }}
+              >
+                Save segment
+              </Button>
+            </>
           ) : null}
           {allTags.length > 0 ? (
             <Select
@@ -382,6 +422,58 @@ export function SpeakerDirectory({
         <span className="text-xs tabular-nums text-muted-foreground">
           {rows.length} of {people.length} speakers
         </span>
+        {segments.length > 0 ? (
+          <div className="flex w-full flex-wrap items-center gap-1.5 pt-1">
+            <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+              Segments
+            </span>
+            {segments.map((segment) => {
+              const f = segment.filtersJson ?? {};
+              const open =
+                (f.q ?? "") === q && (f.tag ?? "all") === tag && (f.company ?? "all") === company;
+              return (
+                <span
+                  key={segment.id}
+                  className={
+                    "flex items-center gap-1 rounded-full py-1 pl-3 pr-1 text-[13px] " +
+                    (open ? "bg-zinc-900 text-white" : "bg-zinc-100 text-zinc-700")
+                  }
+                >
+                  <button
+                    type="button"
+                    // Reopening restores the exact filters it was saved with,
+                    // so the segment shows the same people it did then.
+                    onClick={() => {
+                      setQ(f.q ?? "");
+                      setTag(f.tag ?? "all");
+                      setCompany(f.company ?? "all");
+                    }}
+                  >
+                    {segment.name}
+                  </button>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    className={"size-6 " + (open ? "text-white hover:bg-white/20" : "")}
+                    aria-label={`Delete segment ${segment.name}`}
+                    onClick={async () => {
+                      try {
+                        await callFn("deleteContactSegment", { segmentId: segment.id });
+                      } catch (error) {
+                        toast.error(
+                          error instanceof Error ? error.message : "Couldn't delete that segment.",
+                        );
+                      }
+                    }}
+                  >
+                    <Trash2 className="size-3.5" />
+                  </Button>
+                </span>
+              );
+            })}
+          </div>
+        ) : null}
       </DashboardToolbar>
       ) : null}
 
