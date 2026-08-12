@@ -173,6 +173,68 @@ test("session revisions restore as a new draft and only explicit approval reache
   expect(gatedAgain.body.sessions).toEqual([]);
 }, 30_000);
 
+test("requesting changes reopens the speaker's task until a new version lands", async () => {
+  const fixture = await createTwoOrgFixture(server.baseUrl, "deliverable-reopen");
+  const speaker = fixture.a.speakers[0];
+  const template = await callFn<{ id: string }>(fixture.a.owner, "saveTaskTemplate", {
+    eventId: fixture.a.eventId,
+    title: "Upload Session Presentation",
+    kind: "upload",
+    target: "slides",
+    appliesTo: "selected",
+    speakerUserIds: [speaker.userId],
+  });
+  const task = (await entityList<{ id: string; taskTemplateId: string }>(speaker, "SpeakerTask"))
+    .find((row) => row.taskTemplateId === template.id)!;
+  const slot = await callFn<{ id: string }>(speaker, "ensureDeliverableSlot", { taskId: task.id });
+
+  const taskStatus = async () =>
+    (await entityList<{ id: string; status: string }>(speaker, "SpeakerTask")).find((row) => row.id === task.id)!.status;
+  const slotStatus = async () =>
+    (await entityList<{ id: string; status: string }>(speaker, "DeliverableSlot")).find((row) => row.id === slot.id)!.status;
+
+  const first = await directUpload(speaker, "slides.pdf", "first draft");
+  await callFn(speaker, "recordDeliverableVersion", {
+    slotId: slot.id,
+    fileId: first.id,
+    fileUrl: first.url,
+    filename: "slides.pdf",
+    mimeType: "application/pdf",
+    size: first.size,
+  });
+  await callFn(speaker, "completeTask", { taskId: task.id, completed: true });
+  expect(await taskStatus()).toBe("done");
+
+  await callFn(fixture.a.owner, "reviewDeliverable", {
+    slotId: slot.id,
+    status: "changes_requested",
+    note: "Please use the 16:9 template.",
+  });
+  // The checklist has to say what is left. A task the organizer sent back is
+  // not done, and the speaker cannot tick it done to get around that.
+  expect(await taskStatus()).toBe("pending");
+  const blocked = await jsonRequest(speaker, "/api/fn/completeTask", "POST", { taskId: task.id, completed: true });
+  expect(blocked.response.ok).toBe(false);
+  expect(await taskStatus()).toBe("pending");
+
+  const second = await directUpload(speaker, "slides.pdf", "revised deck");
+  await callFn(speaker, "recordDeliverableVersion", {
+    slotId: slot.id,
+    fileId: second.id,
+    fileUrl: second.url,
+    filename: "slides.pdf",
+    mimeType: "application/pdf",
+    size: second.size,
+  });
+  expect(await slotStatus()).toBe("pending");
+  await callFn(speaker, "completeTask", { taskId: task.id, completed: true });
+  expect(await taskStatus()).toBe("done");
+
+  // Approving leaves the task alone; it is already done.
+  await callFn(fixture.a.owner, "reviewDeliverable", { slotId: slot.id, status: "approved" });
+  expect(await taskStatus()).toBe("done");
+}, 30_000);
+
 async function directUpload(actor: TestIdentity, filename: string, contents: string) {
   const bytes = new TextEncoder().encode(contents);
   const initialized = await jsonRequest<{ assetId: string; uploadUrl: string }>(actor, "/api/files/init", "POST", {

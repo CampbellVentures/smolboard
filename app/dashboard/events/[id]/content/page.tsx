@@ -8,6 +8,8 @@ import type {
   EventRow,
   SessionRow,
   SpeakerProfileRow,
+  SpeakerTaskRow,
+  TaskTemplateRow,
 } from "@/lib/types";
 
 export const metadata: Metadata = {
@@ -45,6 +47,15 @@ export default function ContentPage({ auth, params, response, serverData }: Page
   const sessions = use(serverData.list<SessionRow>("Session")).filter(
     (row) => row.eventId === event.id,
   );
+  // A slot only exists once a speaker uploads something. The assigned upload
+  // task is the record of a deliverable that is still owed, so the desk needs
+  // both to answer "who has not sent their deck yet".
+  const templates = use(serverData.list<TaskTemplateRow>("TaskTemplate")).filter(
+    (row) => row.eventId === event.id,
+  );
+  const tasks = use(serverData.list<SpeakerTaskRow>("SpeakerTask")).filter(
+    (row) => row.eventId === event.id,
+  );
   return (
     <ContentTable
       event={event}
@@ -53,6 +64,8 @@ export default function ContentPage({ auth, params, response, serverData }: Page
       initialComments={comments}
       initialProfiles={profiles}
       initialSessions={sessions}
+      initialTemplates={templates}
+      initialTasks={tasks}
     />
   );
 }

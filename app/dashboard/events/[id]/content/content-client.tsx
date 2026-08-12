@@ -41,6 +41,8 @@ import type {
   EventRow,
   SessionRow,
   SpeakerProfileRow,
+  SpeakerTaskRow,
+  TaskTemplateRow,
 } from "@/lib/types";
 
 // Organizer review desk over the deliverable system: one row per slot, showing
@@ -55,6 +57,19 @@ const STATUS_FILTERS = [
   ["changes_requested", "Changes requested"],
   ["awaiting_upload", "Awaiting upload"],
 ] as const;
+
+// One row per deliverable the event expects. `slot` is null until the speaker
+// uploads, because that is when ensureDeliverableSlot first writes a row. The
+// desk used to list slots alone, so "Awaiting upload" matched nothing and the
+// organizer could not see who still owed a file.
+type DeskRow = {
+  id: string;
+  speakerUserId: string;
+  title: string;
+  kind: string;
+  sessionId?: string;
+  slot: DeliverableSlotRow | null;
+};
 
 import { fmtDateTime as fmtDate } from "@/lib/format";
 
@@ -85,6 +100,8 @@ export function ContentTable({
   initialComments,
   initialProfiles,
   initialSessions,
+  initialTemplates,
+  initialTasks,
 }: {
   event: EventRow;
   initialSlots: DeliverableSlotRow[];
@@ -92,6 +109,8 @@ export function ContentTable({
   initialComments: DeliverableCommentRow[];
   initialProfiles: SpeakerProfileRow[];
   initialSessions: SessionRow[];
+  initialTemplates: TaskTemplateRow[];
+  initialTasks: SpeakerTaskRow[];
 }) {
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => setHydrated(true), []);
@@ -111,6 +130,12 @@ export function ContentTable({
   const sessionsQ = db.useQuery<SessionRow>("Session");
   const sessions =
     !hydrated || sessionsQ.loading ? initialSessions : sessionsQ.data.filter((r) => r.eventId === event.id);
+  const templatesQ = db.useQuery<TaskTemplateRow>("TaskTemplate");
+  const templates =
+    !hydrated || templatesQ.loading ? initialTemplates : templatesQ.data.filter((r) => r.eventId === event.id);
+  const tasksQ = db.useQuery<SpeakerTaskRow>("SpeakerTask");
+  const tasks =
+    !hydrated || tasksQ.loading ? initialTasks : tasksQ.data.filter((r) => r.eventId === event.id);
 
   const speakerByUser = useMemo(() => new Map(profiles.map((p) => [p.userId, p])), [profiles]);
   const sessionById = useMemo(() => new Map(sessions.map((s) => [s.id, s])), [sessions]);
@@ -130,21 +155,61 @@ export function ContentTable({
   // narrow to one speaker, tick their deck, clear the filter, tick another.
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
-  const effectiveStatus = (slot: DeliverableSlotRow) =>
-    latestVersion(versions, slot.id) ? (slot.status ?? "pending") : "awaiting_upload";
+  const latestFor = (row: DeskRow) => (row.slot ? latestVersion(versions, row.slot.id) : undefined);
+  const effectiveStatus = (row: DeskRow) =>
+    row.slot && latestVersion(versions, row.slot.id) ? (row.slot.status ?? "pending") : "awaiting_upload";
 
-  let rows = slots
+  const allRows = useMemo<DeskRow[]>(() => {
+    const fromSlots: DeskRow[] = slots.map((slot) => ({
+      id: slot.id,
+      speakerUserId: slot.speakerUserId,
+      title: slot.title,
+      kind: slot.kind,
+      sessionId: slot.sessionId,
+      slot,
+    }));
+    const claimed = new Set(slots.map((slot) => slot.taskId).filter(Boolean) as string[]);
+    const uploadTemplates = new Map(
+      templates.filter((template) => template.kind === "upload").map((template) => [template.id, template]),
+    );
+    // A speaker who has not uploaded has no slot to carry a sessionId, so find
+    // their talk the other way round.
+    const sessionBySpeaker = new Map<string, SessionRow>();
+    for (const session of sessions) {
+      for (const userId of session.speakerUserIdsJson ?? []) {
+        if (!sessionBySpeaker.has(userId)) sessionBySpeaker.set(userId, session);
+      }
+    }
+    const owed: DeskRow[] = tasks
+      .filter((task) => !claimed.has(task.id) && uploadTemplates.has(task.taskTemplateId))
+      .map((task) => {
+        const template = uploadTemplates.get(task.taskTemplateId)!;
+        return {
+          id: task.id,
+          speakerUserId: task.speakerUserId,
+          title: template.title,
+          kind: template.target || "document",
+          sessionId: sessionBySpeaker.get(task.speakerUserId)?.id,
+          slot: null,
+        };
+      });
+    return [...fromSlots, ...owed];
+  }, [slots, tasks, templates, sessions]);
+
+  let rows = allRows
     .slice()
-    .sort((a, b) => (latestVersion(versions, b.id)?.createdAt ?? "").localeCompare(latestVersion(versions, a.id)?.createdAt ?? ""));
-  if (status !== "all") rows = rows.filter((slot) => effectiveStatus(slot) === status);
+    .sort((a, b) =>
+      (latestFor(b)?.createdAt ?? "").localeCompare(latestFor(a)?.createdAt ?? ""),
+    );
+  if (status !== "all") rows = rows.filter((row) => effectiveStatus(row) === status);
   if (q.trim()) {
     const needle = q.trim().toLowerCase();
-    rows = rows.filter((slot) => {
-      const speaker = speakerByUser.get(slot.speakerUserId);
-      const latest = latestVersion(versions, slot.id);
-      const session = slot.sessionId ? sessionById.get(slot.sessionId) : undefined;
+    rows = rows.filter((row) => {
+      const speaker = speakerByUser.get(row.speakerUserId);
+      const latest = latestFor(row);
+      const session = row.sessionId ? sessionById.get(row.sessionId) : undefined;
       return (
-        slot.title.toLowerCase().includes(needle) ||
+        row.title.toLowerCase().includes(needle) ||
         (latest?.filename ?? "").toLowerCase().includes(needle) ||
         (speaker?.name ?? "").toLowerCase().includes(needle) ||
         (session?.title ?? "").toLowerCase().includes(needle)
@@ -152,22 +217,22 @@ export function ContentTable({
     });
   }
 
-  const pendingCount = slots.filter((slot) => effectiveStatus(slot) === "pending").length;
+  const pendingCount = allRows.filter((row) => effectiveStatus(row) === "pending").length;
 
   // Only rows with an uploaded file can go in an archive.
-  const downloadable = rows.filter((slot) => latestVersion(versions, slot.id));
+  const downloadable = rows.filter((row) => latestFor(row));
   const selectedSlots = slots.filter(
     (slot) => selected.has(slot.id) && latestVersion(versions, slot.id),
   );
   const allShownSelected =
-    downloadable.length > 0 && downloadable.every((slot) => selected.has(slot.id));
+    downloadable.length > 0 && downloadable.every((row) => selected.has(row.id));
 
   function toggleAllShown() {
     setSelected((prev) => {
       const next = new Set(prev);
-      for (const slot of downloadable) {
-        if (allShownSelected) next.delete(slot.id);
-        else next.add(slot.id);
+      for (const row of downloadable) {
+        if (allShownSelected) next.delete(row.id);
+        else next.add(row.id);
       }
       return next;
     });
@@ -197,7 +262,7 @@ export function ContentTable({
   }
 
   const approvedSlots = slots.filter(
-    (slot) => effectiveStatus(slot) === "approved" && latestVersion(versions, slot.id),
+    (slot) => slot.status === "approved" && latestVersion(versions, slot.id),
   );
 
   // Bundle a set of deliverables' latest versions into a zip, fetched through
@@ -341,21 +406,22 @@ export function ContentTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {rows.map((slot) => {
-              const speaker = speakerByUser.get(slot.speakerUserId);
-              const slotVersions = versionsForSlot(versions, slot.id);
+            {rows.map((row) => {
+              const slot = row.slot;
+              const speaker = speakerByUser.get(row.speakerUserId);
+              const slotVersions = slot ? versionsForSlot(versions, slot.id) : [];
               const latest = slotVersions[0];
-              const slotComments = comments.filter((c) => c.slotId === slot.id);
-              const rowStatus = effectiveStatus(slot);
+              const slotComments = slot ? comments.filter((c) => c.slotId === slot.id) : [];
+              const rowStatus = effectiveStatus(row);
               return (
-                <TableRow key={slot.id}>
+                <TableRow key={row.id}>
                   <TableCell>
                     <input
                       type="checkbox"
-                      checked={selected.has(slot.id)}
-                      onChange={() => toggleOne(slot.id)}
+                      checked={selected.has(row.id)}
+                      onChange={() => toggleOne(row.id)}
                       disabled={!latest}
-                      aria-label={`Select ${latest?.filename ?? slot.title}`}
+                      aria-label={`Select ${latest?.filename ?? row.title}`}
                       className="size-4 rounded border-zinc-300 accent-zinc-900 disabled:opacity-40"
                     />
                   </TableCell>
@@ -368,15 +434,15 @@ export function ContentTable({
                           <span className="max-w-56 truncate">{latest.filename}</span>
                         </DownloadLink>
                       ) : (
-                        <span className="text-sm text-zinc-400">{slot.title}</span>
+                        <span className="text-sm text-zinc-400">{row.title}</span>
                       )}
-                      <Badge variant="outline" className="capitalize">{slot.kind}</Badge>
+                      <Badge variant="outline" className="capitalize">{row.kind}</Badge>
                       {latest ? (
                         <span className="whitespace-nowrap text-xs tabular-nums text-zinc-400">
                           v{latest.versionNumber}
                         </span>
                       ) : null}
-                      {slotVersions.length > 1 && (
+                      {slot && slotVersions.length > 1 && (
                         <button
                           type="button"
                           onClick={() => setHistoryFor(slot)}
@@ -386,24 +452,28 @@ export function ContentTable({
                         </button>
                       )}
                       {/* A speaker's note used to render as dead text here, so
-                          the person meant to act on it could not read it. */}
-                      <button
-                        type="button"
-                        onClick={() => setCommentsFor(slot)}
-                        className="inline-flex items-center gap-1 whitespace-nowrap text-xs text-zinc-500 underline-offset-2 hover:underline"
-                      >
-                        <MessageSquareWarning className="size-3" aria-hidden="true" />
-                        {slotComments.length > 0
-                          ? `${slotComments.length} comment${slotComments.length === 1 ? "" : "s"}`
-                          : "Comment"}
-                      </button>
+                          the person meant to act on it could not read it.
+                          Comments hang off a slot, so a deliverable nobody has
+                          uploaded yet has nothing to attach one to. */}
+                      {slot ? (
+                        <button
+                          type="button"
+                          onClick={() => setCommentsFor(slot)}
+                          className="inline-flex items-center gap-1 whitespace-nowrap text-xs text-zinc-500 underline-offset-2 hover:underline"
+                        >
+                          <MessageSquareWarning className="size-3" aria-hidden="true" />
+                          {slotComments.length > 0
+                            ? `${slotComments.length} comment${slotComments.length === 1 ? "" : "s"}`
+                            : "Comment"}
+                        </button>
+                      ) : null}
                     </div>
-                    {rowStatus === "changes_requested" && slot.reviewNote ? (
+                    {rowStatus === "changes_requested" && slot?.reviewNote ? (
                       <p className="mt-1 text-xs text-amber-700">“{slot.reviewNote}”</p>
                     ) : null}
                   </TableCell>
                   <TableCell className="max-w-48 truncate text-sm text-zinc-500">
-                    {slot.sessionId ? (sessionById.get(slot.sessionId)?.title ?? "—") : "—"}
+                    {row.sessionId ? (sessionById.get(row.sessionId)?.title ?? "—") : "—"}
                   </TableCell>
                   <TableCell className="text-sm tabular-nums text-zinc-500">
                     {/* Viewer-local time: differs from the SSR (UTC) render by design. */}
@@ -415,7 +485,7 @@ export function ContentTable({
                     </DashboardStatusBadge>
                   </TableCell>
                   <TableCell className="text-right">
-                    {latest ? (
+                    {slot && latest ? (
                       <div className="flex justify-end gap-1.5">
                         {rowStatus !== "approved" && (
                           <Button

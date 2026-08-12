@@ -778,6 +778,9 @@ function SpeakerTaskItem({
   const slot = taskSlot(slots, task.id);
   const taskVersions = slot ? versionsForSlot(versions, slot.id) : [];
   const hasUpload = Boolean(slot && latestVersion(versions, slot.id));
+  // An organizer sending work back reopens the task server-side. Surface it in
+  // the header, where the speaker looks, instead of only inside the uploader.
+  const changesRequested = template.kind === "upload" && slot?.status === "changes_requested";
 
   async function setComplete(completed: boolean) {
     setBusy(true);
@@ -802,6 +805,7 @@ function SpeakerTaskItem({
             <h3 className="text-sm font-semibold text-zinc-900">{template.title}</h3>
             {due === "overdue" ? <Badge variant="destructive">Overdue</Badge> : null}
             {due === "due_soon" ? <Badge variant="secondary">Due soon</Badge> : null}
+            {changesRequested ? <Badge variant="destructive">Changes requested</Badge> : null}
             {complete ? <Badge>Complete</Badge> : null}
           </div>
           {template.description ? <p className="mt-1 text-sm leading-5 text-zinc-500">{template.description}</p> : null}
@@ -834,16 +838,20 @@ function SpeakerTaskItem({
             />
           ) : null}
           {error ? <p className="mt-3 text-xs text-red-600">{error}</p> : null}
-          <Button
-            type="button"
-            size="sm"
-            variant={complete ? "ghost" : "default"}
-            className="mt-4"
-            disabled={busy || (!complete && template.kind === "upload" && !hasUpload)}
-            onClick={() => setComplete(!complete)}
-          >
-            {busy ? "Saving…" : complete ? "Mark incomplete" : "Mark complete"}
-          </Button>
+          {/* No "Mark complete" while changes are pending: the server rejects
+              it, and the way forward is a new version, not a checkbox. */}
+          {changesRequested ? null : (
+            <Button
+              type="button"
+              size="sm"
+              variant={complete ? "ghost" : "default"}
+              className="mt-4"
+              disabled={busy || (!complete && template.kind === "upload" && !hasUpload)}
+              onClick={() => setComplete(!complete)}
+            >
+              {busy ? "Saving…" : complete ? "Mark incomplete" : "Mark complete"}
+            </Button>
+          )}
         </div>
       </div>
     </div>

@@ -65,6 +65,15 @@ export default mutation({
       ) {
         throw ctx.error("INVALID_ARGS", "Upload a file to this task before completing it.");
       }
+      // Once an organizer sends work back, the speaker cannot tick the task
+      // done again. The way out is a new version, which resets the slot to
+      // pending review and completes the task on upload.
+      if (slot.status === "changes_requested") {
+        throw ctx.error(
+          "CONFLICT",
+          "The organizer asked for changes. Upload a new version to complete this task.",
+        );
+      }
     }
 
     await ctx.db.unsafe.update("SpeakerTask", args.taskId, {
