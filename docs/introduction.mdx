@@ -1,0 +1,62 @@
+---
+title: "smolboard API"
+description: "Every server function is an HTTP endpoint, and the public event feeds need no credentials at all."
+---
+
+smolboard runs the speaker side of a conference: a call for speakers, review and
+scoring, a drag-and-drop agenda, speaker onboarding, and the public pages
+attendees read. One process serves the API, auth, live sync, and server-rendered
+pages.
+
+The API is not a separate integration layer bolted onto the product. The
+dashboard calls the same endpoints documented here, so anything the UI can do is
+available to a script.
+
+## Three families
+
+<CardGroup cols={3}>
+  <Card title="Public feeds" icon="globe">
+    The schedule, the speakers, and a subscribable calendar. No credentials.
+    This is what the embeddable widgets render.
+  </Card>
+  <Card title="Functions" icon="bolt">
+    `POST /api/fn/<name>` — 94 endpoints covering the whole product. Each one
+    enforces its own membership and role checks.
+  </Card>
+  <Card title="Entities" icon="table">
+    `GET /api/entities/<Entity>` — direct row access over 36 entities, filtered
+    by row-level policies.
+  </Card>
+</CardGroup>
+
+## Try it without an account
+
+The public feeds work right now, against the live demo:
+
+```bash
+curl -X POST https://www.smolboard.app/api/fn/getPublicSchedule \
+  -H 'Content-Type: application/json' \
+  -d '{"orgSlug":"ai-engineer","eventSlug":"ai-engineer-sandbox"}'
+```
+
+That returns the published sessions with their rooms, tracks, times, and
+speakers — the same payload the schedule widget renders.
+
+## Errors
+
+Every endpoint fails the same shape, so one handler covers all of them:
+
+```json
+{ "error": { "code": "FORBIDDEN", "message": "..." } }
+```
+
+`INVALID_ARGS` for a bad request body, `FORBIDDEN` when you are authenticated
+but not permitted, `NOT_FOUND` for a missing row or an internal function, and
+`CONFLICT` when the operation contradicts current state.
+
+<Note>
+  This reference is generated from the running application's manifest with
+  `pylon codegen openapi`, not written by hand. If an endpoint is listed here,
+  the router serves it; functions marked internal are excluded because the
+  router refuses external calls to them.
+</Note>

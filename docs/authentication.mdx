@@ -1,0 +1,50 @@
+---
+title: "Authentication"
+description: "Organizers sign in with a password or Google; speakers use an emailed code."
+---
+
+Two populations share one user table, and they reach different surfaces.
+**Organizers** belong to an organization and use the dashboard. **Speakers** do
+not belong to one — they are created when they submit a proposal, and they use
+the portal.
+
+## Getting a token
+
+```bash
+curl -X POST https://www.smolboard.app/api/auth/password/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"you@example.com","password":"..."}'
+```
+
+```json
+{ "token": "pylon_…", "user_id": "0000…", "expires_at": 1789101076 }
+```
+
+## Using it
+
+Both forms work. A script should send the bearer token:
+
+```bash
+curl -X POST https://www.smolboard.app/api/fn/agentListEvents \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer pylon_…' \
+  -d '{}'
+```
+
+The browser uses an `HttpOnly` `smolboard_session` cookie instead, set at
+sign-in. Requests from a browser therefore need no `Authorization` header.
+
+## What a token can do
+
+Nothing implicitly. Every function re-checks membership and role against the
+row it is about to touch, so a token for one organization cannot read or write
+another's data — including through an id you supply directly. Speakers reach
+only their own submissions, tasks, and uploads.
+
+<Warning>
+  Registering an address returns a session immediately, but that address is not
+  yet **verified**. Actions that publish on someone's behalf — completing an
+  onboarding task, editing the public speaker profile, uploading a deliverable —
+  require a verified inbox. This is what stops someone registering another
+  person's address and speaking as them.
+</Warning>

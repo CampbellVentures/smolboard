@@ -1,0 +1,32 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "smolboard",
+  "description": "Open-source speaker and CFP management. One process serves the API, auth, sync, SSR, and the agent runtime.",
+  "colors": { "primary": "#7c3aed", "light": "#a78bfa", "dark": "#5b21b6" },
+  "favicon": "/favicon.svg",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Guides",
+        "groups": [
+          {
+            "group": "Getting started",
+            "pages": ["introduction", "authentication", "public-feeds", "embedding"]
+          }
+        ]
+      },
+      {
+        "tab": "API reference",
+        "openapi": "../pylon.openapi.json"
+      }
+    ]
+  },
+  "navbar": {
+    "links": [{ "label": "Live demo", "href": "https://www.smolboard.app" }],
+    "primary": { "type": "github", "href": "https://github.com/CampbellVentures/smolboard" }
+  },
+  "footer": {
+    "socials": { "github": "https://github.com/CampbellVentures/smolboard" }
+  }
+}

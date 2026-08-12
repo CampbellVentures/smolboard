@@ -1,0 +1,48 @@
+---
+title: "Public feeds"
+description: "Schedule, speakers, and a subscribable calendar — no credentials."
+---
+
+Three anonymous endpoints back every public surface. They are the safest place
+to start, and the only ones you can call from a customer's browser.
+
+## Schedule
+
+```bash
+curl -X POST https://www.smolboard.app/api/fn/getPublicSchedule \
+  -H 'Content-Type: application/json' \
+  -d '{"orgSlug":"ai-engineer","eventSlug":"ai-engineer-sandbox"}'
+```
+
+Returns `event` (including its IANA `timezone`), `rooms`, `tracks`, and
+`sessions`. Two rules govern what appears:
+
+- The organizer must have **published** the schedule. Before that, `sessions` is
+  empty and `published` is `false`.
+- Each session's content must be **approved**. Editing a title or abstract
+  re-drafts it, so it leaves the feed until an organizer approves the change.
+
+Session times are instants. Render them in `event.timezone`, not the viewer's —
+a talk happens when it happens regardless of who is reading.
+
+## Speakers
+
+```bash
+curl -X POST https://www.smolboard.app/api/fn/getPublicSpeakers \
+  -H 'Content-Type: application/json' \
+  -d '{"orgSlug":"ai-engineer","eventSlug":"ai-engineer-sandbox"}'
+```
+
+Deliberately narrow: name, tagline, bio, company, job title, headshot. No email
+addresses and no user ids.
+
+## Calendar
+
+```
+GET /{orgSlug}/{eventSlug}/calendar.ics
+GET /{orgSlug}/{eventSlug}/calendar.ics?sessions=<id>,<id>
+```
+
+A `text/calendar` feed of the published schedule, subscribable in any calendar
+app. Pass `sessions` to narrow it to one attendee's picks. Unknown ids match
+nothing rather than erroring.

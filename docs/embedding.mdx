@@ -1,0 +1,38 @@
+---
+title: "Embedding widgets"
+description: "Five chrome-less surfaces you can iframe onto your own site."
+---
+
+Add `?embed=<widget>` to an event's public URL to get one section with none of
+the page chrome, sized for an iframe:
+
+```html
+<iframe
+  src="https://www.smolboard.app/ai-engineer/ai-engineer-sandbox?embed=sessions"
+  width="100%" height="500" frameborder="0"
+  title="Sessions"></iframe>
+```
+
+| `embed` | Renders |
+| --- | --- |
+| `schedule` (or `agenda`) | Per-day grid with a time axis and rooms |
+| `sessions` | Searchable, filterable session catalogue |
+| `itinerary` | Chronological list with a personal starred schedule |
+| `speakers` | Directory ordered by surname |
+| `gallery` | Photo grid of speaker cards |
+
+## Appearance
+
+`theme=light|dark|auto`, `accent=<6 hex digits, no #>`, and `branding=0` to hide
+the "Powered by smolboard" line.
+
+## Framing
+
+Embed responses send `Content-Security-Policy: frame-ancestors *`, so they can
+be framed from any origin. The rest of the app keeps the default `SAMEORIGIN`.
+
+<Note>
+  These surfaces are anonymous and read only published, approved content. You
+  can put one on a public marketing site without exposing anything an attendee
+  could not already see.
+</Note>
