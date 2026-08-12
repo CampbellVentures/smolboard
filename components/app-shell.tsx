@@ -47,6 +47,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { callFn } from "@/lib/fn";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { initialsOf } from "@/components/person-avatar";
 import { PersonAvatar } from "./person-avatar";
 import { SessionReconcile } from "./session-reconcile";
 import { SyncHeartbeat } from "./sync-heartbeat";
@@ -86,13 +87,6 @@ interface PresencePerson {
 
 // One neutral treatment for every initials chip — never color-on-color.
 const PRESENCE_TONES = ["bg-zinc-100 text-zinc-600"] as const;
-
-function initials(name: string): string {
-  const words = name.trim().split(/\s+/).filter(Boolean);
-  if (words.length === 0) return "?";
-  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
-  return `${words[0][0]}${words[words.length - 1][0]}`.toUpperCase();
-}
 
 function presenceTone(userId: string): string {
   const hash = [...userId].reduce((total, char) => total + char.charCodeAt(0), 0);
@@ -152,7 +146,7 @@ function PresenceIndicator({
             className={`relative flex size-8 items-center justify-center rounded-full text-[10px] font-semibold ring-2 ring-background ${presenceTone(person.id)}`}
             style={{ zIndex: visiblePeople.length - index }}
           >
-            {initials(person.name)}
+            {initialsOf(person.name)}
             {index === 0 ? (
               <span
                 className={`absolute bottom-0 right-0 size-2.5 rounded-full ring-2 ring-background ${

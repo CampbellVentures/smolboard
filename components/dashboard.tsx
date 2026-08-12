@@ -240,34 +240,6 @@ export function DashboardStatStrip({
   );
 }
 
-export function DashboardMetricCard({
-  icon: Icon,
-  label,
-  value,
-  hint,
-}: {
-  icon: LucideIcon;
-  label: string;
-  value: React.ReactNode;
-  hint?: React.ReactNode;
-}) {
-  return (
-    <Card className="gap-0 rounded-xl border bg-card py-0 shadow-none">
-      <CardHeader className="flex-row items-center gap-2 px-4 pb-0 pt-4 text-muted-foreground">
-        <Icon className="size-4" aria-hidden="true" />
-        <CardTitle className="text-[11px] font-medium uppercase tracking-wide">
-          {label}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="px-4 pb-4 pt-2">
-        <div className="text-2xl font-semibold tabular-nums text-foreground">{value}</div>
-        {hint != null ? (
-          <div className="mt-0.5 text-xs text-muted-foreground">{hint}</div>
-        ) : null}
-      </CardContent>
-    </Card>
-  );
-}
 
 export function DashboardEmptyState({
   icon,
@@ -317,21 +289,6 @@ function statusDot(status: string): string {
   return "bg-zinc-300";
 }
 
-// THE table/list container. One border, one radius, one background —
-// wrap every data table and row list in this.
-export function DashboardTableCard({
-  children,
-  className,
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <div className={cn("overflow-x-auto rounded-xl border border-border bg-card", className)}>
-      {children}
-    </div>
-  );
-}
 
 export function DashboardStatusBadge({
   status,

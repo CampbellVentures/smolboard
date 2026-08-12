@@ -4,6 +4,7 @@ import { Link } from "@pylonsync/react";
 import { CalendarDays, MapPin } from "lucide-react";
 import { BrandMark } from "@/components/brand";
 import type { EventBranding } from "@/lib/branding";
+import { initialsOf } from "@/components/person-avatar";
 
 // The one shell every public event page renders inside: same width, same
 // header, same tab nav, same footer. Schedule, speakers, and the CFP pages are
@@ -176,17 +177,11 @@ export function InitialsAvatar({
         className
       }
     >
-      {initials(name)}
+      {initialsOf(name)}
     </span>
   );
 }
 
-export function initials(name: string): string {
-  const words = name.trim().split(/\s+/).filter(Boolean);
-  if (words.length === 0) return "?";
-  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
-  return `${words[0][0]}${words[words.length - 1][0]}`.toUpperCase();
-}
 
 export function formatRange(start: string, end?: string) {
   return fmtDateRange(start, end);

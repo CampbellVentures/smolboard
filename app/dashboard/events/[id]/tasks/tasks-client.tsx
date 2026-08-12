@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { db, Link } from "@pylonsync/react";
 import { callFn } from "@/lib/fn";
+import { fmtDate } from "@/lib/format";
 import { ClipboardList, Plus, Trash2 } from "lucide-react";
 import { OverlayHeaderChip } from "@/components/responsive-overlay";
 import { toast } from "sonner";
@@ -581,5 +582,8 @@ function toLocalDateTime(value?: string) {
 
 function formatDue(value?: string) {
   if (!value) return "No due date";
-  return new Date(value).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  // Due dates are stored as midnight UTC. Reading them with local getters
+  // renders the previous day for anyone west of UTC, which is exactly what
+  // lib/format.ts exists to prevent.
+  return fmtDate(value);
 }

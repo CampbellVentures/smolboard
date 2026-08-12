@@ -1,4 +1,5 @@
 import { query, v } from "@pylonsync/functions";
+import { aggregateSubmissionScore, reviewRoundForNumber } from "../lib/reviews";
 
 // Agent tool: compact submission list with speaker + score context. Runs as
 // the calling organizer (copilot action / MCP request) — requireMember gates.
@@ -18,20 +19,30 @@ export default query({
     let subs = await ctx.db.unsafe.query("Submission", { eventId: args.eventId });
     const profiles = await ctx.db.unsafe.query("SpeakerProfile", { eventId: args.eventId });
     const reviews = await ctx.db.unsafe.query("Review", { eventId: args.eventId });
+    const rounds = await ctx.db.unsafe.query("ReviewRound", { eventId: args.eventId });
 
     if (args.status) subs = subs.filter((s) => s.status === args.status);
     if (args.category) subs = subs.filter((s) => s.category === args.category);
 
-    const scoreBy: Record<string, { total: number; n: number }> = {};
-    for (const r of reviews) {
-      const scores = (r.scoresJson ?? {}) as Record<string, number>;
-      const vals = Object.values(scores).filter((x) => typeof x === "number");
-      if (vals.length === 0) continue;
-      const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
-      const key = r.submissionId as string;
-      scoreBy[key] ??= { total: 0, n: 0 };
-      scoreBy[key].total += mean;
-      scoreBy[key].n += 1;
+    // Score exactly as the Submissions table does: the CURRENT round only,
+    // through the weighted aggregate in lib/reviews.ts, on the same 0-5 scale.
+    // This used to be a raw unweighted mean across every round, so the copilot
+    // reported different numbers — and a different ranking — than the organizer
+    // was looking at on screen.
+    const scoreBy: Record<string, { avg: number; n: number }> = {};
+    for (const submission of subs) {
+      const round = reviewRoundForNumber(
+        rounds as unknown as { roundNumber: number; criteriaJson?: unknown }[],
+        submission.currentRound as number,
+      );
+      if (!round) continue;
+      const current = reviews.filter(
+        (r) => r.submissionId === submission.id && r.roundId === (round as { id?: string }).id,
+      );
+      const score = aggregateSubmissionScore(round.criteriaJson, current as never);
+      if (score !== undefined) {
+        scoreBy[submission.id as string] = { avg: score * 5, n: current.length };
+      }
     }
 
     let rows = subs.map((s) => {
@@ -45,7 +56,7 @@ export default query({
         category: s.category ?? null,
         status: s.status,
         round: s.currentRound,
-        avgScore: sc ? Number((sc.total / sc.n).toFixed(2)) : null,
+        avgScore: sc ? Number(sc.avg.toFixed(2)) : null,
         reviewCount: sc?.n ?? 0,
       };
     });
