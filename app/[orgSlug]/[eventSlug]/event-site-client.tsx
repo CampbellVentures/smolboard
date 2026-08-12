@@ -119,7 +119,7 @@ export function EventSite({
   return (
     <>
       {description && (
-        <p className="whitespace-pre-line text-[15px] leading-relaxed text-zinc-600">
+        <p className="whitespace-pre-line text-[15px] leading-relaxed text-zinc-600 dark:text-zinc-300">
           {description}
         </p>
       )}
@@ -127,16 +127,16 @@ export function EventSite({
         <Link
           href={`/${orgSlug}/${eventSlug}/cfp`}
           className={
-            "flex items-center gap-4 rounded-xl bg-white px-6 py-5 shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.04)] transition-shadow hover:shadow-[0_0_0_1px_rgba(0,0,0,0.1),0_2px_6px_rgba(0,0,0,0.06)] " +
+            "flex items-center gap-4 rounded-xl bg-white dark:bg-zinc-900 px-6 py-5 shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.04)] transition-shadow hover:shadow-[0_0_0_1px_rgba(0,0,0,0.1),0_2px_6px_rgba(0,0,0,0.06)]" +
             (description ? "mt-8" : "")
           }
         >
-          <Send className="size-5 shrink-0 text-zinc-400" aria-hidden="true" />
+          <Send className="size-5 shrink-0 text-zinc-400 dark:text-zinc-500" aria-hidden="true" />
           <div className="min-w-0 flex-1">
-            <div className="text-[15px] font-semibold text-zinc-900">Call for speakers</div>
-            <p className="text-[13px] text-zinc-500">Submit a talk. The CFP is open.</p>
+            <div className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-50">Call for speakers</div>
+            <p className="text-[13px] text-zinc-500 dark:text-zinc-400">Submit a talk. The CFP is open.</p>
           </div>
-          <ArrowRight className="size-4 shrink-0 text-zinc-400" aria-hidden="true" />
+          <ArrowRight className="size-4 shrink-0 text-zinc-400 dark:text-zinc-500" aria-hidden="true" />
         </Link>
       )}
 
@@ -205,11 +205,11 @@ function ScheduleSection({
     <section id="schedule" className={embedded ? "" : "scroll-mt-6 pt-12"}>
       {embedded ? null : (
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-xl font-semibold tracking-tight text-zinc-900">Schedule</h2>
+          <h2 className="text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">Schedule</h2>
           {feed && feed.sessions.length > 0 ? (
             <a
               href={`/${eventInfo.orgSlug}/${eventInfo.slug}/calendar.ics`}
-              className="flex items-center gap-1.5 text-[13px] font-medium text-zinc-500 hover:text-zinc-900"
+              className="flex items-center gap-1.5 text-[13px] font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-900"
             >
               <CalendarDays className="size-4" aria-hidden="true" />
               Subscribe to calendar
@@ -218,17 +218,17 @@ function ScheduleSection({
         </div>
       )}
       {!feed && !error && (
-        <div className="flex items-center justify-center gap-2 py-16 text-sm text-zinc-400">
+        <div className="flex items-center justify-center gap-2 py-16 text-sm text-zinc-400 dark:text-zinc-500">
           <Loader2 className="size-4 animate-spin" /> Loading schedule…
         </div>
       )}
       {(error || (feed && !feed.published)) && (
-        <div className="mt-4 rounded-xl border border-dashed border-zinc-300 bg-white px-6 py-14 text-center">
+        <div className="mt-4 rounded-xl border border-dashed border-zinc-300 bg-white dark:bg-zinc-900 px-6 py-14 text-center">
           <CalendarDays className="mx-auto size-8 text-zinc-300" />
-          <p className="mt-3 text-sm font-medium text-zinc-700">
+          <p className="mt-3 text-sm font-medium text-zinc-700 dark:text-zinc-200">
             The schedule isn&apos;t published yet
           </p>
-          <p className="mt-1 text-sm text-zinc-400">
+          <p className="mt-1 text-sm text-zinc-400 dark:text-zinc-500">
             Check back soon — talks are still being confirmed.
           </p>
         </div>
@@ -257,21 +257,21 @@ function ScheduleSection({
                   <span
                     className={
                       "w-full py-0.5 text-[10px] font-semibold tracking-wide " +
-                      (active ? "bg-zinc-900 text-white" : "bg-zinc-100 text-zinc-500")
+                      (active ? "bg-zinc-900 text-white" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400")
                     }
                   >
                     {part.weekday}
                   </span>
-                  <span className="flex w-full flex-col bg-white pb-1 pt-0.5">
+                  <span className="flex w-full flex-col bg-white dark:bg-zinc-900 pb-1 pt-0.5">
                     <span
                       className={
                         "text-[19px] font-semibold leading-6 tabular-nums " +
-                        (active ? "text-zinc-900" : "text-zinc-500")
+                        (active ? "text-zinc-900 dark:text-zinc-50" : "text-zinc-500 dark:text-zinc-400")
                       }
                     >
                       {part.date}
                     </span>
-                    <span className="text-[9px] font-medium tracking-wide text-zinc-400">
+                    <span className="text-[9px] font-medium tracking-wide text-zinc-400 dark:text-zinc-500">
                       {part.month}
                     </span>
                   </span>
@@ -283,14 +283,14 @@ function ScheduleSection({
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search talks…"
               aria-label="Search schedule"
-              className="ml-auto h-8 w-40 rounded-full bg-white px-3.5 text-[13px] text-zinc-600 shadow-[0_0_0_1px_rgba(0,0,0,0.06)] outline-none placeholder:text-zinc-400 focus:shadow-[0_0_0_1px_rgba(0,0,0,0.15)]"
+              className="ml-auto h-8 w-40 rounded-full bg-white dark:bg-zinc-900 px-3.5 text-[13px] text-zinc-600 dark:text-zinc-300 shadow-[0_0_0_1px_rgba(0,0,0,0.06)] outline-none placeholder:text-zinc-400 focus:shadow-[0_0_0_1px_rgba(0,0,0,0.15)]"
             />
             {feed.tracks.length > 0 && (
               <select
                 value={trackFilter}
                 onChange={(e) => setTrackFilter(e.target.value)}
                 aria-label="Filter by track"
-                className="h-8 rounded-full bg-white px-3 text-[13px] text-zinc-600 shadow-[0_0_0_1px_rgba(0,0,0,0.06)] outline-none"
+                className="h-8 rounded-full bg-white dark:bg-zinc-900 px-3 text-[13px] text-zinc-600 dark:text-zinc-300 shadow-[0_0_0_1px_rgba(0,0,0,0.06)] outline-none"
               >
                 <option value="">All tracks</option>
                 {feed.tracks.map((t) => (
@@ -310,11 +310,11 @@ function ScheduleSection({
             />
             {blocks.map((b) => (
               <div key={b.start} className="grid gap-6 sm:grid-cols-[5rem_1fr]">
-                <div className="relative pt-3 text-right text-[13px] font-semibold tabular-nums text-zinc-500">
+                <div className="relative pt-3 text-right text-[13px] font-semibold tabular-nums text-zinc-500 dark:text-zinc-400">
                   {fmtTime(minutesInDay(b.start, tz))}
                   <span
                     aria-hidden="true"
-                    className="absolute top-[1.15rem] hidden size-[7px] rounded-full bg-white ring-2 ring-zinc-300 sm:block"
+                    className="absolute top-[1.15rem] hidden size-[7px] rounded-full bg-white dark:bg-zinc-900 ring-2 ring-zinc-300 sm:block"
                     style={{ right: "-0.95rem" }}
                   />
                 </div>
@@ -346,33 +346,33 @@ function ScheduleSection({
                         tabIndex={isBreak ? undefined : 0}
                         aria-label={isBreak ? undefined : `${s.title} — session details`}
                         className={
-                          "min-w-0 rounded-xl bg-white p-4 shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.04)] " +
+                          "min-w-0 rounded-xl bg-white dark:bg-zinc-900 p-4 shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.04)]" +
                           (isBreak
                             ? "opacity-70"
                             : "cursor-pointer transition-shadow hover:shadow-[0_0_0_1px_rgba(0,0,0,0.1),0_2px_6px_rgba(0,0,0,0.06)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900")
                         }
                       >
                         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                          <h3 className="text-[15px] font-semibold text-zinc-900">{s.title}</h3>
-                          <span className="text-xs tabular-nums text-zinc-400">
+                          <h3 className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-50">{s.title}</h3>
+                          <span className="text-xs tabular-nums text-zinc-400 dark:text-zinc-500">
                             {fmtTime(minutesInDay(s.startTime!, tz))}–{fmtTime(minutesInDay(s.endTime!, tz))}
                           </span>
                         </div>
-                        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+                        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
                           {s.speakers.map((sp) => (
-                            <span key={sp.name} className="flex items-center gap-1.5 font-medium text-zinc-700">
+                            <span key={sp.name} className="flex items-center gap-1.5 font-medium text-zinc-700 dark:text-zinc-200">
                               <PersonAvatar name={sp.name} src={sp.headshotUrl} size="xs" />
                               {sp.name}
-                              {sp.company ? <span className="font-normal text-zinc-400"> · {sp.company}</span> : null}
+                              {sp.company ? <span className="font-normal text-zinc-400 dark:text-zinc-500"> · {sp.company}</span> : null}
                             </span>
                           ))}
                           {roomName(s.roomId) && (
-                            <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] font-medium text-zinc-500">
+                            <span className="rounded-full bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
                               {roomName(s.roomId)}
                             </span>
                           )}
                           {t && (
-                            <span className="flex items-center gap-1.5 rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] font-medium text-zinc-500">
+                            <span className="flex items-center gap-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
                               <span
                                 aria-hidden="true"
                                 className="size-1.5 rounded-full"
@@ -383,7 +383,7 @@ function ScheduleSection({
                           )}
                         </div>
                         {s.description && !isBreak && (
-                          <p className="mt-2 line-clamp-2 text-[13px] leading-relaxed text-zinc-500">
+                          <p className="mt-2 line-clamp-2 text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400">
                             {s.description}
                           </p>
                         )}
@@ -394,7 +394,7 @@ function ScheduleSection({
               </div>
             ))}
             {blocks.length === 0 && (
-              <p className="py-12 text-center text-sm text-zinc-400">
+              <p className="py-12 text-center text-sm text-zinc-400 dark:text-zinc-500">
                 Nothing scheduled for this day yet.
               </p>
             )}
@@ -473,7 +473,7 @@ function SessionDetailDialog({
           </DialogDescription>
         </DialogHeader>
         {session.description ? (
-          <p className="whitespace-pre-line text-[14px] leading-relaxed text-zinc-600">
+          <p className="whitespace-pre-line text-[14px] leading-relaxed text-zinc-600 dark:text-zinc-300">
             {session.description}
           </p>
         ) : null}
@@ -483,24 +483,24 @@ function SessionDetailDialog({
               <div key={sp.name} className="flex items-start gap-3">
                 <PersonAvatar name={sp.name} src={sp.headshotUrl} size="lg" />
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-zinc-900">{sp.name}</p>
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">{sp.name}</p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
                     {[sp.jobTitle, sp.company].filter(Boolean).join(", ") || sp.tagline || ""}
                   </p>
                   {sp.bio ? (
-                    <p className="mt-1 line-clamp-3 text-[13px] leading-relaxed text-zinc-500">{sp.bio}</p>
+                    <p className="mt-1 line-clamp-3 text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400">{sp.bio}</p>
                   ) : null}
                 </div>
               </div>
             ))}
           </div>
         ) : null}
-        <div className="flex flex-wrap gap-2 border-t border-zinc-100 pt-3">
+        <div className="flex flex-wrap gap-2 border-t border-zinc-100 dark:border-zinc-800 pt-3">
           <a
             href={calendar.google}
             target="_blank"
             rel="noreferrer"
-            className="rounded-full bg-zinc-100 px-3 py-1.5 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-200"
+            className="rounded-full bg-zinc-100 dark:bg-zinc-800 px-3 py-1.5 text-xs font-medium text-zinc-700 dark:text-zinc-200 transition-colors hover:bg-zinc-200"
           >
             Google Calendar
           </a>
@@ -508,14 +508,14 @@ function SessionDetailDialog({
             href={calendar.outlook}
             target="_blank"
             rel="noreferrer"
-            className="rounded-full bg-zinc-100 px-3 py-1.5 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-200"
+            className="rounded-full bg-zinc-100 dark:bg-zinc-800 px-3 py-1.5 text-xs font-medium text-zinc-700 dark:text-zinc-200 transition-colors hover:bg-zinc-200"
           >
             Outlook
           </a>
           <button
             type="button"
             onClick={downloadIcs}
-            className="rounded-full bg-zinc-100 px-3 py-1.5 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-200"
+            className="rounded-full bg-zinc-100 dark:bg-zinc-800 px-3 py-1.5 text-xs font-medium text-zinc-700 dark:text-zinc-200 transition-colors hover:bg-zinc-200"
           >
             Download .ics
           </button>
@@ -560,7 +560,7 @@ function SpeakersSection({
     <section id="speakers" className={embedded ? "" : "scroll-mt-6 pt-12"}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         {embedded ? <span /> : (
-          <h2 className="text-xl font-semibold tracking-tight text-zinc-900">Speakers</h2>
+          <h2 className="text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">Speakers</h2>
         )}
         <label className="relative">
           <input
@@ -568,11 +568,11 @@ function SpeakersSection({
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search speakers…"
             aria-label="Search speakers"
-            className="h-8 w-44 rounded-full bg-white px-3.5 text-[13px] text-zinc-600 shadow-[0_0_0_1px_rgba(0,0,0,0.06)] outline-none placeholder:text-zinc-400 focus:shadow-[0_0_0_1px_rgba(0,0,0,0.15)]"
+            className="h-8 w-44 rounded-full bg-white dark:bg-zinc-900 px-3.5 text-[13px] text-zinc-600 dark:text-zinc-300 shadow-[0_0_0_1px_rgba(0,0,0,0.06)] outline-none placeholder:text-zinc-400 focus:shadow-[0_0_0_1px_rgba(0,0,0,0.15)]"
           />
         </label>
       </div>
-      <p className="mt-2 text-[12.5px] text-zinc-500" aria-live="polite">
+      <p className="mt-2 text-[12.5px] text-zinc-500 dark:text-zinc-400" aria-live="polite">
         {people.length} of {feed.speakers.length} speakers
       </p>
       <div className="mt-3 grid gap-4 sm:grid-cols-2">
@@ -581,24 +581,24 @@ function SpeakersSection({
             key={sp.name}
             type="button"
             onClick={() => setOpen(sp)}
-            className="min-w-0 rounded-xl bg-white p-5 text-left shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.04)] transition-shadow hover:shadow-[0_0_0_1px_rgba(0,0,0,0.12),0_2px_6px_rgba(0,0,0,0.06)]"
+            className="min-w-0 rounded-xl bg-white dark:bg-zinc-900 p-5 text-left shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.04)] transition-shadow hover:shadow-[0_0_0_1px_rgba(0,0,0,0.12),0_2px_6px_rgba(0,0,0,0.06)]"
           >
             <div className="flex items-center gap-3">
               <PersonAvatar name={sp.name} src={sp.headshotUrl} size="xl" />
               <div className="min-w-0">
-                <h3 className="truncate text-[15px] font-semibold text-zinc-900">{sp.name}</h3>
-                <p className="truncate text-xs text-zinc-500">
+                <h3 className="truncate text-[15px] font-semibold text-zinc-900 dark:text-zinc-50">{sp.name}</h3>
+                <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
                   {[sp.jobTitle, sp.company].filter(Boolean).join(", ") || sp.tagline || ""}
                 </p>
               </div>
             </div>
             {sp.bio && (
-              <p className="mt-3 line-clamp-3 text-[13px] leading-relaxed text-zinc-500">{sp.bio}</p>
+              <p className="mt-3 line-clamp-3 text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400">{sp.bio}</p>
             )}
             {sp.talks.length > 0 && (
-              <div className="mt-3 border-t border-zinc-100 pt-2.5">
+              <div className="mt-3 border-t border-zinc-100 dark:border-zinc-800 pt-2.5">
                 {sp.talks.map((t) => (
-                  <p key={t} className="text-[12.5px] font-medium leading-5 text-zinc-700">
+                  <p key={t} className="text-[12.5px] font-medium leading-5 text-zinc-700 dark:text-zinc-200">
                     {t}
                   </p>
                 ))}
@@ -608,7 +608,7 @@ function SpeakersSection({
         ))}
       </div>
       {people.length === 0 ? (
-        <p className="mt-3 rounded-xl border border-dashed border-zinc-200 px-6 py-8 text-center text-sm text-zinc-400">
+        <p className="mt-3 rounded-xl border border-dashed border-zinc-200 dark:border-zinc-700 px-6 py-8 text-center text-sm text-zinc-400 dark:text-zinc-500">
           No speakers match that search.
         </p>
       ) : null}
@@ -656,22 +656,22 @@ function SpeakerDetailDialog({
           </div>
         </DialogHeader>
         {speaker.bio ? (
-          <p className="text-[13.5px] leading-relaxed text-zinc-600">{speaker.bio}</p>
+          <p className="text-[13.5px] leading-relaxed text-zinc-600 dark:text-zinc-300">{speaker.bio}</p>
         ) : null}
         {sessions.length > 0 ? (
-          <div className="border-t border-zinc-100 pt-3">
-            <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-400">Sessions</p>
+          <div className="border-t border-zinc-100 dark:border-zinc-800 pt-3">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-400 dark:text-zinc-500">Sessions</p>
             <ul className="mt-1.5 flex flex-col gap-2">
               {sessions.map((session) => (
                 <li key={session.title}>
-                  <p className="text-[13.5px] font-medium text-zinc-800">{session.title}</p>
+                  <p className="text-[13.5px] font-medium text-zinc-800 dark:text-zinc-100">{session.title}</p>
                   {session.startTime ? (
-                    <p className="text-[12.5px] text-zinc-500">
+                    <p className="text-[12.5px] text-zinc-500 dark:text-zinc-400">
                       {eventSessionTime(session.startTime, session.endTime, tz)}
                       {session.room ? ` · ${session.room}` : ""}
                     </p>
                   ) : session.room ? (
-                    <p className="text-[12.5px] text-zinc-500">{session.room}</p>
+                    <p className="text-[12.5px] text-zinc-500 dark:text-zinc-400">{session.room}</p>
                   ) : null}
                 </li>
               ))}

@@ -136,7 +136,14 @@ export default function EventHomePage({
   }
   if (embed === "schedule" || embed === "speakers") {
     return (
-      <div className="bg-transparent p-2">
+      // Same shell as the other three widgets. This branch used to hardcode
+      // its own wrapper, so theme, accent and branding=0 were silently
+      // ignored on exactly two of the five surfaces the embeds page offers
+      // them for.
+      <div
+        className={embedShell}
+        style={embedAccent ? ({ "--event-accent": embedAccent } as React.CSSProperties) : undefined}
+      >
         <EventSite
           event={eventInfo}
           description={null}
@@ -145,6 +152,7 @@ export default function EventHomePage({
           initialSpeakers={speakers}
           section={embed}
         />
+        {hideBranding ? null : (
         <p className="mt-4 text-center text-[11px] text-zinc-400">
           <a
             href={`/${params.orgSlug}/${params.eventSlug}`}
@@ -155,6 +163,7 @@ export default function EventHomePage({
             Powered by smolboard
           </a>
         </p>
+        )}
       </div>
     );
   }

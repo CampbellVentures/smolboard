@@ -45,7 +45,7 @@ function minutesOf(iso: string, tz: string): number {
 
 function Empty({ label }: { label: string }) {
   return (
-    <p className="rounded-xl border border-dashed border-zinc-200 px-6 py-10 text-center text-sm text-zinc-400">
+    <p className="rounded-xl border border-dashed border-zinc-200 dark:border-zinc-700 px-6 py-10 text-center text-sm text-zinc-400 dark:text-zinc-500">
       {label}
     </p>
   );
@@ -99,20 +99,20 @@ export function SessionsListWidget({
     <section>
       <div className="flex flex-wrap items-center gap-2">
         <label className="relative flex-1 min-w-48">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-zinc-400" aria-hidden="true" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-zinc-400 dark:text-zinc-500" aria-hidden="true" />
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search sessions or speakers…"
             aria-label="Search sessions"
-            className="h-9 w-full rounded-full bg-white pl-9 pr-3 text-[13px] text-zinc-700 shadow-[0_0_0_1px_rgba(0,0,0,0.06)] outline-none placeholder:text-zinc-400 focus:shadow-[0_0_0_1px_rgba(0,0,0,0.15)]"
+            className="h-9 w-full rounded-full bg-white dark:bg-zinc-900 pl-9 pr-3 text-[13px] text-zinc-700 dark:text-zinc-200 shadow-[0_0_0_1px_rgba(0,0,0,0.06)] outline-none placeholder:text-zinc-400 focus:shadow-[0_0_0_1px_rgba(0,0,0,0.15)]"
           />
         </label>
         <select
           value={track}
           onChange={(e) => setTrack(e.target.value)}
           aria-label="Filter by track"
-          className="h-9 rounded-full bg-white px-3 text-[13px] text-zinc-600 shadow-[0_0_0_1px_rgba(0,0,0,0.06)] outline-none"
+          className="h-9 rounded-full bg-white dark:bg-zinc-900 px-3 text-[13px] text-zinc-600 dark:text-zinc-300 shadow-[0_0_0_1px_rgba(0,0,0,0.06)] outline-none"
         >
           <option value="">All tracks</option>
           {feed.tracks.map((t) => (
@@ -123,7 +123,7 @@ export function SessionsListWidget({
           value={format}
           onChange={(e) => setFormat(e.target.value)}
           aria-label="Filter by format"
-          className="h-9 rounded-full bg-white px-3 text-[13px] capitalize text-zinc-600 shadow-[0_0_0_1px_rgba(0,0,0,0.06)] outline-none"
+          className="h-9 rounded-full bg-white dark:bg-zinc-900 px-3 text-[13px] capitalize text-zinc-600 dark:text-zinc-300 shadow-[0_0_0_1px_rgba(0,0,0,0.06)] outline-none"
         >
           <option value="">All formats</option>
           {formats.map((f) => (
@@ -134,7 +134,7 @@ export function SessionsListWidget({
           value={room}
           onChange={(e) => setRoom(e.target.value)}
           aria-label="Filter by location"
-          className="h-9 rounded-full bg-white px-3 text-[13px] text-zinc-600 shadow-[0_0_0_1px_rgba(0,0,0,0.06)] outline-none"
+          className="h-9 rounded-full bg-white dark:bg-zinc-900 px-3 text-[13px] text-zinc-600 dark:text-zinc-300 shadow-[0_0_0_1px_rgba(0,0,0,0.06)] outline-none"
         >
           <option value="">All locations</option>
           {feed.rooms.map((r) => (
@@ -145,14 +145,14 @@ export function SessionsListWidget({
           <button
             type="button"
             onClick={() => { setQ(""); setTrack(""); setFormat(""); setRoom(""); }}
-            className="h-9 rounded-full px-3 text-[13px] font-medium text-zinc-500 hover:text-zinc-900"
+            className="h-9 rounded-full px-3 text-[13px] font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-900"
           >
             Clear
           </button>
         ) : null}
       </div>
 
-      <p className="mt-3 text-[12.5px] text-zinc-500" aria-live="polite">
+      <p className="mt-3 text-[12.5px] text-zinc-500 dark:text-zinc-400" aria-live="polite">
         {sessions.length} of {(feed.sessions ?? []).filter((s) => s.startTime).length} sessions
       </p>
 
@@ -163,28 +163,28 @@ export function SessionsListWidget({
           return (
             <article
               key={s.id}
-              className="min-w-0 rounded-xl bg-white p-4 shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.04)]"
+              className="min-w-0 rounded-xl bg-white dark:bg-zinc-900 p-4 shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.04)]"
             >
               <div className="flex flex-wrap items-center gap-2">
-                <h3 className="text-[15px] font-semibold text-zinc-900">{s.title}</h3>
-                <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] font-medium capitalize text-zinc-600">
+                <h3 className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-50">{s.title}</h3>
+                <span className="rounded-full bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 text-[11px] font-medium capitalize text-zinc-600 dark:text-zinc-300">
                   {s.kind || "talk"}
                 </span>
                 {track ? (
-                  <span className="flex items-center gap-1.5 rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] font-medium text-zinc-600">
+                  <span className="flex items-center gap-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 text-[11px] font-medium text-zinc-600 dark:text-zinc-300">
                     <span className="size-1.5 rounded-full" style={{ background: track.color ?? "#a1a1aa" }} />
                     {track.name}
                   </span>
                 ) : null}
               </div>
-              <div className="mt-1 flex flex-wrap items-center gap-3 text-[12.5px] text-zinc-500">
+              <div className="mt-1 flex flex-wrap items-center gap-3 text-[12.5px] text-zinc-500 dark:text-zinc-400">
                 <span className="flex items-center gap-1.5">
-                  <CalendarDays className="size-3.5 text-zinc-400" aria-hidden="true" />
+                  <CalendarDays className="size-3.5 text-zinc-400 dark:text-zinc-500" aria-hidden="true" />
                   {sessionTime(s, tz)}
                 </span>
                 {roomName(s.roomId) ? (
                   <span className="flex items-center gap-1.5">
-                    <MapPin className="size-3.5 text-zinc-400" aria-hidden="true" />
+                    <MapPin className="size-3.5 text-zinc-400 dark:text-zinc-500" aria-hidden="true" />
                     {roomName(s.roomId)}
                   </span>
                 ) : null}
@@ -192,10 +192,10 @@ export function SessionsListWidget({
               {s.speakers.length > 0 ? (
                 <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
                   {s.speakers.map((sp) => (
-                    <span key={sp.name} className="flex items-center gap-2 text-[12.5px] text-zinc-600">
+                    <span key={sp.name} className="flex items-center gap-2 text-[12.5px] text-zinc-600 dark:text-zinc-300">
                       <PersonAvatar name={sp.name} src={sp.headshotUrl} size="xs" />
-                      <span className="font-medium text-zinc-800">{sp.name}</span>
-                      <span className="text-zinc-400">
+                      <span className="font-medium text-zinc-800 dark:text-zinc-100">{sp.name}</span>
+                      <span className="text-zinc-400 dark:text-zinc-500">
                         {[sp.jobTitle, sp.company].filter(Boolean).join(", ")}
                       </span>
                     </span>
@@ -204,7 +204,7 @@ export function SessionsListWidget({
               ) : null}
               {s.description ? (
                 <>
-                  <p className={"mt-2 text-[13px] leading-relaxed text-zinc-500" + (open ? "" : " line-clamp-2")}>
+                  <p className={"mt-2 text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400" + (open ? "" : " line-clamp-2")}>
                     {s.description}
                   </p>
                   <button
@@ -217,7 +217,7 @@ export function SessionsListWidget({
                         return next;
                       })
                     }
-                    className="mt-1 text-[12.5px] font-medium text-zinc-500 hover:text-zinc-900"
+                    className="mt-1 text-[12.5px] font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-900"
                   >
                     {open ? "Show less" : "Show more"}
                   </button>
@@ -302,7 +302,7 @@ export function ItineraryWidget({
               "rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-colors " +
               (activeDay === d
                 ? "bg-zinc-900 text-white"
-                : "bg-white text-zinc-600 shadow-[0_0_0_1px_rgba(0,0,0,0.06)] hover:text-zinc-900")
+                : "bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 shadow-[0_0_0_1px_rgba(0,0,0,0.06)] hover:text-zinc-900")
             }
           >
             {dayHeading(d)}
@@ -314,10 +314,10 @@ export function ItineraryWidget({
           aria-pressed={mineOnly}
           className={
             "ml-auto flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-medium transition-colors " +
-            (mineOnly ? "bg-amber-100 text-amber-900" : "bg-white text-zinc-600 shadow-[0_0_0_1px_rgba(0,0,0,0.06)]")
+            (mineOnly ? "bg-amber-100 text-amber-900" : "bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 shadow-[0_0_0_1px_rgba(0,0,0,0.06)]")
           }
         >
-          <Star className={"size-3.5 " + (mineOnly ? "fill-amber-500 text-amber-500" : "text-zinc-400")} aria-hidden="true" />
+          <Star className={"size-3.5 " + (mineOnly ? "fill-amber-500 text-amber-500" : "text-zinc-400 dark:text-zinc-500")} aria-hidden="true" />
           My schedule ({stars.size})
         </button>
         {/* Starred sessions go to the calendar feed as an id list, so what you
@@ -329,7 +329,7 @@ export function ItineraryWidget({
               ? `${icsHref}${icsHref.includes("?") ? "&" : "?"}sessions=${[...stars].join(",")}`
               : icsHref
           }
-          className="rounded-full bg-white px-3 py-1.5 text-[13px] font-medium text-zinc-600 shadow-[0_0_0_1px_rgba(0,0,0,0.06)] hover:text-zinc-900"
+          className="rounded-full bg-white dark:bg-zinc-900 px-3 py-1.5 text-[13px] font-medium text-zinc-600 dark:text-zinc-300 shadow-[0_0_0_1px_rgba(0,0,0,0.06)] hover:text-zinc-900"
         >
           {stars.size > 0 ? `Add ${stars.size} to calendar` : "Add to calendar"}
         </a>
@@ -342,24 +342,24 @@ export function ItineraryWidget({
           return (
             <li
               key={s.id}
-              className="flex min-w-0 items-start gap-3 rounded-xl bg-white p-4 shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.04)]"
+              className="flex min-w-0 items-start gap-3 rounded-xl bg-white dark:bg-zinc-900 p-4 shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.04)]"
             >
-              <span className="w-24 shrink-0 text-[12.5px] font-medium tabular-nums text-zinc-500">
+              <span className="w-24 shrink-0 text-[12.5px] font-medium tabular-nums text-zinc-500 dark:text-zinc-400">
                 {fmtTime(minutesOf(s.startTime!, tz))}–{fmtTime(minutesOf(s.endTime!, tz))}
               </span>
               <span className="min-w-0 flex-1">
                 {track ? (
-                  <span className="mb-1 inline-flex items-center gap-1.5 rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] font-medium text-zinc-600">
+                  <span className="mb-1 inline-flex items-center gap-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 text-[11px] font-medium text-zinc-600 dark:text-zinc-300">
                     <span className="size-1.5 rounded-full" style={{ background: track.color ?? "#a1a1aa" }} />
                     {track.name}
                   </span>
                 ) : null}
-                <span className="block text-[14.5px] font-semibold text-zinc-900">{s.title}</span>
-                <span className="mt-0.5 block text-[12.5px] text-zinc-500">
+                <span className="block text-[14.5px] font-semibold text-zinc-900 dark:text-zinc-50">{s.title}</span>
+                <span className="mt-0.5 block text-[12.5px] text-zinc-500 dark:text-zinc-400">
                   {[roomName(s.roomId), s.speakers.map((sp) => sp.name).join(", ")].filter(Boolean).join(" · ")}
                 </span>
                 {s.description ? (
-                  <span className="mt-1 line-clamp-2 block text-[13px] leading-relaxed text-zinc-500">
+                  <span className="mt-1 line-clamp-2 block text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400">
                     {s.description}
                   </span>
                 ) : null}
@@ -399,16 +399,16 @@ export function SpeakerGalleryWidget({ feed, tz }: { feed: SpeakersFeed | null; 
   return (
     <section>
       <label className="relative block max-w-xs">
-        <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-zinc-400" aria-hidden="true" />
+        <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-zinc-400 dark:text-zinc-500" aria-hidden="true" />
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search speakers by name…"
+          placeholder="Search speakers by name"
           aria-label="Search speakers"
-          className="h-9 w-full rounded-full bg-white pl-9 pr-3 text-[13px] text-zinc-700 shadow-[0_0_0_1px_rgba(0,0,0,0.06)] outline-none placeholder:text-zinc-400"
+          className="h-9 w-full rounded-full bg-white dark:bg-zinc-900 pl-9 pr-3 text-[13px] text-zinc-700 dark:text-zinc-200 shadow-[0_0_0_1px_rgba(0,0,0,0.06)] outline-none placeholder:text-zinc-400"
         />
       </label>
-      <p className="mt-3 text-[12.5px] text-zinc-500" aria-live="polite">
+      <p className="mt-3 text-[12.5px] text-zinc-500 dark:text-zinc-400" aria-live="polite">
         {people.length} of {feed.speakers.length} speakers
       </p>
       <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
@@ -417,12 +417,12 @@ export function SpeakerGalleryWidget({ feed, tz }: { feed: SpeakersFeed | null; 
             key={sp.name}
             type="button"
             onClick={() => setOpen(sp)}
-            className="flex min-w-0 flex-col items-center rounded-xl bg-white p-4 text-center shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.04)] transition-shadow hover:shadow-[0_0_0_1px_rgba(0,0,0,0.12),0_2px_6px_rgba(0,0,0,0.06)]"
+            className="flex min-w-0 flex-col items-center rounded-xl bg-white dark:bg-zinc-900 p-4 text-center shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.04)] transition-shadow hover:shadow-[0_0_0_1px_rgba(0,0,0,0.12),0_2px_6px_rgba(0,0,0,0.06)]"
           >
             <PersonAvatar name={sp.name} src={sp.headshotUrl} size="xl" />
-            <span className="mt-2 w-full truncate text-[13.5px] font-semibold text-zinc-900">{sp.name}</span>
-            <span className="w-full truncate text-[11.5px] text-zinc-500">{sp.jobTitle ?? ""}</span>
-            <span className="w-full truncate text-[11.5px] text-zinc-400">{sp.company ?? ""}</span>
+            <span className="mt-2 w-full truncate text-[13.5px] font-semibold text-zinc-900 dark:text-zinc-50">{sp.name}</span>
+            <span className="w-full truncate text-[11.5px] text-zinc-500 dark:text-zinc-400">{sp.jobTitle ?? ""}</span>
+            <span className="w-full truncate text-[11.5px] text-zinc-400 dark:text-zinc-500">{sp.company ?? ""}</span>
           </button>
         ))}
       </div>
@@ -435,11 +435,11 @@ export function SpeakerGalleryWidget({ feed, tz }: { feed: SpeakersFeed | null; 
           aria-label={open.name}
           onMouseDown={(e) => { if (e.target === e.currentTarget) setOpen(null); }}
         >
-          <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-xl">
+          <div className="w-full max-w-md rounded-xl bg-white dark:bg-zinc-900 p-5 shadow-xl">
             <button
               type="button"
               onClick={() => setOpen(null)}
-              className="mb-3 flex items-center gap-1.5 text-[13px] font-medium text-zinc-500 hover:text-zinc-900"
+              className="mb-3 flex items-center gap-1.5 text-[13px] font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-900"
             >
               <ChevronLeft className="size-4" aria-hidden="true" />
               Back
@@ -447,24 +447,24 @@ export function SpeakerGalleryWidget({ feed, tz }: { feed: SpeakersFeed | null; 
             <div className="flex items-center gap-3">
               <PersonAvatar name={open.name} src={open.headshotUrl} size="xl" />
               <div className="min-w-0">
-                <h3 className="truncate text-base font-semibold text-zinc-900">{open.name}</h3>
-                <p className="truncate text-[12.5px] text-zinc-500">
+                <h3 className="truncate text-base font-semibold text-zinc-900 dark:text-zinc-50">{open.name}</h3>
+                <p className="truncate text-[12.5px] text-zinc-500 dark:text-zinc-400">
                   {[open.jobTitle, open.company].filter(Boolean).join(", ")}
                 </p>
               </div>
             </div>
             {open.bio ? (
-              <p className="mt-3 text-[13px] leading-relaxed text-zinc-600">{open.bio}</p>
+              <p className="mt-3 text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-300">{open.bio}</p>
             ) : null}
             {(open.sessions ?? []).length > 0 || open.talks.length > 0 ? (
-              <div className="mt-3 border-t border-zinc-100 pt-3">
-                <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-400">Sessions</p>
+              <div className="mt-3 border-t border-zinc-100 dark:border-zinc-800 pt-3">
+                <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-400 dark:text-zinc-500">Sessions</p>
                 {(open.sessions ?? open.talks.map((title) => ({ title, startTime: null, room: null }))).map(
                   (session) => (
                     <div key={session.title} className="mt-1.5">
-                      <p className="text-[13px] font-medium text-zinc-700">{session.title}</p>
+                      <p className="text-[13px] font-medium text-zinc-700 dark:text-zinc-200">{session.title}</p>
                       {session.startTime ? (
-                        <p className="text-[12px] text-zinc-500">
+                        <p className="text-[12px] text-zinc-500 dark:text-zinc-400">
                           {eventSessionTime(session.startTime, session.endTime, tz)}
                           {session.room ? ` · ${session.room}` : ""}
                         </p>
