@@ -5,6 +5,17 @@ import { callFn, db } from "@pylonsync/react";
 import { fmtDate, fmtDateTime } from "@/lib/format";
 import { sendMagicLink, verifyMagicLink, useAuth } from "@pylonsync/client";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { BrandMark } from "@/components/brand";
 import { Badge } from "@/components/ui/badge";
 import { ResponsiveFormOverlay } from "@/components/responsive-overlay";
@@ -335,7 +346,19 @@ export function PortalHome({
                 const event = events.find((candidate) => candidate.id === draft.eventId);
                 const org = event ? orgs.find((candidate) => candidate.id === event.orgId) : undefined;
                 const href = form && event && org?.slug ? `/${org.slug}/${event.slug}/cfp/${form.slug}` : "/portal";
-                return <li key={draft.id} className="flex items-center justify-between gap-4 px-5 py-4"><span className="truncate text-sm font-medium">{draft.title}</span><Button asChild size="sm" variant="outline"><a href={href}>Resume</a></Button></li>;
+                return (
+                  <li key={draft.id} className="flex items-center justify-between gap-4 px-5 py-4">
+                    <span className="truncate text-sm font-medium">{draft.title}</span>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <Button asChild size="sm" variant="outline"><a href={href}>Resume</a></Button>
+                      {/* A draft started by accident used to be permanent: the
+                          entity denies client deletes and nothing offered a
+                          way out, so it sat here and any co-presenter invited
+                          to it stayed pending. */}
+                      <DiscardDraftButton draftId={draft.id} title={draft.title} />
+                    </div>
+                  </li>
+                );
               })}
             </ul>
           </section>
@@ -1214,4 +1237,45 @@ function compactLinks(links: Record<string, string>) {
     .map(([key, value]) => [key, value.trim()] as const)
     .filter(([, value]) => value);
   return entries.length > 0 ? Object.fromEntries(entries) : undefined;
+}
+
+function DiscardDraftButton({ draftId, title }: { draftId: string; title: string }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button type="button" size="sm" variant="ghost" disabled={busy}>
+          {busy ? "Discarding…" : "Discard"}
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Discard &ldquo;{title}&rdquo;?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This deletes the draft and cancels any co-presenter invitations on it. It has not been
+            submitted, so the organizers never saw it.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        {error ? <p className="text-xs text-red-600">{error}</p> : null}
+        <AlertDialogFooter>
+          <AlertDialogCancel>Keep it</AlertDialogCancel>
+          <AlertDialogAction
+            variant="destructive"
+            onClick={() => {
+              setBusy(true);
+              setError(null);
+              void callFn("discardCfpDraft", { draftId })
+                .catch((caught) =>
+                  setError(caught instanceof Error ? caught.message : "Could not discard this draft."),
+                )
+                .finally(() => setBusy(false));
+            }}
+          >
+            Discard
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
 }
