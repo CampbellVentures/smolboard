@@ -23,6 +23,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { ResponsiveDetailOverlay } from "@/components/responsive-overlay";
 import {
   AlertDialog,
@@ -1227,6 +1234,21 @@ export function AddRoundButton({
   );
 }
 
+interface ReviewProgress {
+  total: number;
+  complete: number;
+  percent: number;
+  reviewers: {
+    userId: string;
+    name?: string;
+    email?: string;
+    total: number;
+    complete: number;
+    percent: number;
+    recused: number;
+  }[];
+}
+
 function ReviewOperations({
   eventId,
   round,
@@ -1238,6 +1260,19 @@ function ReviewOperations({
 }) {
   const [note, setNote] = useState<string | null>(null);
   const [triaging, setTriaging] = useState(false);
+  // getReviewProgress has always returned a per-reviewer breakdown; nothing
+  // rendered it, so an organizer could see that reviews were outstanding but
+  // never who owed them.
+  const [progress, setProgress] = useState<ReviewProgress | null>(null);
+  async function showProgress() {
+    try {
+      setProgress(
+        await callFn<ReviewProgress>("getReviewProgress", { eventId, roundId: round.id }),
+      );
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Couldn't load review progress.");
+    }
+  }
   async function assign() {
     const result = await callFn<{ created: number }>("bulkAssignReviews", {
       eventId,
@@ -1269,6 +1304,9 @@ function ReviewOperations({
   return (
     <div className="flex flex-wrap items-center gap-1">
       <Button type="button" size="sm" variant="outline" onClick={() => void assign()}>Assign reviewers</Button>
+      <Button type="button" size="sm" variant="ghost" onClick={() => void showProgress()}>
+        Progress
+      </Button>
       <Button type="button" size="sm" variant="ghost" onClick={() => void remind()}>Remind</Button>
       <Button type="button" size="sm" variant="ghost" onClick={() => void download()}>Export CSV</Button>
       <Button
@@ -1299,6 +1337,49 @@ function ReviewOperations({
         {triaging ? "Scoring…" : "AI triage"}
       </Button>
       {note ? <span className="text-xs text-muted-foreground">{note}</span> : null}
+      <Dialog open={progress !== null} onOpenChange={(open) => !open && setProgress(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Review progress</DialogTitle>
+            <DialogDescription>
+              {progress
+                ? `${progress.complete} of ${progress.total} reviews complete (${progress.percent}%).`
+                : ""}
+            </DialogDescription>
+          </DialogHeader>
+          <ul className="divide-y divide-border/70">
+            {(progress?.reviewers ?? []).map((reviewer) => (
+              <li key={reviewer.userId} className="flex items-center gap-3 py-2.5">
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium">
+                    {reviewer.name || reviewer.email || "Reviewer"}
+                  </span>
+                  {reviewer.recused > 0 ? (
+                    <span className="text-xs text-muted-foreground">
+                      {reviewer.recused} recused
+                    </span>
+                  ) : null}
+                </span>
+                <span className="h-1.5 w-24 shrink-0 overflow-hidden rounded-full bg-zinc-100">
+                  <span
+                    className="block h-full rounded-full bg-zinc-800"
+                    style={{ width: `${reviewer.percent}%` }}
+                    aria-hidden="true"
+                  />
+                </span>
+                <span className="w-16 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
+                  {reviewer.complete}/{reviewer.total}
+                </span>
+              </li>
+            ))}
+            {progress && progress.reviewers.length === 0 ? (
+              <li className="py-4 text-center text-sm text-muted-foreground">
+                No reviewers assigned in this round yet.
+              </li>
+            ) : null}
+          </ul>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
