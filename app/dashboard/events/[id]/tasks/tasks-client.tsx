@@ -50,6 +50,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useOptimisticRemoval } from "@/components/use-optimistic-removal";
+import { PersonAvatar } from "@/components/person-avatar";
 import { fieldsOf } from "@/lib/types";
 import { taskDueState } from "@/lib/tasks";
 import type {
@@ -362,8 +363,16 @@ export function TasksClient({
                   .map((profile) => (
                     <TableRow key={profile.id}>
                       <TableCell>
-                        <div className="font-medium">{profile.name}</div>
-                        <div className="text-xs text-muted-foreground">{profile.email}</div>
+                        {/* Same speaker cell as the speakers table and the
+                            content desk. This one was the only list in the
+                            dashboard that identified a speaker by text alone. */}
+                        <div className="flex items-center gap-3">
+                          <PersonAvatar name={profile.name} src={profile.headshotUrl || null} size="lg" />
+                          <div className="min-w-0">
+                            <div className="truncate font-medium">{profile.name}</div>
+                            <div className="truncate text-xs text-muted-foreground">{profile.email}</div>
+                          </div>
+                        </div>
                       </TableCell>
                       {templates.slice().sort((a, b) => a.sortOrder - b.sortOrder).map((template) => {
                         const assignment = tasks.find(
