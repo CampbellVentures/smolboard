@@ -8,6 +8,7 @@ import {
   font,
   cron,
 } from "@pylonsync/sdk";
+import { discoverFunctions } from "./lib/discover-functions";
 
 // ---------------------------------------------------------------------------
 // smolboard — open-source speaker & CFP management (Sessionboard replacement).
@@ -1168,6 +1169,8 @@ const calendarInvitePolicy = policy({
   allowDelete: "false",
 });
 
+const discoveredFunctions = await discoverFunctions();
+
 const manifest = buildManifest({
   name: "smolboard",
   version: "0.1.0",
@@ -1209,8 +1212,11 @@ const manifest = buildManifest({
     CopilotThread,
     CopilotMessage,
   ],
-  queries: [],
-  actions: [],
+  // Read from functions/ rather than hand-listed: these were empty arrays
+  // while 111 functions served at /api/fn/<name>, so the manifest described
+  // an app with no API and any client generated from it had nothing to call.
+  queries: discoveredFunctions.queries,
+  actions: discoveredFunctions.actions,
   policies: [
     userPolicy,
     orgPolicy,
