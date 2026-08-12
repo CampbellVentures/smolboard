@@ -643,6 +643,21 @@ function DetailDrawer({
   const fields = form ? fieldsOf(form) : [];
   const [busy, setBusy] = useState<string | null>(null);
   const [confirmStatus, setConfirmStatus] = useState<string | null>(null);
+  const [dismissingTriage, setDismissingTriage] = useState(false);
+
+  async function dismissTriage() {
+    setDismissingTriage(true);
+    try {
+      await callFn("dismissTriage", { submissionId: submission.id });
+      toast.success("AI first pass dismissed", {
+        description: "The next triage run can score this submission again.",
+      });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not dismiss the AI first pass.");
+    } finally {
+      setDismissingTriage(false);
+    }
+  }
 
   async function applyStatus(status: string) {
     setBusy(status);
@@ -688,9 +703,22 @@ function DetailDrawer({
               <Markdown className="mt-1 text-[13px] text-zinc-600">
                 {submission.triageSummary}
               </Markdown>
-              <p className="mt-1.5 text-[11px] text-muted-foreground">
-                Advisory only. It doesn&apos;t count toward reviewer scores or decide anything.
-              </p>
+              <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2">
+                <p className="text-[11px] text-muted-foreground">
+                  Advisory only. It doesn&apos;t count toward reviewer scores or decide anything.
+                </p>
+                {/* The read was display-only, so a wrong one sat on the
+                    submission and anchored every reviewer who opened it. */}
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  disabled={dismissingTriage}
+                  onClick={() => void dismissTriage()}
+                >
+                  {dismissingTriage ? "Dismissing…" : "Dismiss"}
+                </Button>
+              </div>
             </div>
           ) : null}
           <div className="flex items-center gap-2">

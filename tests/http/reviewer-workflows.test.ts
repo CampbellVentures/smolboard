@@ -282,3 +282,41 @@ test("review assignments enforce designation, blind projections, validation, pro
   const foreignQueue = await jsonRequest(a.reviewer, "/api/fn/getReviewerQueue", "POST", { orgId: b.id });
   expect([400, 403]).toContain(foreignQueue.response.status);
 }, 30_000);
+
+test("an organizer can dismiss the AI first pass, and only an organizer can", async () => {
+  const fixture = await createTwoOrgFixture(server.baseUrl, "triage-dismiss");
+  const submissionId = fixture.a.submissionIds[0];
+
+  // Nothing to dismiss until a triage result exists.
+  const empty = await jsonRequest(fixture.a.owner, "/api/fn/dismissTriage", "POST", { submissionId });
+  expect(empty.response.ok).toBe(false);
+
+  // recordTriage is internal, so seed the row the way the entity API would.
+  // The Submission policy lets an owner write these columns directly.
+  expect(
+    (await entityUpdate(fixture.a.owner, "Submission", submissionId, {
+      triageScore: 4.2,
+      triageSummary: "Strong premise, thin on evidence.",
+      triageAt: "2026-08-12T12:00:00.000Z",
+    })).status,
+  ).toBe(200);
+  const scored = (await entityList<{ id: string; triageScore?: number; triageAt?: string }>(
+    fixture.a.owner,
+    "Submission",
+  )).find((row) => row.id === submissionId)!;
+  expect(scored.triageScore).toBeCloseTo(4.2);
+
+  const foreign = await jsonRequest(fixture.b.owner, "/api/fn/dismissTriage", "POST", { submissionId });
+  expect(foreign.response.ok).toBe(false);
+
+  await callFn(fixture.a.owner, "dismissTriage", { submissionId });
+  const cleared = (await entityList<{ id: string; triageScore?: number; triageSummary?: string; triageAt?: string }>(
+    fixture.a.owner,
+    "Submission",
+  )).find((row) => row.id === submissionId)!;
+  // null, not undefined: an update ignores undefined and would leave the score
+  // on screen while reporting success.
+  expect(cleared.triageScore ?? null).toBeNull();
+  expect(cleared.triageSummary ?? null).toBeNull();
+  expect(cleared.triageAt ?? null).toBeNull();
+}, 30_000);

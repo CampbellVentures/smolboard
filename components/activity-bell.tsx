@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { db, Link } from "@pylonsync/react";
 import {
   Bell,
+  Bot,
   CalendarClock,
   ClipboardCheck,
   FileText,
@@ -22,6 +23,7 @@ import { fmtAgo, type ActivityRow } from "@/lib/activity";
 const KIND_STYLE: Record<string, { icon: LucideIcon; tone: DashboardChipTone }> = {
   "submission.created": { icon: Inbox, tone: "violet" },
   "submission.status": { icon: ClipboardCheck, tone: "emerald" },
+  "submission.triage": { icon: Bot, tone: "violet" },
   "content.uploaded": { icon: FileText, tone: "sky" },
   "content.reviewed": { icon: FileText, tone: "emerald" },
   "agenda.autoscheduled": { icon: CalendarClock, tone: "amber" },
