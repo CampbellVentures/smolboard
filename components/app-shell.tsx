@@ -213,12 +213,14 @@ function eventNav(eventId: string): NavEntry<EventNavKey>[] {
 // a live query, and picking one lands on the equivalent section.
 // Inside an event, the sidebar's job is to get you back out of it. The event's
 // own name lives in the page header instead, so this row doesn't repeat it.
+// gap-2.5 matches GroupedNav so the label lands on the same vertical line as
+// every nav item below it.
 function BackToEvents({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <Link
       href="/dashboard/events"
       onClick={onNavigate}
-      className="group flex h-10 items-center gap-2 rounded-lg px-2.5 text-[13px] font-medium text-muted-foreground transition-[background-color,color,scale] duration-150 ease-out hover:bg-background hover:text-foreground active:scale-[0.98] motion-reduce:transform-none"
+      className="group flex h-10 items-center gap-2.5 rounded-lg px-2.5 text-[13px] font-medium text-muted-foreground transition-[background-color,color,scale] duration-150 ease-out hover:bg-background hover:text-foreground active:scale-[0.98] motion-reduce:transform-none"
     >
       <ArrowLeft
         className="size-4 shrink-0 transition-[translate] duration-150 ease-out group-hover:-translate-x-0.5 motion-reduce:transform-none"
