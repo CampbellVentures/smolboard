@@ -403,7 +403,7 @@ export function SpeakerGalleryWidget({ feed, tz }: { feed: SpeakersFeed | null; 
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search speakers by name"
+          placeholder="Search speakers by name…"
           aria-label="Search speakers"
           className="h-9 w-full rounded-full bg-white dark:bg-zinc-900 pl-9 pr-3 text-[13px] text-zinc-700 dark:text-zinc-200 shadow-[0_0_0_1px_rgba(0,0,0,0.06)] outline-none placeholder:text-zinc-400"
         />
