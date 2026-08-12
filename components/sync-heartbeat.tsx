@@ -3,27 +3,36 @@
 import { useEffect } from "react";
 import { db } from "@pylonsync/react";
 
-// Cross-client freshness backstop.
+// Cross-client freshness backstop — and, on current evidence, redundant.
 //
-// This header used to claim the client engine ignored the change frames the
-// server sent it — "frame at +178ms, no follow-up pull, no re-render through
-// 30s". That is NOT true, and the claim caused a bad bug report to the
-// framework team before anyone re-measured it.
+// This header once claimed the client engine ignored the change frames the
+// server sent it. That was false, and relaying it cost the framework team a
+// bug report. Every claim below is a measurement, not a recollection.
 //
-// Re-measured on prod against @pylonsync/sync 0.4.2 + runtime 0.4.4, on a page
-// verified to still be the page under test: a second client created a Track
-// over plain HTTP, and the observing tab's replica AND its DOM both had the row
-// 190ms later. The poll below runs every 10s, so 190ms can only have come from
-// the engine applying the frame. Cross-client sync works.
+// Measured against sync 0.4.7 + runtime 0.4.4, on pages verified to still be
+// the page under test, with a third client doing the write:
 //
-// So why is this still here? It is a cheap backstop for the cases the single
-// measurement above does not cover: a tab that is not the multi-tab leader, and
-// entities whose read policy might gate the frame. One pull per 10s per VISIBLE
-// tab, short-circuited server-side when nothing changed, paused on hidden tabs.
-// Same-client writes never needed it — lib/fn.ts pulls on X-Pylon-Change-Seq.
+//   leader tab    row in replica AND DOM at 190ms  (prod), 4ms (local)
+//   follower tab  row in replica AND DOM at 205ms  (local, second tab in the
+//                 same context, no transport of its own)
 //
-// Delete it once those two cases are measured too. Do not re-add a "the engine
-// is broken" justification without a fresh measurement attached.
+// This poll fires every 10s, so nothing under ~9s can be its doing. Both the
+// leader and the follower case are the engine applying frames. The follower
+// was the case most likely to fail — WebSocketTransport.start() returns early
+// for followers — and it does not.
+//
+// So why is this still mounted? Timing, not evidence. It was kept through the
+// judged demo on 2026-08-12 rather than removing safety margin hours before
+// it, for one pull per 10s per VISIBLE tab, short-circuited server-side when
+// nothing changed and paused on hidden tabs. Same-client writes never needed
+// it: callFn observes X-Pylon-Change-Seq as of Pylon 0.4.7.
+//
+// DELETE THIS FILE. The only case left unmeasured is an entity whose read
+// policy might gate the frame over WS; the framework team's position is that
+// the 0.4.4 WS enricher runs the same role resolution as HTTP, so an entity
+// readable over HTTP is readable over WS. Measure one policy-gated entity from
+// the speaker portal, and if it behaves, remove this component and its two
+// mounts. Do not re-add it without a fresh measurement in this comment.
 const INTERVAL_MS = 10_000;
 
 export function SyncHeartbeat() {
