@@ -507,6 +507,7 @@ export function AgendaBuilder({
         <SessionPopover
           session={openSession}
           tracks={tracks}
+          profiles={profiles}
           tz={tz}
           revisions={revisionsForSession(revisions, openSession.id)}
           onClose={() => setOpenSessionId(null)}
@@ -1385,14 +1386,24 @@ function SessionPopover({
   tracks,
   tz,
   revisions,
+  profiles,
   onClose,
 }: {
   session: SessionRow;
   tracks: TrackRow[];
   tz: string;
   revisions: SessionContentRevisionRow[];
+  profiles: SpeakerProfileRow[];
   onClose: () => void;
 }) {
+  // Who is presenting. saveSession has always accepted speakerUserIdsJson —
+  // nothing in the organizer UI ever set it, so the only way a session got a
+  // speaker was inheriting one from an accepted submission. That also made
+  // the speaker double-booking conflict unreachable by hand.
+  const [speakerIds, setSpeakerIds] = useState<string[]>(
+    () => parseJson<string[]>(session.speakerUserIdsJson) ?? [],
+  );
+  const [speakerBusy, setSpeakerBusy] = useState(false);
   const [title, setTitle] = useState(session.title);
   const [description, setDescription] = useState(session.description ?? "");
   const [inviteBusy, setInviteBusy] = useState(false);
@@ -1586,6 +1597,59 @@ function SessionPopover({
                 </Select>
               </Field>
             </FieldGroup>
+            <Field>
+              <FieldLabel>Speakers</FieldLabel>
+              {profiles.length === 0 ? (
+                <p className="text-[13px] text-muted-foreground">
+                  No speakers on this event yet. Add them under Speakers.
+                </p>
+              ) : (
+                <div className="max-h-44 overflow-y-auto rounded-lg border border-border">
+                  {profiles
+                    .slice()
+                    .sort((a, b) => a.name.localeCompare(b.name))
+                    .map((profile) => {
+                      const on = speakerIds.includes(profile.userId);
+                      return (
+                        <label
+                          key={profile.id}
+                          className="flex cursor-pointer items-center gap-2.5 border-b border-border/60 px-3 py-2 text-sm last:border-b-0 hover:bg-muted/50"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={on}
+                            disabled={speakerBusy}
+                            onChange={async () => {
+                              const next = on
+                                ? speakerIds.filter((id) => id !== profile.userId)
+                                : [...speakerIds, profile.userId];
+                              setSpeakerIds(next);
+                              setSpeakerBusy(true);
+                              try {
+                                await patch({ speakerUserIdsJson: next });
+                              } catch (error) {
+                                setSpeakerIds(speakerIds);
+                                toast.error(
+                                  error instanceof Error ? error.message : "Couldn't save speakers.",
+                                );
+                              } finally {
+                                setSpeakerBusy(false);
+                              }
+                            }}
+                            className="size-4 rounded border-zinc-300 accent-zinc-900"
+                          />
+                          <span className="min-w-0 flex-1 truncate">{profile.name}</span>
+                          {profile.company ? (
+                            <span className="shrink-0 truncate text-xs text-muted-foreground">
+                              {profile.company}
+                            </span>
+                          ) : null}
+                        </label>
+                      );
+                    })}
+                </div>
+              )}
+            </Field>
           </FieldGroup>
         </ResponsiveFormOverlay.Body>
         <ResponsiveFormOverlay.Footer className="sm:flex-row sm:justify-between">
