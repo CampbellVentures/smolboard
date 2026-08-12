@@ -118,6 +118,9 @@ export function ContentTable({
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<string>("all");
   const [historyFor, setHistoryFor] = useState<DeliverableSlotRow | null>(null);
+  const [commentsFor, setCommentsFor] = useState<DeliverableSlotRow | null>(null);
+  const [reply, setReply] = useState("");
+  const [replying, setReplying] = useState(false);
   const [changesFor, setChangesFor] = useState<DeliverableSlotRow | null>(null);
   const [note, setNote] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -382,11 +385,18 @@ export function ContentTable({
                           <History className="size-3" /> {slotVersions.length - 1} previous
                         </button>
                       )}
-                      {slotComments.length > 0 && (
-                        <span className="whitespace-nowrap text-xs tabular-nums text-zinc-400">
-                          {slotComments.length} comment{slotComments.length === 1 ? "" : "s"}
-                        </span>
-                      )}
+                      {/* A speaker's note used to render as dead text here, so
+                          the person meant to act on it could not read it. */}
+                      <button
+                        type="button"
+                        onClick={() => setCommentsFor(slot)}
+                        className="inline-flex items-center gap-1 whitespace-nowrap text-xs text-zinc-500 underline-offset-2 hover:underline"
+                      >
+                        <MessageSquareWarning className="size-3" aria-hidden="true" />
+                        {slotComments.length > 0
+                          ? `${slotComments.length} comment${slotComments.length === 1 ? "" : "s"}`
+                          : "Comment"}
+                      </button>
                     </div>
                     {rowStatus === "changes_requested" && slot.reviewNote ? (
                       <p className="mt-1 text-xs text-amber-700">“{slot.reviewNote}”</p>
@@ -472,6 +482,77 @@ export function ContentTable({
       </Dialog>
 
       {/* Version history */}
+      <Dialog
+        open={commentsFor !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setCommentsFor(null);
+            setReply("");
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Comments</DialogTitle>
+            <DialogDescription>
+              {commentsFor
+                ? speakerByUser.get(commentsFor.speakerUserId)?.name ?? commentsFor.title
+                : ""}
+            </DialogDescription>
+          </DialogHeader>
+          <ul className="max-h-80 space-y-3 overflow-y-auto">
+            {(commentsFor ? comments.filter((c) => c.slotId === commentsFor.id) : [])
+              .slice()
+              .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+              .map((comment) => (
+                <li key={comment.id} className="rounded-lg border border-border/70 p-3">
+                  <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span className="font-medium text-foreground">{comment.authorName}</span>
+                    <Badge variant="outline" className="capitalize">{comment.authorRole}</Badge>
+                    <span suppressHydrationWarning>{fmtDate(comment.createdAt)}</span>
+                  </p>
+                  <p className="mt-1.5 whitespace-pre-line text-sm">{comment.body}</p>
+                </li>
+              ))}
+            {commentsFor && comments.filter((c) => c.slotId === commentsFor.id).length === 0 ? (
+              <li className="py-6 text-center text-sm text-muted-foreground">
+                No comments yet. Anything you write here is visible to the speaker.
+              </li>
+            ) : null}
+          </ul>
+          <form
+            className="flex items-start gap-2"
+            onSubmit={async (event) => {
+              event.preventDefault();
+              if (!commentsFor || !reply.trim()) return;
+              setReplying(true);
+              try {
+                await callFn("addDeliverableComment", {
+                  slotId: commentsFor.id,
+                  body: reply.trim(),
+                });
+                setReply("");
+              } catch (caught) {
+                setError(caught instanceof Error ? caught.message : "Couldn't post that comment.");
+              } finally {
+                setReplying(false);
+              }
+            }}
+          >
+            <Textarea
+              value={reply}
+              onChange={(e) => setReply(e.target.value)}
+              placeholder="Reply to the speaker…"
+              aria-label="Reply to the speaker"
+              className="min-h-16"
+            />
+            <Button type="submit" disabled={replying || !reply.trim()}>
+              {replying ? "Posting…" : "Post"}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={historyFor !== null} onOpenChange={(open) => !open && setHistoryFor(null)}>
         <DialogContent>
           <DialogHeader>

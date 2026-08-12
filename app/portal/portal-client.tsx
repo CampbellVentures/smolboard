@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { callFn, db } from "@pylonsync/react";
+import { fmtDate, fmtDateTime } from "@/lib/format";
 import { sendMagicLink, verifyMagicLink, useAuth } from "@pylonsync/client";
 import { Button } from "@/components/ui/button";
 import { BrandMark } from "@/components/brand";
@@ -804,7 +805,12 @@ function SpeakerTaskItem({
             {complete ? <Badge>Complete</Badge> : null}
           </div>
           {template.description ? <p className="mt-1 text-sm leading-5 text-zinc-500">{template.description}</p> : null}
-          {template.dueAt ? <p className="mt-1 text-xs text-zinc-400">Due {new Date(template.dueAt).toLocaleString()}</p> : null}
+          {template.dueAt ? (
+            // A due date is a calendar day, not an instant: stored midnight-UTC
+            // and read back in UTC, so it says the same day everywhere and
+            // matches the server render.
+            <p className="mt-1 text-xs text-zinc-400">Due {fmtDate(template.dueAt)}</p>
+          ) : null}
 
           {!complete && template.kind === "form" ? (
             <div className="mt-4">
@@ -949,7 +955,8 @@ function DeliverableUploader({
             {versions.map((version, index) => (
               <li key={version.id} className="flex items-center justify-between gap-3 px-2.5 py-2 text-xs">
                 <span className="min-w-0 truncate">
-                  v{version.versionNumber} · {version.filename} · {new Date(version.createdAt).toLocaleString()}
+                  v{version.versionNumber} · {version.filename} ·{" "}
+                  <span suppressHydrationWarning>{fmtDateTime(version.createdAt)}</span>
                 </span>
                 <span className="flex shrink-0 items-center gap-2">
                   {index === 0 ? <Badge>Latest</Badge> : null}
@@ -976,7 +983,9 @@ function DeliverableUploader({
                 .map((item) => (
                   <li key={item.id} className="rounded-md bg-white px-2.5 py-2 text-xs">
                     <span className="font-medium">{item.authorName}</span>
-                    <span className="ml-1 text-zinc-400">· {new Date(item.createdAt).toLocaleString()}</span>
+                    <span className="ml-1 text-zinc-400" suppressHydrationWarning>
+                      · {fmtDateTime(item.createdAt)}
+                    </span>
                     <p className="mt-0.5 whitespace-pre-wrap text-zinc-600">{item.body}</p>
                   </li>
                 ))}
