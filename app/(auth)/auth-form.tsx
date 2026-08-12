@@ -10,6 +10,7 @@ import {
   listOrgs,
   ApiError,
 } from "@pylonsync/client";
+import { track } from "@/components/analytics";
 
 // The email/password form, shared by /login and /signup. It calls the built-in
 // auth API directly — `passwordLogin` / `passwordRegister` (from
@@ -80,6 +81,8 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
       } else {
         const session = await passwordRegister({ email, password });
         persistSession(session);
+        // Fired before the navigation away, so the beacon leaves this document.
+        track("signup");
         // Auto-provision a first workspace so new accounts land in a ready
         // dashboard instead of an empty first-run screen. Named "My Workspace"
         // (renamable in Settings) and made the active tenant. Either way we land

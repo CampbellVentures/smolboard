@@ -52,6 +52,7 @@ import { CommandPalette, type PaletteDestination } from "./command-palette";
 import { lastEventStorageKey } from "@/lib/dashboard-routing";
 import { CopilotChat, useCopilotThreads } from "@/components/copilot-chat";
 import { useEnsureOrgSlug } from "@/components/use-org-slug";
+import { Analytics } from "@/components/analytics";
 
 // Three-pane organizer shell (SPEC.md → "Organizer UI shell"):
 //   [nav sidebar] [copilot pane] [content]
@@ -466,6 +467,7 @@ export function AppShell({
     // instead of sitting at the bottom of however long the page happens to be.
     // Below md there are no side panes, so the document scrolls normally.
     <div className="flex min-h-dvh bg-background text-foreground md:h-dvh md:overflow-hidden">
+      <Analytics />
       <SessionReconcile />
       <SyncHeartbeat />
       <SyncDebug />

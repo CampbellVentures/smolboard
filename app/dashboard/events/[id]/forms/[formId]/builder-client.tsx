@@ -38,6 +38,7 @@ import {
   type SubmissionHandoffConfig,
 } from "@/lib/submission-handoff";
 import type { SubmissionRow, TrackRow } from "@/lib/types";
+import { track } from "@/components/analytics";
 import {
   ArrowDown,
   ArrowRightLeft,
@@ -204,6 +205,10 @@ export function FormBuilder({
         routingJson: routing,
         handoffMappingsJson: handoff,
       });
+      // Activation for this product is a call for speakers that is actually
+      // taking submissions, so the funnel's last step is the open transition,
+      // not any save.
+      if (status === "open" && form.status !== "open") track("cfp_published");
       setSavedAt(Date.now());
     } finally {
       setSaving(false);

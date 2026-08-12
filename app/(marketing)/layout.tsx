@@ -3,6 +3,7 @@ import { Link, type PageAuth } from "@pylonsync/react";
 import { PRODUCTS } from "@/lib/products";
 import { SOLUTIONS, RESOURCES, COMPANY, COMPARISONS } from "@/lib/site";
 import { siteConfig } from "@/lib/site.config";
+import { Analytics } from "@/components/analytics";
 import { BrandMark } from "@/components/brand";
 
 // `(marketing)` is a ROUTE GROUP: the parens segment is stripped from every
@@ -185,6 +186,7 @@ export default function MarketingLayout({ children, auth }: LayoutProps) {
   const signedIn = Boolean(auth?.user_id);
   return (
     <>
+      <Analytics />
       <header className="sticky top-0 z-30 bg-white/80 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-6">
           <div className="flex items-center gap-8">

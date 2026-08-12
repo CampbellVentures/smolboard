@@ -1,5 +1,6 @@
 import React from "react";
 import { BrandMark } from "@/components/brand";
+import { Analytics } from "@/components/analytics";
 import { Link, type PageAuth, type SsrResponse } from "@pylonsync/react";
 
 // `(auth)` route group → the shared frame for /login and /signup: one centered
@@ -23,6 +24,7 @@ export default function AuthLayout({ children, auth, response }: LayoutProps) {
   }
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-50 px-6 py-12">
+      <Analytics />
       <div className="w-full max-w-[400px] rounded-2xl bg-white p-8 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_8px_24px_-12px_rgba(0,0,0,0.12)]">
         <Link href="/" className="inline-flex">
           <BrandMark size={36} />

@@ -20,6 +20,7 @@ import { CalendarPlus } from "lucide-react";
 import { slugify } from "@/lib/forms";
 import { fmtDateRange } from "@/lib/format";
 import type { EventRow } from "@/lib/types";
+import { track } from "@/components/analytics";
 
 // Events list: server-seeded, then live. Creating an event is a direct
 // db.insert — the tenant policy scopes it to the active org.
@@ -87,6 +88,7 @@ export function EventsList({
         startDate: new Date(`${startDate}T00:00:00Z`).toISOString(),
         endDate: new Date(`${end}T00:00:00Z`).toISOString(),
       });
+      track("event_created");
       router.push(`/dashboard/events/${id}`);
     } catch {
       setError(`The URL handle "${s}" is taken — pick another.`);
