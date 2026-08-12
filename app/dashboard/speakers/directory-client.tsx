@@ -143,16 +143,40 @@ export function SpeakerDirectory({
   const notes = !hydrated || noteQ.loading ? initialNotes : noteQ.data;
   const eventById = useMemo(() => new Map(events.map((row) => [row.id, row])), [events]);
 
+  const contactQ = db.useQuery<ContactRow>("Contact");
+  const contacts = (contactQ.loading ? [] : contactQ.data).filter((row) => row.orgId === orgId);
+
   // Only profiles whose event still exists — pre-cascade deletes left orphans
   // in older workspaces, and a person built purely from orphans is noise.
   const liveProfiles = useMemo(
     () => profiles.filter((profile) => eventById.has(profile.eventId)),
     [profiles, eventById],
   );
-  const people = useMemo(
-    () => aggregateSpeakers(liveProfiles, submissions),
-    [liveProfiles, submissions],
-  );
+  // Speakers come from event profiles; CRM contacts come from Contact rows.
+  // The directory is the org-level view of BOTH — an imported contact used to
+  // exist only as a pipeline card, so a CSV import reported "created: 3" and
+  // then could not be found by search, and the Companies tile counted rows the
+  // table never showed. A contact already on an event is represented by its
+  // profile, so it is matched out by email rather than listed twice.
+  const people = useMemo(() => {
+    const fromEvents = aggregateSpeakers(liveProfiles, submissions);
+    const known = new Set(fromEvents.map((person) => person.email.toLowerCase()));
+    const fromCrm = contacts
+      .filter((contact) => !known.has((contact.email ?? "").toLowerCase()))
+      .map((contact) => ({
+        email: contact.email,
+        name: contact.name,
+        company: contact.company,
+        jobTitle: contact.jobTitle,
+        headshotUrl: contact.headshotUrl,
+        tags: contact.tagsJson ?? [],
+        profiles: [],
+        submissions: [],
+        accepted: 0,
+        lastActivity: contact.updatedAt || contact.createdAt,
+      }));
+    return [...fromEvents, ...fromCrm];
+  }, [liveProfiles, submissions, contacts]);
   const allTags = useMemo(
     () => [...new Set(people.flatMap((person) => person.tags))].sort(),
     [people],
@@ -167,10 +191,8 @@ export function SpeakerDirectory({
   const [emailing, setEmailing] = useState(false);
   const [picked, setPicked] = useState<Set<string>>(new Set());
 
-  const contactQ = db.useQuery<ContactRow>("Contact");
   const stageQ = db.useQuery<ContactStageEventRow>("ContactStageEvent");
   const segmentQ = db.useQuery<ContactSegmentRow>("ContactSegment");
-  const contacts = (contactQ.loading ? [] : contactQ.data).filter((row) => row.orgId === orgId);
   const stageEvents = (stageQ.loading ? [] : stageQ.data).filter((row) => row.orgId === orgId);
   const segments = (segmentQ.loading ? [] : segmentQ.data).filter((row) => row.orgId === orgId);
   const liveEvents = events.filter((row) => row.orgId === orgId);

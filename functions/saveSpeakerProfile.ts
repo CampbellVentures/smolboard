@@ -65,16 +65,25 @@ export default mutation({
     } catch (error) {
       throw ctx.error("INVALID_ARGS", error instanceof Error ? error.message : "Invalid headshot URL.");
     }
+    // An explicitly-sent empty string means CLEAR, not "leave alone".
+    //
+    // boundedSpeakerText and validatePublicHeadshotUrl both return undefined
+    // for an empty value, and an update ignores undefined keys — so a wrong
+    // headshot URL or a stale travel note could never be removed once saved.
+    // Two independent walkthroughs hit this. Absent key still means untouched.
+    const cleared = (raw: string | undefined, parsed: string | undefined) =>
+      raw !== undefined && raw.trim() === "" ? null : parsed;
+
     const now = new Date().toISOString();
     const payload = {
       name,
-      jobTitle,
-      company,
-      bio,
-      tagline,
+      jobTitle: cleared(args.jobTitle, jobTitle),
+      company: cleared(args.company, company),
+      bio: cleared(args.bio, bio),
+      tagline: cleared(args.tagline, tagline),
       status,
-      headshotUrl,
-      logistics,
+      headshotUrl: cleared(args.headshotUrl, headshotUrl),
+      logistics: cleared(args.logistics, logistics),
       linksJson,
       tagsJson: cleanTags(args.tagsJson),
       customJson,
