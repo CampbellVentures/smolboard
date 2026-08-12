@@ -1,10 +1,9 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { db } from "@pylonsync/react";
+import { callFn, db } from "@pylonsync/react";
 import { toast } from "sonner";
 import { BookOpen, ExternalLink, Plus, Trash2 } from "lucide-react";
-import { callFn } from "@/lib/fn";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";

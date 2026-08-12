@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { useAuth, changePassword, ApiError } from "@pylonsync/client";
 import { KeyRound, UserRound } from "lucide-react";
 import { toast } from "sonner";
-import { callFn } from "@/lib/fn";
+import { callFn } from "@pylonsync/react";
 import { DashboardPage, DashboardPanel } from "@/components/dashboard";
 import { PersonAvatar } from "@/components/person-avatar";
 import { Button } from "@/components/ui/button";

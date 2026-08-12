@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { db, useRouter } from "@pylonsync/react";
-import { callFn } from "@/lib/fn";
+import { callFn, db, useRouter } from "@pylonsync/react";
 import { toast } from "sonner";
 import {
   DashboardEmptyState,

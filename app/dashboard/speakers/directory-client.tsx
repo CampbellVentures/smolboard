@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { db, Link } from "@pylonsync/react";
-import { callFn } from "@/lib/fn";
+import { callFn, db, Link } from "@pylonsync/react";
 import { PersonAvatar } from "@/components/person-avatar";
 import { fmtDate } from "@/lib/format";
 import { BookUser, ExternalLink, Trash2 } from "lucide-react";

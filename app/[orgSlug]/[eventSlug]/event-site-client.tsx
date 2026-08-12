@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { Link } from "@pylonsync/react";
-import { callFn } from "@/lib/fn";
+import { callFn, Link } from "@pylonsync/react";
 import { dayKey, eventSessionTime, fmtTime, minutesInDay } from "@/lib/agenda";
 import { buildCalendarUrls, buildIcsInvite } from "@/lib/ics";
 import {

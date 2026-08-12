@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { db } from "@pylonsync/react";
-import { callFn } from "@/lib/fn";
+import { callFn, db } from "@pylonsync/react";
 import type { OrgRow } from "@/lib/types";
 
 // The workspace's public URL handle, for building /<org-slug>/<event-slug>

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { callFn } from "@/lib/fn";
+import { callFn } from "@pylonsync/react";
 
 import { CalendarDays, Download, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";

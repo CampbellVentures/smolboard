@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { db, Link, useRouter } from "@pylonsync/react";
-import { callFn } from "@/lib/fn";
+import { callFn, db, Link, useRouter } from "@pylonsync/react";
 import {
   DashboardEmptyState,
   DashboardHero,

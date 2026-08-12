@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { db, Link, usePathname, useRoom, useRouter, type RoomPeer } from "@pylonsync/react";
+import { callFn, db, Link, type RoomPeer, usePathname, useRoom, useRouter } from "@pylonsync/react";
 import { useAuth, OrganizationSwitcher } from "@pylonsync/client";
 import {
   LayoutDashboard,
@@ -44,7 +44,6 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
-import { callFn } from "@/lib/fn";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { initialsOf } from "@/components/person-avatar";

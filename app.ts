@@ -5,10 +5,10 @@ import {
   auth,
   buildManifest,
   discoverAppRoutes,
+  discoverFunctions,
   font,
   cron,
 } from "@pylonsync/sdk";
-import { discoverFunctions } from "./lib/discover-functions";
 
 // ---------------------------------------------------------------------------
 // smolboard — open-source speaker & CFP management (Sessionboard replacement).
@@ -1212,9 +1212,8 @@ const manifest = buildManifest({
     CopilotThread,
     CopilotMessage,
   ],
-  // Read from functions/ rather than hand-listed: these were empty arrays
-  // while 111 functions served at /api/fn/<name>, so the manifest described
-  // an app with no API and any client generated from it had nothing to call.
+  // Read from functions/ rather than hand-listed, so the manifest cannot
+  // drift from what the router actually serves.
   queries: discoveredFunctions.queries,
   actions: discoveredFunctions.actions,
   policies: [

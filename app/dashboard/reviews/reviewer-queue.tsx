@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { callFn } from "@/lib/fn";
+import { callFn } from "@pylonsync/react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

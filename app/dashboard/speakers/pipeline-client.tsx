@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { db } from "@pylonsync/react";
+import { callFn, db } from "@pylonsync/react";
 import {
   ArrowRight,
   Building2,
@@ -15,7 +15,6 @@ import {
   Users,
 } from "lucide-react";
 import { toast } from "sonner";
-import { callFn } from "@/lib/fn";
 import {
   DashboardEmptyState,
   DashboardIconChip,
