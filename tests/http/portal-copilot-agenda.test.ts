@@ -3,7 +3,9 @@ import {
   callFn,
   createTwoOrgFixture,
   entityList,
+  entityUpdate,
   jsonRequest,
+  publicFn,
   type TestIdentity,
 } from "../helpers/http-fixtures";
 import { startDisposablePylonServer, type DisposablePylonServer } from "../helpers/http-server";
@@ -355,4 +357,56 @@ test("a round blocked only by debris from deleted submissions can be removed", a
 
   const rounds = await entityList<{ id: string }>(owner, "ReviewRound");
   expect(rounds.some((r) => r.id === round.id)).toBe(false);
+});
+
+test("a newly scheduled session reaches the public schedule, and an edit pulls it back", async () => {
+  const fixture = await createTwoOrgFixture(server.baseUrl, "publish-gate");
+  const { owner, eventId, eventSlug, slug: orgSlug } = fixture.a;
+
+  const room = await callFn<{ id: string }>(owner, "saveRoom", {
+    eventId,
+    name: "Publish Hall",
+    sortOrder: 0,
+  });
+  const created = await callFn<{ id: string }>(owner, "saveSession", {
+    eventId,
+    data: {
+      title: "Newly placed talk",
+      kind: "talk",
+      speakerUserIdsJson: [],
+      roomId: room.id,
+      startTime: "2027-05-12T17:00:00.000Z",
+      endTime: "2027-05-12T17:30:00.000Z",
+    },
+  });
+
+  // The public feed is gated on a published schedule, as it should be.
+  await entityUpdate(owner, "Event", eventId, { schedulePublished: true, cfpStatus: "open" });
+
+  const publicTitles = async () => {
+    const { body } = await publicFn<{ sessions?: Array<{ title: string }> }>(
+      server.baseUrl,
+      "getPublicSchedule",
+      { orgSlug, eventSlug },
+    );
+    return (body.sessions ?? []).map((s) => s.title);
+  };
+
+  // Placing a session and publishing must be enough: it used to land as draft,
+  // so a freshly built agenda published to an empty public schedule.
+  expect(await publicTitles()).toContain("Newly placed talk");
+
+  // The approval gate still governs CHANGES: editing the content re-drafts it,
+  // and it drops out of the public feed until re-approved.
+  await callFn(owner, "saveSession", {
+    eventId,
+    sessionId: created.id,
+    data: { title: "Retitled after publishing" },
+  });
+  const afterEdit = await publicTitles();
+  expect(afterEdit).not.toContain("Retitled after publishing");
+  expect(afterEdit).not.toContain("Newly placed talk");
+
+  await callFn(owner, "approveSessionContent", { sessionId: created.id, approved: true });
+  expect(await publicTitles()).toContain("Retitled after publishing");
 });

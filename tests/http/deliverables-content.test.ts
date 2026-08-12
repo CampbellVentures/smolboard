@@ -117,6 +117,15 @@ test("session revisions restore as a new draft and only explicit approval reache
   const fixture = await createTwoOrgFixture(server.baseUrl, "content-approval");
   const args = { orgSlug: fixture.a.slug, eventSlug: fixture.a.eventSlug };
   await entityUpdate(fixture.a.owner, "Event", fixture.a.eventId, { schedulePublished: true });
+
+  // A session the organizer created is approved on creation, so it publishes
+  // without a second sign-off step. Put it back to draft explicitly, because
+  // the invariant under test is "unapproved content never reaches the public
+  // feeds" — not whatever the creation default happens to be.
+  await callFn(fixture.a.owner, "approveSessionContent", {
+    sessionId: fixture.a.sessionId,
+    approved: false,
+  });
   const hidden = await publicFn<{ sessions: unknown[] }>(server.baseUrl, "getPublicSchedule", args);
   const hiddenSpeakers = await publicFn<{ speakers: unknown[] }>(server.baseUrl, "getPublicSpeakers", args);
   expect(hidden.body.sessions).toEqual([]);

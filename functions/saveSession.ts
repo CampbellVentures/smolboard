@@ -86,7 +86,19 @@ export default mutation({
       description: payload.description as string | undefined,
       speakerUserIdsJson: payload.speakerUserIdsJson as string[] | undefined,
     });
-    await ctx.db.unsafe.update("Session", id, { currentRevisionId: revisionId });
+    // A session the organizer just created is approved content by definition:
+    // they typed it. Leaving it draft meant a freshly built agenda published
+    // to an EMPTY public schedule, with nothing on screen explaining why.
+    // The gate still does its job — editing content below sets contentStatus
+    // back to "draft", so a change drops out of the public feed until it is
+    // re-approved.
+    await ctx.db.unsafe.update("Session", id, {
+      currentRevisionId: revisionId,
+      approvedRevisionId: revisionId,
+      contentStatus: "approved",
+      approvedAt: new Date().toISOString(),
+      approvedByUserId: ctx.auth.userId,
+    });
     return { id };
   },
 });

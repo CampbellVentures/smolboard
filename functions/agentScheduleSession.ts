@@ -124,6 +124,29 @@ export default mutation({
       startTime: start.toISOString(),
       endTime: end.toISOString(),
     });
+    // Seed and approve revision 1, exactly as the drag-and-drop path does.
+    // Without a revision this session could never be approved at all
+    // (approveSessionContent requires one), so a talk the copilot scheduled
+    // could never reach the public schedule by any route.
+    const actor = await ctx.db.unsafe.get("User", ctx.auth.userId);
+    const revisionId = await ctx.db.unsafe.insert("SessionContentRevision", {
+      orgId: event.orgId as string,
+      eventId: args.eventId,
+      sessionId: id,
+      revisionNumber: 1,
+      title,
+      description: (canonicalData as { description?: string } | undefined)?.description,
+      speakerUserIdsJson: speakerUserIds,
+      editorUserId: ctx.auth.userId,
+      editorName: String(actor?.displayName || actor?.email || "Organizer").slice(0, 200),
+    });
+    await ctx.db.unsafe.update("Session", id, {
+      currentRevisionId: revisionId,
+      approvedRevisionId: revisionId,
+      contentStatus: "approved",
+      approvedAt: new Date().toISOString(),
+      approvedByUserId: ctx.auth.userId,
+    });
     return { scheduled: true, sessionId: id, title, room: room.name, start: start.toISOString(), end: end.toISOString() };
   },
 });

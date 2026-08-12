@@ -734,7 +734,11 @@ function DetailDrawer({
             </section>
           )}
 
-          {participants.length > 1 && (
+          {/* Shown for a single presenter too. Gating on >1 hid the role label
+              in the common case, while the reviewer card always shows it —
+              so the organizer had strictly less information than the
+              reviewer about who is presenting. */}
+          {participants.length > 0 && (
             <section>
               <h4 className="text-[11px] font-medium uppercase tracking-wide text-zinc-400">
                 Participants
@@ -1066,6 +1070,13 @@ function RoundEditor({
 }) {
   const [name, setName] = useState(round?.name ?? `Round ${nextNumber}`);
   const [anonymized, setAnonymized] = useState(Boolean(round?.anonymized));
+  // Stored as instants; the inputs are plain dates.
+  const [opensAt, setOpensAt] = useState(
+    round?.opensAt ? String(round.opensAt).slice(0, 10) : "",
+  );
+  const [closesAt, setClosesAt] = useState(
+    round?.closesAt ? String(round.closesAt).slice(0, 10) : "",
+  );
   const [criteria, setCriteria] = useState<DraftCriterion[]>(() =>
     round ? normalizeCriteria(parseJson(round.criteriaJson)) : normalizeCriteria(DEFAULT_CRITERIA),
   );
@@ -1095,6 +1106,8 @@ function RoundEditor({
         criteriaJson: cleaned,
         status: round?.status ?? "open",
         anonymized,
+        opensAt: opensAt ? new Date(`${opensAt}T00:00:00Z`).toISOString() : undefined,
+        closesAt: closesAt ? new Date(`${closesAt}T23:59:59Z`).toISOString() : undefined,
       });
       toast.success(round ? "Round updated" : `Round ${nextNumber} created`);
       onClose();
@@ -1138,6 +1151,28 @@ function RoundEditor({
                   />
                   Hide speaker identity from reviewers
                 </label>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {/* ReviewRound has stored opensAt/closesAt all along; the
+                    editor never showed them, so every round was open-ended. */}
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="round-opens">Opens</Label>
+                  <Input
+                    id="round-opens"
+                    type="date"
+                    value={opensAt}
+                    onChange={(e) => setOpensAt(e.target.value)}
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="round-closes">Closes</Label>
+                  <Input
+                    id="round-closes"
+                    type="date"
+                    value={closesAt}
+                    onChange={(e) => setClosesAt(e.target.value)}
+                  />
+                </div>
               </div>
               <div>
                 <p className="mb-2 text-sm font-medium">Scorecard</p>

@@ -46,9 +46,11 @@ export default mutation({
       eventId: event.id as string,
       ...payload,
     });
-    // Seed revision 1 from the submission content so the session can go
-    // through content approval (and reach the public schedule) without an
-    // extra manual edit first.
+    // Seed revision 1 from the submission content, APPROVED. This talk was
+    // already read and accepted through review; re-approving the same words
+    // before they can appear publicly is a step with no decision in it. An
+    // organizer editing the session afterwards re-drafts it (saveSession), so
+    // the approval gate still governs every actual change.
     const user = await ctx.db.unsafe.get("User", ctx.auth.userId);
     const revisionId = await ctx.db.unsafe.insert("SessionContentRevision", {
       orgId: event.orgId as string,
@@ -61,7 +63,13 @@ export default mutation({
       editorUserId: ctx.auth.userId,
       editorName: String(user?.displayName || user?.email || "Organizer").slice(0, 200),
     });
-    await ctx.db.unsafe.update("Session", id, { currentRevisionId: revisionId });
+    await ctx.db.unsafe.update("Session", id, {
+      currentRevisionId: revisionId,
+      approvedRevisionId: revisionId,
+      contentStatus: "approved",
+      approvedAt: new Date().toISOString(),
+      approvedByUserId: ctx.auth.userId,
+    });
     return { materialized: true, sessionId: id, unresolved: [] };
   },
 });
