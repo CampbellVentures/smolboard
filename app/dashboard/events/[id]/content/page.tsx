@@ -6,6 +6,7 @@ import type {
   DeliverableSlotRow,
   DeliverableVersionRow,
   EventRow,
+  SessionRow,
   SpeakerProfileRow,
 } from "@/lib/types";
 
@@ -39,6 +40,11 @@ export default function ContentPage({ auth, params, response, serverData }: Page
   const profiles = use(serverData.list<SpeakerProfileRow>("SpeakerProfile")).filter(
     (row) => row.eventId === event.id,
   );
+  // Slots carry a sessionId; the table names the session so an organizer can
+  // see which talk a deck belongs to, not just who sent it.
+  const sessions = use(serverData.list<SessionRow>("Session")).filter(
+    (row) => row.eventId === event.id,
+  );
   return (
     <ContentTable
       event={event}
@@ -46,6 +52,7 @@ export default function ContentPage({ auth, params, response, serverData }: Page
       initialVersions={versions}
       initialComments={comments}
       initialProfiles={profiles}
+      initialSessions={sessions}
     />
   );
 }

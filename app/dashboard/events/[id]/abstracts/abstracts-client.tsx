@@ -51,7 +51,7 @@ import type {
   SubmissionFormRow,
   SubmissionRow,
 } from "@/lib/types";
-import { ChevronRight, Star, Plus, Inbox, Bot } from "lucide-react";
+import { ArrowUpDown, ChevronRight, Star, Plus, Inbox, Bot } from "lucide-react";
 
 // Abstracts: dense table + right detail drawer (row click keeps table
 // context), bulk actions over setSubmissionStatus, per-round scoring. All
@@ -73,6 +73,48 @@ const DEFAULT_CRITERIA = [
   { key: "quality", label: "Quality", max: 5 },
   { key: "speaker", label: "Speaker", max: 5 },
 ];
+
+type SortKey = "title" | "category" | "round" | "score" | "status";
+interface SortState {
+  key: SortKey;
+  dir: "asc" | "desc";
+}
+
+// A column header that sorts. Clicking the active column flips direction;
+// clicking another switches to it, descending, because for a score column
+// "best first" is what you want on the first click.
+function SortableHead({
+  sortKey,
+  sort,
+  onSort,
+  children,
+}: {
+  sortKey: SortKey;
+  sort: SortState;
+  onSort: (next: SortState) => void;
+  children: React.ReactNode;
+}) {
+  const active = sort.key === sortKey;
+  return (
+    <TableHead aria-sort={active ? (sort.dir === "asc" ? "ascending" : "descending") : "none"}>
+      <button
+        type="button"
+        onClick={() =>
+          onSort({ key: sortKey, dir: active && sort.dir === "desc" ? "asc" : "desc" })
+        }
+        className="-mx-1 flex items-center gap-1 rounded px-1 py-0.5 transition-colors hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-zinc-900"
+      >
+        {children}
+        <ArrowUpDown
+          aria-hidden="true"
+          className={
+            "size-3 transition-opacity " + (active ? "opacity-70" : "opacity-0 group-hover:opacity-40")
+          }
+        />
+      </button>
+    </TableHead>
+  );
+}
 
 export function AbstractsView({
   event,
@@ -123,6 +165,10 @@ export function AbstractsView({
   }, []);
   const [busy, setBusy] = useState(false);
   const [bulkConfirmStatus, setBulkConfirmStatus] = useState<string | null>(null);
+  // Highest score first is the order a program chair wants on arrival, but it
+  // can't be the only order — deciding a shortlist means re-reading by title,
+  // by track, and by status too.
+  const [sort, setSort] = useState<SortState>({ key: "score", dir: "desc" });
 
   const categories = useMemo(
     () => [...new Set(submissions.map((s) => s.category).filter(Boolean))] as string[],
@@ -158,10 +204,33 @@ export function AbstractsView({
             .includes(needle),
       );
     }
-    return list
-      .slice()
-      .sort((a, b) => (avgScore[b.id]?.avg ?? -1) - (avgScore[a.id]?.avg ?? -1));
-  }, [submissions, statusFilter, categoryFilter, q, profiles, avgScore]);
+    const dir = sort.dir === "asc" ? 1 : -1;
+    const speaker = (s: SubmissionRow) =>
+      profiles.find((p) => p.userId === s.speakerUserId)?.name ?? "";
+    return list.slice().sort((a, b) => {
+      switch (sort.key) {
+        case "title":
+          return dir * (a.title.localeCompare(b.title) || speaker(a).localeCompare(speaker(b)));
+        case "category":
+          return dir * (a.category ?? "").localeCompare(b.category ?? "");
+        case "round":
+          return dir * ((a.currentRound ?? 0) - (b.currentRound ?? 0));
+        case "status":
+          return dir * a.status.localeCompare(b.status);
+        default:
+          // Unscored sorts last in both directions: an empty cell is not a
+          // low score, and burying real scores under blanks helps no one.
+          {
+            const av = avgScore[a.id]?.avg;
+            const bv = avgScore[b.id]?.avg;
+            if (av === undefined && bv === undefined) return 0;
+            if (av === undefined) return 1;
+            if (bv === undefined) return -1;
+            return sort.dir === "asc" ? av - bv : bv - av;
+          }
+      }
+    });
+  }, [submissions, statusFilter, categoryFilter, q, profiles, avgScore, sort]);
 
   const allSelected = rows.length > 0 && rows.every((r) => selected.has(r.id));
   function toggleAll() {
@@ -340,11 +409,21 @@ export function AbstractsView({
                     className="size-4 rounded border-zinc-300 accent-zinc-900"
                   />
                 </TableHead>
-                <TableHead>Title / speaker</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Round</TableHead>
-                <TableHead>Score</TableHead>
-                <TableHead>Status</TableHead>
+                <SortableHead sortKey="title" sort={sort} onSort={setSort}>
+                  Title / speaker
+                </SortableHead>
+                <SortableHead sortKey="category" sort={sort} onSort={setSort}>
+                  Category
+                </SortableHead>
+                <SortableHead sortKey="round" sort={sort} onSort={setSort}>
+                  Round
+                </SortableHead>
+                <SortableHead sortKey="score" sort={sort} onSort={setSort}>
+                  Score
+                </SortableHead>
+                <SortableHead sortKey="status" sort={sort} onSort={setSort}>
+                  Status
+                </SortableHead>
                 <TableHead className="w-8" />
               </TableRow>
             </TableHeader>

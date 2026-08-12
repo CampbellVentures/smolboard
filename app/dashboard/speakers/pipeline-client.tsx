@@ -5,6 +5,8 @@ import { db } from "@pylonsync/react";
 import {
   ArrowRight,
   Building2,
+  CalendarDays,
+  CheckCircle2,
   GitMerge,
   Mail,
   Plus,
@@ -559,36 +561,96 @@ function applyPreview(template: string, contact: ContactRow): string {
 
 /* ------------------------------- Metrics -------------------------------- */
 
-export function CrmMetrics({ contacts }: { contacts: ContactRow[] }) {
+// Org-wide numbers for the speaker database.
+//
+// These used to count only Contact rows, which are created by CSV import
+// alone — so a workspace with a full roster of speakers showed 0 / 0 and an
+// empty chart. The headline figures now come from the speaker database itself
+// and the imported-contact pipeline is one panel inside it.
+export function CrmMetrics({
+  people,
+  contacts,
+  events,
+}: {
+  people: { company?: string; profiles: { eventId: string }[]; accepted: number }[];
+  contacts: ContactRow[];
+  events: { id: string; name: string }[];
+}) {
   const byStage = STAGES.map((stage) => ({
     ...stage,
     count: contacts.filter((c) => c.stage === stage.key).length,
   }));
-  const companies = new Set(contacts.map((c) => c.company).filter(Boolean)).size;
-  const max = Math.max(1, ...byStage.map((s) => s.count));
+  const companies = new Set(
+    [...people.map((p) => p.company), ...contacts.map((c) => c.company)].filter(Boolean),
+  ).size;
+  const accepted = people.reduce((sum, person) => sum + person.accepted, 0);
+
+  // Speakers per event: populated whenever the workspace has any speaker at
+  // all, which is what makes this widget worth showing on arrival.
+  const perEvent = events
+    .map((event) => ({
+      id: event.id,
+      name: event.name,
+      count: people.filter((p) => p.profiles.some((profile) => profile.eventId === event.id)).length,
+    }))
+    .filter((row) => row.count > 0)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5);
+
+  const stageMax = Math.max(1, ...byStage.map((s) => s.count));
+  const eventMax = Math.max(1, ...perEvent.map((s) => s.count));
+
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
       <div className="grid grid-cols-2 gap-3">
-        <Metric icon={Users} label="Contacts" value={contacts.length} />
+        <Metric icon={Users} label="Speakers" value={people.length} />
         <Metric icon={Building2} label="Companies" value={companies} />
+        <Metric icon={CalendarDays} label="Events" value={events.length} />
+        <Metric icon={CheckCircle2} label="Accepted talks" value={accepted} />
       </div>
       <div className="rounded-xl border border-border bg-card p-4">
         <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-          Pipeline
+          Speakers per event
         </p>
         <div className="mt-2 flex flex-col gap-1.5">
-          {byStage.map((stage) => (
-            <div key={stage.key} className="flex items-center gap-2 text-xs">
-              <span className="w-20 shrink-0 text-muted-foreground">{stage.label}</span>
+          {perEvent.map((row) => (
+            <div key={row.id} className="flex items-center gap-2 text-xs">
+              <span className="w-28 shrink-0 truncate text-muted-foreground" title={row.name}>
+                {row.name}
+              </span>
               <span
-                className="h-2 rounded-full bg-zinc-300"
-                style={{ width: `${(stage.count / max) * 65}%` }}
+                className="h-2 rounded-full bg-violet-300"
+                style={{ width: `${(row.count / eventMax) * 60}%` }}
                 aria-hidden="true"
               />
-              <span className="tabular-nums text-muted-foreground">{stage.count}</span>
+              <span className="tabular-nums text-muted-foreground">{row.count}</span>
             </div>
           ))}
+          {perEvent.length === 0 && (
+            <p className="py-2 text-xs text-muted-foreground">No speakers on an event yet.</p>
+          )}
         </div>
+
+        {contacts.length > 0 && (
+          <>
+            <p className="mt-4 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+              Sourcing pipeline
+            </p>
+            <div className="mt-2 flex flex-col gap-1.5">
+              {byStage.map((stage) => (
+                <div key={stage.key} className="flex items-center gap-2 text-xs">
+                  <span className="w-28 shrink-0 text-muted-foreground">{stage.label}</span>
+                  <span
+                    className="h-2 rounded-full bg-zinc-300"
+                    style={{ width: `${(stage.count / stageMax) * 60}%` }}
+                    aria-hidden="true"
+                  />
+                  <span className="tabular-nums text-muted-foreground">{stage.count}</span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

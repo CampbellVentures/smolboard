@@ -525,6 +525,8 @@ function formatDayTab(day: string): string {
 /* ============================== Grid ============================== */
 
 const SLOT_PX = 14;
+/** Narrowest a single week-view lane may get before a title stops being readable. */
+const LANE_MIN_PX = 120;
 
 function Grid({
   day,
@@ -744,8 +746,16 @@ function WeekView({
               end: minutesInDay(s.endTime!, tz),
             })),
           );
+          // A day running four parallel tracks would squeeze four lanes into a
+          // 160px column and nothing would be readable. Give each lane room and
+          // let the container scroll sideways instead.
+          const maxLanes = Math.max(1, ...[...placements.values()].map((p) => p.lanes));
           return (
-            <div key={d} className="min-w-40 flex-1 border-r border-zinc-100 last:border-r-0">
+            <div
+              key={d}
+              className="flex-1 border-r border-zinc-100 last:border-r-0"
+              style={{ minWidth: Math.max(160, maxLanes * LANE_MIN_PX) }}
+            >
               <button
                 type="button"
                 onClick={() => onPickDay(d)}

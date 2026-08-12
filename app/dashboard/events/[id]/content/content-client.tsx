@@ -40,6 +40,7 @@ import type {
   DeliverableSlotRow,
   DeliverableVersionRow,
   EventRow,
+  SessionRow,
   SpeakerProfileRow,
 } from "@/lib/types";
 
@@ -84,12 +85,14 @@ export function ContentTable({
   initialVersions,
   initialComments,
   initialProfiles,
+  initialSessions,
 }: {
   event: EventRow;
   initialSlots: DeliverableSlotRow[];
   initialVersions: DeliverableVersionRow[];
   initialComments: DeliverableCommentRow[];
   initialProfiles: SpeakerProfileRow[];
+  initialSessions: SessionRow[];
 }) {
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => setHydrated(true), []);
@@ -106,7 +109,12 @@ export function ContentTable({
   const profiles =
     !hydrated || profilesQ.loading ? initialProfiles : profilesQ.data.filter((r) => r.eventId === event.id);
 
+  const sessionsQ = db.useQuery<SessionRow>("Session");
+  const sessions =
+    !hydrated || sessionsQ.loading ? initialSessions : sessionsQ.data.filter((r) => r.eventId === event.id);
+
   const speakerByUser = useMemo(() => new Map(profiles.map((p) => [p.userId, p])), [profiles]);
+  const sessionById = useMemo(() => new Map(sessions.map((s) => [s.id, s])), [sessions]);
 
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<string>("all");
@@ -116,6 +124,9 @@ export function ContentTable({
   const [busyId, setBusyId] = useState<string | null>(null);
   const [zipping, setZipping] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Slot ids ticked for download. Kept across filter changes on purpose: you
+  // narrow to one speaker, tick their deck, clear the filter, tick another.
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const effectiveStatus = (slot: DeliverableSlotRow) =>
     latestVersion(versions, slot.id) ? (slot.status ?? "pending") : "awaiting_upload";
@@ -129,15 +140,45 @@ export function ContentTable({
     rows = rows.filter((slot) => {
       const speaker = speakerByUser.get(slot.speakerUserId);
       const latest = latestVersion(versions, slot.id);
+      const session = slot.sessionId ? sessionById.get(slot.sessionId) : undefined;
       return (
         slot.title.toLowerCase().includes(needle) ||
         (latest?.filename ?? "").toLowerCase().includes(needle) ||
-        (speaker?.name ?? "").toLowerCase().includes(needle)
+        (speaker?.name ?? "").toLowerCase().includes(needle) ||
+        (session?.title ?? "").toLowerCase().includes(needle)
       );
     });
   }
 
   const pendingCount = slots.filter((slot) => effectiveStatus(slot) === "pending").length;
+
+  // Only rows with an uploaded file can go in an archive.
+  const downloadable = rows.filter((slot) => latestVersion(versions, slot.id));
+  const selectedSlots = slots.filter(
+    (slot) => selected.has(slot.id) && latestVersion(versions, slot.id),
+  );
+  const allShownSelected =
+    downloadable.length > 0 && downloadable.every((slot) => selected.has(slot.id));
+
+  function toggleAllShown() {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      for (const slot of downloadable) {
+        if (allShownSelected) next.delete(slot.id);
+        else next.add(slot.id);
+      }
+      return next;
+    });
+  }
+
+  function toggleOne(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
   async function review(slot: DeliverableSlotRow, verdict: "approved" | "changes_requested", reviewNote?: string) {
     setBusyId(slot.id);
@@ -157,16 +198,17 @@ export function ContentTable({
     (slot) => effectiveStatus(slot) === "approved" && latestVersion(versions, slot.id),
   );
 
-  // Bundle every approved deliverable's latest version into a zip, fetched
-  // through short-lived signed URLs in the organizer's browser — the files
-  // never transit shared storage.
-  async function downloadApproved() {
+  // Bundle a set of deliverables' latest versions into a zip, fetched through
+  // short-lived signed URLs in the organizer's browser — the files never
+  // transit shared storage.
+  async function downloadSlots(list: DeliverableSlotRow[], label: string) {
+    if (list.length === 0) return;
     setZipping(true);
     setError(null);
     try {
       const entries = [];
       const seen = new Set<string>();
-      for (const slot of approvedSlots) {
+      for (const slot of list) {
         const version = latestVersion(versions, slot.id)!;
         const { url } = await callFn<{ url: string }>("getDeliverableFileUrl", {
           versionId: version.id,
@@ -184,7 +226,7 @@ export function ContentTable({
       const blob = new Blob([bytes.buffer as ArrayBuffer], { type: "application/zip" });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
-      link.download = `${event.slug || "event"}-approved-content.zip`;
+      link.download = `${event.slug || "event"}-${label}.zip`;
       link.click();
       URL.revokeObjectURL(link.href);
     } catch (caught) {
@@ -213,7 +255,7 @@ export function ContentTable({
           <Input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search files or speakers…"
+            placeholder="Search files, speakers, sessions…"
             className="w-full sm:w-64"
             aria-label="Search files"
             autoComplete="off"
@@ -235,13 +277,35 @@ export function ContentTable({
           <span className="text-xs tabular-nums text-muted-foreground">
             {pendingCount} pending · {rows.length} shown
           </span>
-          {approvedSlots.length > 0 ? (
+          {/* Ticking rows switches the button to that set; with nothing ticked
+              the common case (everything signed off) stays one click away. */}
+          {selectedSlots.length > 0 ? (
+            <>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => setSelected(new Set())}
+              >
+                Clear
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                disabled={zipping}
+                onClick={() => void downloadSlots(selectedSlots, "selected-content")}
+              >
+                <Archive data-icon="inline-start" />
+                {zipping ? "Zipping…" : `Download selected (${selectedSlots.length})`}
+              </Button>
+            </>
+          ) : approvedSlots.length > 0 ? (
             <Button
               type="button"
               size="sm"
               variant="outline"
               disabled={zipping}
-              onClick={() => void downloadApproved()}
+              onClick={() => void downloadSlots(approvedSlots, "approved-content")}
             >
               <Archive data-icon="inline-start" />
               {zipping ? "Zipping…" : `Download approved (${approvedSlots.length})`}
@@ -256,8 +320,19 @@ export function ContentTable({
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-10">
+                <input
+                  type="checkbox"
+                  checked={allShownSelected}
+                  onChange={toggleAllShown}
+                  disabled={downloadable.length === 0}
+                  aria-label="Select all files shown"
+                  className="size-4 rounded border-zinc-300 accent-zinc-900"
+                />
+              </TableHead>
               <TableHead>Speaker</TableHead>
               <TableHead>Deliverable</TableHead>
+              <TableHead>Session</TableHead>
               <TableHead>Uploaded</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Review</TableHead>
@@ -272,6 +347,16 @@ export function ContentTable({
               const rowStatus = effectiveStatus(slot);
               return (
                 <TableRow key={slot.id}>
+                  <TableCell>
+                    <input
+                      type="checkbox"
+                      checked={selected.has(slot.id)}
+                      onChange={() => toggleOne(slot.id)}
+                      disabled={!latest}
+                      aria-label={`Select ${latest?.filename ?? slot.title}`}
+                      className="size-4 rounded border-zinc-300 accent-zinc-900 disabled:opacity-40"
+                    />
+                  </TableCell>
                   <TableCell className="font-medium">{speaker?.name ?? "Unknown speaker"}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
@@ -307,6 +392,9 @@ export function ContentTable({
                     {rowStatus === "changes_requested" && slot.reviewNote ? (
                       <p className="mt-1 text-xs text-amber-700">“{slot.reviewNote}”</p>
                     ) : null}
+                  </TableCell>
+                  <TableCell className="max-w-48 truncate text-sm text-zinc-500">
+                    {slot.sessionId ? (sessionById.get(slot.sessionId)?.title ?? "—") : "—"}
                   </TableCell>
                   <TableCell className="text-sm tabular-nums text-zinc-500">
                     {/* Viewer-local time: differs from the SSR (UTC) render by design. */}

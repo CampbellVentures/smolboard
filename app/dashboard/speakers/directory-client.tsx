@@ -210,7 +210,7 @@ export function SpeakerDirectory({
           {people.length === 1 ? "person" : "people"} so far.
         </p>
       </DashboardHero>
-      <CrmMetrics contacts={contacts} />
+      <CrmMetrics people={people} contacts={contacts} events={liveEvents} />
 
       <div className="flex flex-wrap items-center gap-2">
         {(["directory", "pipeline"] as const).map((key) => (
