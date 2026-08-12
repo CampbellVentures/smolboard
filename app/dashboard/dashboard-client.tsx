@@ -123,6 +123,7 @@ function MembersList({
   const [inviteRole, setInviteRole] = useState("member");
   const [note, setNote] = useState<string | null>(null);
   const [inviting, setInviting] = useState(false);
+  const [togglingReviewer, setTogglingReviewer] = useState<string | null>(null);
 
   async function load() {
     setMembers(await listOrgMembers(orgId));
@@ -169,13 +170,23 @@ function MembersList({
 
   async function toggleReviewer(userId: string) {
     const active = !reviewerIds.has(userId);
-    await callFn("setReviewerMembership", { orgId, userId, active });
-    setReviewerIds((current) => {
-      const next = new Set(current);
-      if (active) next.add(userId);
-      else next.delete(userId);
-      return next;
-    });
+    setTogglingReviewer(userId);
+    setNote(null);
+    try {
+      await callFn("setReviewerMembership", { orgId, userId, active });
+      setReviewerIds((current) => {
+        const next = new Set(current);
+        if (active) next.add(userId);
+        else next.delete(userId);
+        return next;
+      });
+    } catch {
+      // The old version updated local state whether or not the call landed, so
+      // a failure showed as success until the next reload.
+      setNote("Couldn't change reviewer access. Check your role and try again.");
+    } finally {
+      setTogglingReviewer(null);
+    }
   }
 
   return (
@@ -244,11 +255,17 @@ function MembersList({
                     </div>
                     {reviewerIds.has(m.user_id) ? <Badge variant="outline">Reviewer</Badge> : null}
                     <RoleBadge role={m.role} />
-                    {canManage && m.role === "member" ? (
+                    {/* Owners and admins can review too, and on a small
+                        program they usually do. Gating this on role === member
+                        hid the control entirely in a workspace where everyone
+                        is an organizer, leaving a Reviewer badge nobody could
+                        change. The server has never restricted it that way. */}
+                    {canManage ? (
                       <Button
                         type="button"
                         size="sm"
                         variant="ghost"
+                        disabled={togglingReviewer === m.user_id}
                         onClick={() => void toggleReviewer(m.user_id)}
                       >
                         {reviewerIds.has(m.user_id) ? "Remove reviewer" : "Make reviewer"}
