@@ -40,16 +40,18 @@ export default mutation<
       reviewNote: args.status === "approved" ? null : note,
       reviewedAt: new Date().toISOString(),
     });
-    // Sending work back reopens the task. Uploading marks the task done, so
-    // without this the speaker's checklist still read "Complete" and counted
-    // toward 4/4 while the organizer was waiting on a new version. The whole
-    // point of the checklist is that it says what is left to do.
-    if (args.status === "changes_requested" && slot.taskId) {
+    // The verdict drives the speaker's checklist, in both directions. Sending
+    // work back reopens the task: uploading is what marked it done, so without
+    // this the checklist still read "Complete" and counted toward 4/4 while the
+    // organizer waited on a new version. Approving closes it, otherwise an
+    // accepted file left the speaker staring at an item they could not clear.
+    if (slot.taskId) {
       const task = await ctx.db.unsafe.get("SpeakerTask", slot.taskId as string);
       if (task && task.orgId === slot.orgId && task.eventId === slot.eventId) {
+        const done = args.status === "approved";
         await ctx.db.unsafe.update("SpeakerTask", slot.taskId as string, {
-          status: "pending",
-          completedAt: null,
+          status: done ? "done" : "pending",
+          completedAt: done ? (task.completedAt ?? new Date().toISOString()) : null,
         });
       }
     }

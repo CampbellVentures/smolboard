@@ -230,7 +230,13 @@ test("requesting changes reopens the speaker's task until a new version lands", 
   await callFn(speaker, "completeTask", { taskId: task.id, completed: true });
   expect(await taskStatus()).toBe("done");
 
-  // Approving leaves the task alone; it is already done.
+  // Approving closes the task, so the verdict drives the checklist both ways.
+  await callFn(fixture.a.owner, "reviewDeliverable", {
+    slotId: slot.id,
+    status: "changes_requested",
+    note: "One more pass on the closing slide.",
+  });
+  expect(await taskStatus()).toBe("pending");
   await callFn(fixture.a.owner, "reviewDeliverable", { slotId: slot.id, status: "approved" });
   expect(await taskStatus()).toBe("done");
 }, 30_000);
