@@ -50,8 +50,14 @@ test("dashboard shell exposes calm navigation, presence, and contextual copilot"
     </AppShell>,
   );
 
-  expect(screen.getByRole("heading", { name: "Event dashboard" })).toBeDefined();
+  // Inside an event the heading reads as a breadcrumb: the event, then the
+  // section. The sidebar links back out instead of naming the event again.
+  expect(
+    screen.getByRole("heading", { name: "AI Engineer Summit Event dashboard" }),
+  ).toBeDefined();
   expect(screen.getAllByRole("link", { name: "Overview" }).length).toBeGreaterThan(0);
+  const back = screen.getByRole("link", { name: "Back to events" });
+  expect(back.getAttribute("href")).toBe("/dashboard/events");
   expect(screen.getByLabelText("1 online in AI Engineer Summit")).toBeDefined();
 
   fireEvent.click(screen.getByRole("button", { name: "Ask smolboard" }));

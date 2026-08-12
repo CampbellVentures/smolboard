@@ -27,7 +27,8 @@ import {
   Palette,
   Code2,
   UserRound,
-  Check,
+  ArrowLeft,
+  ChevronRight,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -210,64 +211,21 @@ function eventNav(eventId: string): NavEntry<EventNavKey>[] {
 // Event switcher: the same shape as the workspace switcher directly above it,
 // so the sidebar reads workspace → event → sections. Sibling events come from
 // a live query, and picking one lands on the equivalent section.
-function EventSwitcher({
-  event,
-  workspaceId,
-  activeSection,
-  onNavigate,
-}: {
-  event: { id: string; name: string };
-  workspaceId: string;
-  activeSection?: string;
-  onNavigate?: () => void;
-}) {
-  const { data, loading } = db.useQuery<{ id: string; name: string; orgId: string; startDate?: string }>(
-    "Event",
-  );
-  const events = (loading ? [] : data)
-    .filter((row) => row.orgId === workspaceId)
-    .sort((a, b) => ((a.startDate ?? "") < (b.startDate ?? "") ? 1 : -1));
-  const section = activeSection && activeSection !== "overview" ? activeSection : "overview";
-
+// Inside an event, the sidebar's job is to get you back out of it. The event's
+// own name lives in the page header instead, so this row doesn't repeat it.
+function BackToEvents({ onNavigate }: { onNavigate?: () => void }) {
   return (
-    <details className="group relative">
-      <summary className="flex h-12 w-full cursor-pointer select-none list-none items-center gap-2.5 rounded-lg bg-background/70 px-2.5 transition-[background-color,scale] duration-150 ease-out hover:bg-background active:scale-[0.98] marker:hidden motion-reduce:transform-none [&::-webkit-details-marker]:hidden">
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border bg-muted/60 text-foreground shadow-sm">
-          <CalendarDays className="size-4" aria-hidden="true" />
-        </span>
-        <span className="min-w-0 flex-1 text-left">
-          <span className="block truncate text-[13px] font-semibold">{event.name}</span>
-          <span className="block text-[10px] text-muted-foreground">Event</span>
-        </span>
-        <ChevronsUpDown className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
-      </summary>
-      <div className="absolute left-0 right-0 top-[3.25rem] z-40 overflow-hidden rounded-lg border border-border bg-popover shadow-lg">
-        <ul className="max-h-72 overflow-y-auto py-1">
-          {events.map((row) => (
-            <li key={row.id}>
-              <Link
-                href={`/dashboard/events/${row.id}/${row.id === event.id ? section : "overview"}`}
-                onClick={onNavigate}
-                className="flex items-center gap-2 px-2.5 py-2 text-[13px] hover:bg-muted/70"
-              >
-                <span className="min-w-0 flex-1 truncate">{row.name}</span>
-                {row.id === event.id ? (
-                  <Check className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
-                ) : null}
-              </Link>
-            </li>
-          ))}
-        </ul>
-        <Link
-          href="/dashboard/events"
-          onClick={onNavigate}
-          className="flex items-center gap-2 border-t px-2.5 py-2 text-[13px] text-muted-foreground hover:bg-muted/70 hover:text-foreground"
-        >
-          <LayoutDashboard className="size-3.5" aria-hidden="true" />
-          All events
-        </Link>
-      </div>
-    </details>
+    <Link
+      href="/dashboard/events"
+      onClick={onNavigate}
+      className="group flex h-10 items-center gap-2 rounded-lg px-2.5 text-[13px] font-medium text-muted-foreground transition-[background-color,color,scale] duration-150 ease-out hover:bg-background hover:text-foreground active:scale-[0.98] motion-reduce:transform-none"
+    >
+      <ArrowLeft
+        className="size-4 shrink-0 transition-[translate] duration-150 ease-out group-hover:-translate-x-0.5 motion-reduce:transform-none"
+        aria-hidden="true"
+      />
+      Back to events
+    </Link>
   );
 }
 
@@ -460,13 +418,7 @@ export function AppShell({
               onSwitched={() => router.push("/dashboard")}
               className="w-full [&>button]:h-12 [&>button]:w-full [&>button]:justify-start [&>button]:rounded-lg [&>button]:border-0 [&>button]:bg-background/70 [&>button]:px-2.5 [&>button]:shadow-none [&>button]:transition-[background-color,scale] [&>button]:duration-150 [&>button]:ease-out [&>button]:hover:bg-background [&>button]:active:scale-[0.96] [&>button>span:first-child]:size-8 [&>button>span:first-child]:rounded-lg [&>button>span:nth-child(2)]:min-w-0 [&>button>span:nth-child(2)]:flex-1 [&>button>span:nth-child(2)]:text-left"
             />
-          {event ? (
-            <EventSwitcher
-              event={event}
-              workspaceId={workspaceId}
-              activeSection={active}
-            />
-          ) : null}
+          {event ? <BackToEvents /> : null}
         </div>
 
         {event ? (
@@ -531,12 +483,7 @@ export function AppShell({
                         className="w-full [&>button]:h-10 [&>button]:w-full [&>button]:justify-start [&>button]:rounded-lg [&>button]:border-0 [&>button]:bg-background/70 [&>button]:px-2.5 [&>button]:shadow-none"
                       />
                     {event ? (
-                      <EventSwitcher
-                        event={event}
-                        workspaceId={workspaceId}
-                        activeSection={active}
-                        onNavigate={() => setMobileNavOpen(false)}
-                      />
+                      <BackToEvents onNavigate={() => setMobileNavOpen(false)} />
                     ) : null}
                   </div>
                   <GroupedNav
@@ -559,7 +506,23 @@ export function AppShell({
                 </div>
               </SheetContent>
             </Sheet>
-            <h1 className="truncate text-[15px] font-semibold tracking-tight">{title}</h1>
+            {/* The sidebar no longer names the event, so the header does:
+                event, then the section you're in. The event name is the part
+                that gives when space runs out. */}
+            <h1 className="flex min-w-0 items-center gap-1.5 text-[15px] font-semibold tracking-tight">
+              {event ? (
+                <>
+                  <span className="hidden min-w-0 truncate font-normal text-muted-foreground sm:inline">
+                    {event.name}
+                  </span>
+                  <ChevronRight
+                    className="hidden size-3.5 shrink-0 text-muted-foreground/60 sm:inline"
+                    aria-hidden="true"
+                  />
+                </>
+              ) : null}
+              <span className="shrink-0 truncate">{title}</span>
+            </h1>
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2">
             {actions}
