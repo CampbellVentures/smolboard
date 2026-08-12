@@ -3,7 +3,7 @@ import { type Metadata, type PageProps } from "@pylonsync/react";
 import { CfpForm } from "./cfp-form";
 import { PublicEventShell } from "@/components/public-shell";
 import { publicEventInfo, resolvePublicEvent } from "@/lib/public-site";
-import type { EventRow, OrgRow, SubmissionFormRow } from "@/lib/types";
+import type { EventRow, OrgRow, SpeakerProfileRow, SubmissionFormRow } from "@/lib/types";
 import { cfpWindowState, formatCfpInstant } from "@/lib/cfp-window";
 import { CfpWindowNotice } from "./cfp-window-notice";
 
@@ -55,6 +55,16 @@ export default function CfpFormPage({
   const me = auth.user_id
     ? use(serverData.get<{ email?: string; displayName?: string }>("User", auth.user_id))
     : null;
+  // displayName is the sign-up address on accounts that never set one, and an
+  // email is not a name. The speaker's own profile for this event is the real
+  // source; the account name is the fallback, and only when it reads like one.
+  const myProfile = auth.user_id
+    ? use(serverData.list<SpeakerProfileRow>("SpeakerProfile")).find(
+        (p) => p.userId === auth.user_id && p.eventId === event.id,
+      )
+    : undefined;
+  const accountName = me?.displayName?.includes("@") ? "" : me?.displayName ?? "";
+  const initialName = myProfile?.name || accountName;
 
   return (
     <PublicEventShell event={publicEventInfo(org, event)} active="cfp">
@@ -73,7 +83,7 @@ export default function CfpFormPage({
           fieldsJson={form.fieldsJson}
           confirmationMessage={form.confirmationMessage}
           signedIn={Boolean(auth.user_id)}
-          initialName={me?.displayName ?? ""}
+          initialName={initialName}
           initialEmail={me?.email ?? ""}
           windowState={windowState}
         />
