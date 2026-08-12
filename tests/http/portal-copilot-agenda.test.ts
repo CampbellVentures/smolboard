@@ -304,3 +304,55 @@ test("a track can be removed, and its sessions keep their slot", async () => {
   expect(kept?.roomId).toBe(room.id);
   expect(kept?.startTime).toBeTruthy();
 });
+
+test("a round blocked only by debris from deleted submissions can be removed", async () => {
+  const fixture = await createTwoOrgFixture(server.baseUrl, "round-debris");
+  const { owner, eventId } = fixture.a;
+
+  const round = await callFn<{ id: string }>(owner, "saveReviewRound", {
+    eventId,
+    roundNumber: 2,
+    name: "Round 2",
+    status: "open",
+  });
+
+  // Real review work on this round must still block deletion. Reviewing is
+  // gated twice over: an org-level reviewer membership, then the round pool.
+  await callFn(owner, "setReviewerMembership", {
+    orgId: fixture.a.id,
+    userId: fixture.a.reviewer.userId,
+    active: true,
+  });
+  await callFn(owner, "setReviewRoundReviewer", {
+    eventId,
+    roundId: round.id,
+    reviewerUserId: fixture.a.reviewer.userId,
+    active: true,
+  });
+  await callFn(owner, "assignReview", {
+    eventId,
+    roundId: round.id,
+    submissionId: fixture.a.submissionIds[0],
+    reviewerUserId: fixture.a.reviewer.userId,
+  });
+  const blocked = await failCode(owner, "deleteReviewRound", { eventId, roundId: round.id });
+  expect(blocked.code).toBe("CONFLICT");
+
+  // Delete the submission out from under it: the assignment becomes debris the
+  // organizer can neither see nor remove, and used to block the round forever.
+  const { response } = await jsonRequest(
+    owner,
+    `/api/entities/Submission/${fixture.a.submissionIds[0]}`,
+    "DELETE",
+  );
+  expect(response.ok).toBe(true);
+
+  const removed = await callFn<{ deleted: boolean }>(owner, "deleteReviewRound", {
+    eventId,
+    roundId: round.id,
+  });
+  expect(removed.deleted).toBe(true);
+
+  const rounds = await entityList<{ id: string }>(owner, "ReviewRound");
+  expect(rounds.some((r) => r.id === round.id)).toBe(false);
+});
