@@ -500,3 +500,16 @@ export interface ContactSegmentRow {
   filtersJson?: { q?: string; tag?: string; stage?: string; company?: string };
   createdAt: string;
 }
+
+export interface PortalResourceRow {
+  id: string;
+  orgId: string;
+  eventId: string;
+  title: string;
+  body?: string;
+  embedUrl?: string;
+  published: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt?: string;
+}

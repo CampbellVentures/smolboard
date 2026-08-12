@@ -505,6 +505,30 @@ const Room = entity(
   { indexes: [{ name: "by_event", fields: ["eventId"], unique: false }] },
 );
 
+// Reference material an organizer publishes into the speaker portal: a run of
+// show, a brand kit, travel notes. `bodyHtml` accepts embed markup (a Notion or
+// Google Doc iframe, a video) so existing material can be pointed at rather
+// than retyped, which is the whole point of the requirement.
+const PortalResource = entity(
+  "PortalResource",
+  {
+    orgId: field.id("Org").readonly(),
+    eventId: field.id("Event").readonly(),
+    title: field.string(),
+    // Plain prose, rendered as markdown in the portal.
+    body: field.string().optional(),
+    // Raw embed markup. Sanitized on the way in (lib/portal-resources.ts) and
+    // rendered in a sandboxed iframe, never injected into the portal document.
+    embedUrl: field.string().optional(),
+    // Speakers only see published pages; drafts stay organizer-only.
+    published: field.boolean().default(false),
+    sortOrder: field.int().default(0),
+    createdAt: field.datetime().defaultNow(),
+    updatedAt: field.datetime().optional(),
+  },
+  { indexes: [{ name: "by_event", fields: ["eventId"], unique: false }] },
+);
+
 const Track = entity(
   "Track",
   {
@@ -999,6 +1023,17 @@ const roomPolicy = policy({
   allowUpdate: "false",
   allowDelete: "false",
 });
+const portalResourcePolicy = policy({
+  name: "portal_resource_access",
+  entity: "PortalResource",
+  // Organizers read their workspace's pages; speakers read published ones
+  // through getPortalResources (auth: "user"), which filters server-side.
+  // Writes are function-only so the embed sanitizer can never be bypassed.
+  allowRead: 'auth.tenantId == data.orgId && auth.hasAnyRole("owner", "admin")',
+  allowInsert: "false",
+  allowUpdate: "false",
+  allowDelete: "false",
+});
 const trackPolicy = policy({
   name: "track_access",
   entity: "Track",
@@ -1148,6 +1183,7 @@ const manifest = buildManifest({
     SubmissionParticipantInvite,
     SpeakerProfile,
     SpeakerFile,
+    PortalResource,
     DeliverableSlot,
     DeliverableVersion,
     DeliverableComment,
@@ -1197,6 +1233,7 @@ const manifest = buildManifest({
     reviewPolicy,
     roomPolicy,
     trackPolicy,
+    portalResourcePolicy,
     sessionPolicy,
     sessionContentRevisionPolicy,
     taskTemplatePolicy,

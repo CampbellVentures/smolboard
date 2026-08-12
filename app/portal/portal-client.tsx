@@ -15,6 +15,7 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { FormRenderer } from "@/components/form-renderer";
 import { SyncHeartbeat } from "@/components/sync-heartbeat";
+import { Markdown } from "@/components/markdown";
 import {
   CalendarDays,
   CheckCircle2,
@@ -323,6 +324,7 @@ export function PortalHome({
       <main className="mx-auto max-w-3xl space-y-8 px-6 py-10">
         {claimNotice ? <p className="rounded-lg border bg-white p-4 text-sm">{claimNotice}</p> : null}
         <ScheduleSection sessions={sessions} loading={scheduleLoading} />
+        <ResourcesSection />
 
         {drafts.some((draft) => draft.lifecycle === "draft") ? (
           <section>
@@ -445,6 +447,80 @@ export function PortalHome({
         </a>
       </footer>
     </div>
+  );
+}
+
+// Reference pages the organizer published for this speaker's events. Fetched
+// through a function rather than a live query: PortalResource reads are scoped
+// to organizers, and getPortalResources filters to published pages for events
+// this speaker is actually on.
+function ResourcesSection() {
+  const [resources, setResources] = useState<
+    { id: string; eventName: string; title: string; body: string | null; embedUrl: string | null }[]
+  >([]);
+  const [openId, setOpenId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    callFn<{ resources: typeof resources }>("getPortalResources", {})
+      .then((res) => alive && setResources(res.resources ?? []))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  if (resources.length === 0) return null;
+  return (
+    <section>
+      <h2 className="text-sm font-semibold text-zinc-900">Resources</h2>
+      <p className="mt-1 text-sm text-zinc-500">
+        Reference material from the organizers.
+      </p>
+      <ul className="mt-3 divide-y rounded-xl border bg-white">
+        {resources.map((resource) => {
+          const open = openId === resource.id;
+          return (
+            <li key={resource.id}>
+              <button
+                type="button"
+                onClick={() => setOpenId(open ? null : resource.id)}
+                aria-expanded={open}
+                className="flex min-h-12 w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-zinc-50"
+              >
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium text-zinc-900">
+                    {resource.title}
+                  </span>
+                  <span className="block truncate text-xs text-zinc-400">{resource.eventName}</span>
+                </span>
+                <span className="text-xs text-zinc-400">{open ? "Hide" : "Open"}</span>
+              </button>
+              {open ? (
+                <div className="space-y-3 border-t px-4 py-4">
+                  {resource.body ? (
+                    <Markdown className="text-[13.5px] text-zinc-700">{resource.body}</Markdown>
+                  ) : null}
+                  {resource.embedUrl ? (
+                    // Sandboxed, and the src is allowlisted server-side. The
+                    // frame gets no same-origin access, so embedded material
+                    // can't reach this speaker's session.
+                    <iframe
+                      src={resource.embedUrl}
+                      title={resource.title}
+                      loading="lazy"
+                      sandbox="allow-scripts allow-popups allow-forms"
+                      referrerPolicy="no-referrer"
+                      className="aspect-video w-full rounded-lg border bg-zinc-50"
+                    />
+                  ) : null}
+                </div>
+              ) : null}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 

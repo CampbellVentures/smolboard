@@ -14,6 +14,7 @@ import {
   ListChecks,
   FileStack,
   BookUser,
+  BookOpen,
   Mail,
   Settings as SettingsIcon,
   LogOut,
@@ -73,6 +74,7 @@ export type EventNavKey =
   | "tasks"
   | "content"
   | "emails"
+  | "resources"
   | "branding"
   | "embeds"
   | "event-settings";
@@ -207,6 +209,7 @@ function eventNav(eventId: string): NavEntry<EventNavKey>[] {
     { key: "tasks", label: "Tasks", href: `${base}/tasks`, Icon: ListChecks, group: "Speakers" },
     { key: "content", label: "Content", href: `${base}/content`, Icon: FileStack, group: "Speakers" },
     { key: "emails", label: "Emails", href: `${base}/emails`, Icon: Mail, group: "Speakers" },
+    { key: "resources", label: "Resources", href: `${base}/resources`, Icon: BookOpen, group: "Speakers" },
     { key: "branding", label: "Branding", href: `${base}/branding`, Icon: Palette, group: "Publish" },
     { key: "embeds", label: "Embeds", href: `${base}/embeds`, Icon: Code2, group: "Publish" },
     { key: "event-settings", label: "Settings", href: `${base}/settings`, Icon: SettingsIcon, group: "Event" },
