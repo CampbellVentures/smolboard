@@ -48,6 +48,7 @@ import {
   fmtTime,
   isoAt,
   minutesInDay,
+  packLanes,
   slotCount,
   type AgendaSession,
 } from "@/lib/agenda";
@@ -156,7 +157,10 @@ export function AgendaBuilder({
     if (days.length > 0 && !days.includes(day)) setDay(days[0]);
   }, [days, day]);
 
-  const [view, setView] = useState<"grid" | "list" | "tracks">("grid");
+  // The five ways the schedule can be read. "day" is the editable grid (rooms
+  // as columns); "week" lays every day side by side; the rest group the same
+  // sessions by a different key.
+  const [view, setView] = useState<"day" | "week" | "list" | "tracks" | "rooms">("day");
   const [openSessionId, setOpenSessionId] = useState<string | null>(null);
 
   const conflicts = useMemo(() => findConflicts(sessions.map(toAgenda)), [sessions]);
@@ -195,12 +199,19 @@ export function AgendaBuilder({
 
   /* ---------------- mutations ---------------- */
 
-  async function scheduleAt(payload: DragPayload, roomId: string, minutes: number) {
-    const start = isoAt(day, minutes, tz);
+  // targetDay defaults to the selected day; the week view passes the column
+  // that was dropped on.
+  async function scheduleAt(
+    payload: DragPayload,
+    roomId: string,
+    minutes: number,
+    targetDay: string = day,
+  ) {
+    const start = isoAt(targetDay, minutes, tz);
     if (payload.kind === "tray" && payload.submissionId) {
       const sub = submissions.find((s) => s.id === payload.submissionId);
       if (!sub) return;
-      const end = isoAt(day, minutes + DEFAULT_DURATION_MIN, tz);
+      const end = isoAt(targetDay, minutes + DEFAULT_DURATION_MIN, tz);
       const result = await callFn<{
         materialized: boolean;
         unresolved: Array<{ value?: string; reason: string }>;
@@ -226,9 +237,27 @@ export function AgendaBuilder({
       await callFn("saveSession", {
         eventId: event.id,
         sessionId: ses.id,
-        data: { roomId, startTime: start, endTime: isoAt(day, minutes + dur, tz) },
+        data: { roomId, startTime: start, endTime: isoAt(targetDay, minutes + dur, tz) },
       });
     }
+  }
+
+  // The week view has no room axis, so a drop only knows a day and a time. A
+  // session already in a room keeps it. Anything else needs a room we can't
+  // infer, unless the event only has one.
+  function scheduleInWeek(payload: DragPayload, targetDay: string, minutes: number) {
+    const existingRoom =
+      payload.kind === "session" && payload.sessionId
+        ? sessions.find((s) => s.id === payload.sessionId)?.roomId
+        : undefined;
+    const roomId = existingRoom ?? (rooms.length === 1 ? rooms[0].id : undefined);
+    if (!roomId) {
+      toast.error("Choose a room on the Day view.", {
+        description: "Week moves talks between days. It can't pick which room for you.",
+      });
+      return;
+    }
+    void scheduleAt(payload, roomId, minutes, targetDay);
   }
 
   async function addBreak() {
@@ -263,21 +292,24 @@ export function AgendaBuilder({
       {/* Toolbar: day tabs + views + rooms/tracks managers */}
       <DashboardToolbar>
         <div className="flex flex-wrap items-center gap-2">
+        {/* Week spans every day at once, so the day picker would do nothing. */}
+        {view !== "week" && (
+          <div className="flex rounded-lg border border-zinc-200 p-0.5">
+            {days.map((d) => (
+              <Button
+                key={d}
+                type="button"
+                size="sm"
+                variant={day === d ? "default" : "ghost"}
+                onClick={() => setDay(d)}
+              >
+                {formatDayTab(d)}
+              </Button>
+            ))}
+          </div>
+        )}
         <div className="flex rounded-lg border border-zinc-200 p-0.5">
-          {days.map((d) => (
-            <Button
-              key={d}
-              type="button"
-              size="sm"
-              variant={day === d ? "default" : "ghost"}
-              onClick={() => setDay(d)}
-            >
-              {formatDayTab(d)}
-            </Button>
-          ))}
-        </div>
-        <div className="flex rounded-lg border border-zinc-200 p-0.5">
-          {(["grid", "list", "tracks"] as const).map((v) => (
+          {(["day", "week", "list", "tracks", "rooms"] as const).map((v) => (
             <Button
               key={v}
               type="button"
@@ -400,7 +432,7 @@ export function AgendaBuilder({
 
         {/* Main view */}
         <div className="min-w-0 flex-1">
-          {view === "grid" &&
+          {view === "day" &&
             (rooms.length === 0 ? (
               <div className="rounded-xl border border-dashed border-zinc-300 bg-white px-6 py-14 text-center">
                 <p className="text-sm font-medium text-zinc-700">Add a room to start scheduling</p>
@@ -420,10 +452,37 @@ export function AgendaBuilder({
                 onOpen={setOpenSessionId}
               />
             ))}
+          {view === "week" && (
+            <WeekView
+              days={days}
+              tz={tz}
+              rooms={rooms}
+              tracks={tracks}
+              sessions={sessions}
+              conflicted={conflicted}
+              onDrop={scheduleInWeek}
+              onOpen={setOpenSessionId}
+              onPickDay={(d) => {
+                setDay(d);
+                setView("day");
+              }}
+            />
+          )}
           {view === "list" && (
             <ListView
               tz={tz}
               sessions={sessions.filter((s) => s.startTime && dayKey(s.startTime, tz) === day)}
+              rooms={rooms}
+              tracks={tracks}
+              conflicted={conflicted}
+              onOpen={setOpenSessionId}
+            />
+          )}
+          {view === "rooms" && (
+            <RoomsView
+              tz={tz}
+              day={day}
+              sessions={sessions}
               rooms={rooms}
               tracks={tracks}
               conflicted={conflicted}
@@ -621,6 +680,196 @@ function Grid({
   );
 }
 
+/* ============================== Week ============================== */
+
+// Every event day side by side. Rooms are not an axis here — a column holds the
+// whole day, so concurrent talks sit in lanes (see packLanes). Dragging a
+// scheduled block to another column moves it to that day and keeps its room.
+function WeekView({
+  days,
+  tz,
+  rooms,
+  tracks,
+  sessions,
+  conflicted,
+  onDrop,
+  onOpen,
+  onPickDay,
+}: {
+  days: string[];
+  tz: string;
+  rooms: RoomRow[];
+  tracks: TrackRow[];
+  sessions: SessionRow[];
+  conflicted: Set<string>;
+  onDrop: (payload: DragPayload, day: string, minutes: number) => void;
+  onOpen: (id: string) => void;
+  onPickDay: (day: string) => void;
+}) {
+  const [hover, setHover] = useState<{ day: string; slot: number } | null>(null);
+  const slots = slotCount();
+
+  function slotFromEvent(e: React.DragEvent<HTMLDivElement>): number {
+    const rect = e.currentTarget.getBoundingClientRect();
+    return Math.max(0, Math.min(slots - 1, Math.floor((e.clientY - rect.top) / SLOT_PX)));
+  }
+
+  const scheduled = sessions.filter((s) => s.startTime && s.endTime);
+
+  return (
+    <div className="overflow-x-auto rounded-xl border border-border bg-card">
+      <div className="flex min-w-fit">
+        {/* Time gutter, shared by every column. */}
+        <div className="w-14 shrink-0 border-r border-zinc-100">
+          <div className="h-9 border-b border-zinc-100" />
+          <div className="relative" style={{ height: slots * SLOT_PX }}>
+            {Array.from({ length: slots / 4 + 1 }, (_, i) => (
+              <span
+                key={i}
+                className="absolute right-2 -translate-y-1/2 text-[10px] text-zinc-400"
+                style={{ top: i * 4 * SLOT_PX }}
+              >
+                {fmtTime(DAY_START_MIN + i * 60)}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {days.map((d) => {
+          const daySessions = scheduled.filter((s) => dayKey(s.startTime!, tz) === d);
+          const placements = packLanes(
+            daySessions.map((s) => ({
+              id: s.id,
+              start: minutesInDay(s.startTime!, tz),
+              end: minutesInDay(s.endTime!, tz),
+            })),
+          );
+          return (
+            <div key={d} className="min-w-40 flex-1 border-r border-zinc-100 last:border-r-0">
+              <button
+                type="button"
+                onClick={() => onPickDay(d)}
+                title={`Open ${formatDayTab(d)} in the day view`}
+                className="flex h-9 w-full items-center justify-center gap-1.5 border-b border-zinc-100 px-2 text-[12.5px] font-semibold text-zinc-700 transition-colors hover:bg-zinc-50"
+              >
+                {formatDayTab(d)}
+                <span className="text-[11px] font-normal tabular-nums text-zinc-400">
+                  {daySessions.length}
+                </span>
+              </button>
+              <div
+                className="relative"
+                style={{ height: slots * SLOT_PX }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setHover({ day: d, slot: slotFromEvent(e) });
+                }}
+                onDragLeave={() => setHover(null)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setHover(null);
+                  try {
+                    const payload = JSON.parse(
+                      e.dataTransfer.getData("application/json"),
+                    ) as DragPayload;
+                    onDrop(payload, d, DAY_START_MIN + slotFromEvent(e) * SLOT_MINUTES);
+                  } catch {
+                    // Foreign drag (text, file) — ignore.
+                  }
+                }}
+              >
+                {Array.from({ length: slots / 4 }, (_, i) => (
+                  <div
+                    key={i}
+                    className="absolute inset-x-0 border-t border-zinc-50"
+                    style={{ top: i * 4 * SLOT_PX }}
+                  />
+                ))}
+                {hover?.day === d && (
+                  <div
+                    className="pointer-events-none absolute inset-x-1 rounded-md border-2 border-dashed border-zinc-400/70"
+                    style={{
+                      top: hover.slot * SLOT_PX,
+                      height: (DEFAULT_DURATION_MIN / SLOT_MINUTES) * SLOT_PX,
+                    }}
+                  />
+                )}
+                {daySessions.map((ses) => {
+                  const startMin = minutesInDay(ses.startTime!, tz);
+                  const endMin = minutesInDay(ses.endTime!, tz);
+                  const top = ((startMin - DAY_START_MIN) / SLOT_MINUTES) * SLOT_PX;
+                  const height = Math.max(SLOT_PX, ((endMin - startMin) / SLOT_MINUTES) * SLOT_PX);
+                  const { lane, lanes } = placements.get(ses.id) ?? { lane: 0, lanes: 1 };
+                  const track = tracks.find((t) => t.id === ses.trackId);
+                  const room = rooms.find((r) => r.id === ses.roomId);
+                  const isBad = conflicted.has(ses.id);
+                  return (
+                    <div
+                      key={ses.id}
+                      draggable
+                      onDragStart={(e) =>
+                        e.dataTransfer.setData(
+                          "application/json",
+                          JSON.stringify({
+                            kind: "session",
+                            sessionId: ses.id,
+                          } satisfies DragPayload),
+                        )
+                      }
+                      onClick={() => onOpen(ses.id)}
+                      className={
+                        "absolute cursor-grab overflow-hidden rounded-md border px-1.5 py-1 text-left shadow-sm transition-shadow hover:shadow active:cursor-grabbing " +
+                        (isBad
+                          ? "border-red-400 bg-red-50 ring-1 ring-red-400"
+                          : ses.kind === "break"
+                            ? "border-zinc-200 bg-zinc-50"
+                            : "border-zinc-200 bg-white")
+                      }
+                      style={{
+                        top,
+                        height,
+                        // Lanes divide the column; the 4px inset keeps blocks off
+                        // the day borders and off each other.
+                        left: `calc(${(lane / lanes) * 100}% + 2px)`,
+                        width: `calc(${100 / lanes}% - 4px)`,
+                      }}
+                      title={`${ses.title}${room ? ` · ${room.name}` : ""} · ${fmtTime(startMin)}–${fmtTime(endMin)}`}
+                    >
+                      <div className="flex items-center gap-1">
+                        {track && !isBad && (
+                          <span
+                            aria-hidden="true"
+                            className="size-1.5 shrink-0 rounded-full"
+                            style={{ backgroundColor: track.color ?? "#a1a1aa" }}
+                          />
+                        )}
+                        <span className="truncate text-[11px] font-semibold leading-tight text-zinc-800">
+                          {ses.title}
+                        </span>
+                      </div>
+                      {height >= 3 * SLOT_PX && (
+                        <div className="truncate text-[10px] text-zinc-400">
+                          {fmtTime(startMin)}
+                          {room ? ` · ${room.name}` : ""}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+                {daySessions.length === 0 && (
+                  <p className="pointer-events-none absolute inset-x-0 top-8 text-center text-[11px] text-zinc-300">
+                    Nothing scheduled
+                  </p>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 /* ============================== List ============================== */
 
 function ListView({
@@ -773,6 +1022,119 @@ function TracksView({
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+/* ============================== Rooms ============================== */
+
+// The same day as the grid, read one room at a time. The grid answers "what is
+// happening at 2pm"; this answers "what does Ballroom A do all day", which is
+// the question a venue lead actually asks.
+function RoomsView({
+  tz,
+  day,
+  sessions,
+  rooms,
+  tracks,
+  conflicted,
+  onOpen,
+}: {
+  tz: string;
+  day: string;
+  sessions: SessionRow[];
+  rooms: RoomRow[];
+  tracks: TrackRow[];
+  conflicted: Set<string>;
+  onOpen: (id: string) => void;
+}) {
+  const daySessions = sessions.filter((s) => s.startTime && dayKey(s.startTime, tz) === day);
+  const lanes: { room: RoomRow | null; list: SessionRow[] }[] = [
+    ...rooms.map((r) => ({
+      room: r as RoomRow | null,
+      list: daySessions.filter((s) => s.roomId === r.id),
+    })),
+    { room: null, list: daySessions.filter((s) => !s.roomId) },
+  ];
+
+  if (rooms.length === 0) {
+    return (
+      <div className="rounded-xl border border-dashed border-zinc-300 bg-white px-6 py-14 text-center">
+        <p className="text-sm font-medium text-zinc-700">No rooms yet</p>
+        <p className="mt-1 text-sm text-zinc-400">Add one with “+ room” in the toolbar.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      {lanes
+        // The catch-all lane only earns its space when something is in it.
+        .filter((lane) => lane.room !== null || lane.list.length > 0)
+        .map(({ room, list }) => (
+          <div key={room?.id ?? "none"} className="rounded-xl border border-zinc-200 bg-white">
+            <div className="flex items-center gap-2 border-b border-zinc-100 px-4 py-2.5 text-[13px] font-semibold text-zinc-800">
+              {room?.name ?? "No room"}
+              <span className="text-xs font-normal tabular-nums text-zinc-400">{list.length}</span>
+              {room?.capacity ? (
+                <span className="ml-auto text-[11px] font-normal text-zinc-400">
+                  seats {room.capacity}
+                </span>
+              ) : null}
+            </div>
+            <ul className="divide-y divide-zinc-50">
+              {list
+                .slice()
+                .sort((a, b) => (a.startTime! < b.startTime! ? -1 : 1))
+                .map((s) => {
+                  const track = tracks.find((t) => t.id === s.trackId);
+                  return (
+                    <li
+                      key={s.id}
+                      onClick={() => onOpen(s.id)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          onOpen(s.id);
+                        }
+                      }}
+                      role="button"
+                      tabIndex={0}
+                      className="cursor-pointer px-4 py-2.5 transition-colors hover:bg-zinc-50"
+                    >
+                      <div className="text-[13px] font-medium text-zinc-900">
+                        {s.title}
+                        {conflicted.has(s.id) && (
+                          <span className="ml-2 rounded-full bg-red-50 px-1.5 py-0.5 text-[10px] font-medium text-red-500">
+                            conflict
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1.5 text-[11px] text-zinc-400">
+                        {s.startTime && s.endTime
+                          ? `${fmtTime(minutesInDay(s.startTime, tz))}–${fmtTime(minutesInDay(s.endTime, tz))}`
+                          : "Unscheduled"}
+                        {track && (
+                          <>
+                            <span aria-hidden="true">·</span>
+                            <span
+                              aria-hidden="true"
+                              className="size-1.5 shrink-0 rounded-full"
+                              style={{ backgroundColor: track.color ?? "#a1a1aa" }}
+                            />
+                            {track.name}
+                          </>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+              {list.length === 0 && (
+                <li className="px-4 py-6 text-center text-xs text-zinc-300">Empty</li>
+              )}
+            </ul>
+          </div>
+        ))}
     </div>
   );
 }

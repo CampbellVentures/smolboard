@@ -125,6 +125,64 @@ export function isoAt(day: string, minutes: number, timeZone: string): string {
   return new Date(naive.getTime() + deltaMin * 60_000).toISOString();
 }
 
+// Side-by-side placement for a calendar column that holds every room at once
+// (the week view). Two talks at 10:00 in different rooms must not stack on top
+// of each other, so each gets a horizontal lane.
+//
+// Lanes are computed per CLUSTER of transitively overlapping items, not across
+// the whole day: a lone 4pm keynote spans the full column width even if the
+// morning had four parallel tracks.
+export interface LaneItem {
+  id: string;
+  start: number;
+  end: number;
+}
+
+export interface LanePlacement {
+  /** 0-based horizontal slot. */
+  lane: number;
+  /** How many lanes this item's cluster needs; the divisor for its width. */
+  lanes: number;
+}
+
+export function packLanes(items: LaneItem[]): Map<string, LanePlacement> {
+  // Longest-first on a tie so a 3-hour workshop anchors the left edge and the
+  // short talks cycle beside it, the way a calendar app lays it out.
+  const sorted = items.slice().sort((a, b) => a.start - b.start || b.end - a.end);
+  const placements = new Map<string, LanePlacement>();
+
+  let cluster: string[] = [];
+  let clusterEnd = -Infinity;
+  // laneEnds[i] is when lane i last became free.
+  const laneEnds: number[] = [];
+  const laneOf = new Map<string, number>();
+
+  function flush() {
+    for (const id of cluster) placements.set(id, { lane: laneOf.get(id) ?? 0, lanes: laneEnds.length });
+    cluster = [];
+    laneEnds.length = 0;
+    clusterEnd = -Infinity;
+  }
+
+  for (const item of sorted) {
+    // Starting at or after every open item ends means a fresh cluster.
+    if (cluster.length > 0 && item.start >= clusterEnd) flush();
+    let lane = laneEnds.findIndex((end) => end <= item.start);
+    if (lane === -1) {
+      lane = laneEnds.length;
+      laneEnds.push(item.end);
+    } else {
+      laneEnds[lane] = item.end;
+    }
+    laneOf.set(item.id, lane);
+    cluster.push(item.id);
+    clusterEnd = Math.max(clusterEnd, item.end);
+  }
+  if (cluster.length > 0) flush();
+
+  return placements;
+}
+
 export function fmtTime(minutes: number): string {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
