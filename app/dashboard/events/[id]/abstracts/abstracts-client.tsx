@@ -169,6 +169,11 @@ export function AbstractsView({
   // can't be the only order — deciding a shortlist means re-reading by title,
   // by track, and by status too.
   const [sort, setSort] = useState<SortState>({ key: "score", dir: "desc" });
+  // Which round the toolbar acts on. It used to be hardcoded to the highest,
+  // so once a round 2 existed the Scorecard button could only ever edit the
+  // newest round and round 1's config, reviewers, reminders and CSV export
+  // became permanently unreachable.
+  const [roundId, setRoundId] = useState<string | null>(null);
 
   const categories = useMemo(
     () => [...new Set(submissions.map((s) => s.category).filter(Boolean))] as string[],
@@ -231,6 +236,9 @@ export function AbstractsView({
       }
     });
   }, [submissions, statusFilter, categoryFilter, q, profiles, avgScore, sort]);
+
+  const activeRound =
+    rounds.find((r) => r.id === roundId) ?? rounds[rounds.length - 1] ?? null;
 
   const allSelected = rows.length > 0 && rows.every((r) => selected.has(r.id));
   function toggleAll() {
@@ -360,14 +368,28 @@ export function AbstractsView({
             )}
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            {rounds.length > 0 ? (
+            {rounds.length > 1 ? (
+              <Select
+                aria-label="Review round"
+                value={activeRound?.id ?? ""}
+                onChange={(e) => setRoundId(e.target.value)}
+                className="w-40"
+              >
+                {rounds.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.name?.trim() || `Round ${r.roundNumber}`}
+                  </option>
+                ))}
+              </Select>
+            ) : null}
+            {activeRound ? (
               <ReviewOperations
                 eventId={event.id}
-                round={rounds[rounds.length - 1]}
+                round={activeRound}
                 category={categoryFilter || undefined}
               />
             ) : null}
-            <AddRoundButton event={event} rounds={rounds} />
+            <AddRoundButton event={event} rounds={rounds} activeRound={activeRound} />
             <span className="text-xs tabular-nums text-muted-foreground">
               {rows.length} of {submissions.length}
             </span>
@@ -1135,14 +1157,23 @@ function RoundEditor({
   );
 }
 
-export function AddRoundButton({ event, rounds }: { event: EventRow; rounds: ReviewRoundRow[] }) {
+export function AddRoundButton({
+  event,
+  rounds,
+  activeRound,
+}: {
+  event: EventRow;
+  rounds: ReviewRoundRow[];
+  // The round the toolbar is pointed at, not simply the newest one.
+  activeRound?: ReviewRoundRow | null;
+}) {
   const next = (rounds[rounds.length - 1]?.roundNumber ?? 0) + 1;
   const [editing, setEditing] = useState<"new" | ReviewRoundRow | null>(null);
-  const latest = rounds[rounds.length - 1];
+  const target = activeRound ?? rounds[rounds.length - 1];
   return (
     <>
-      {latest ? (
-        <Button type="button" size="sm" variant="ghost" onClick={() => setEditing(latest)}>
+      {target ? (
+        <Button type="button" size="sm" variant="ghost" onClick={() => setEditing(target)}>
           Scorecard
         </Button>
       ) : null}
