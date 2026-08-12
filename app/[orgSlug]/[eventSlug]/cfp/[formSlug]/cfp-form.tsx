@@ -37,12 +37,16 @@ export function CfpForm({
   fieldsJson,
   confirmationMessage,
   signedIn,
+  initialName = "",
+  initialEmail = "",
   windowState,
 }: {
   formId: string;
   fieldsJson: unknown;
   confirmationMessage?: string;
   signedIn: boolean;
+  initialName?: string;
+  initialEmail?: string;
   windowState: "upcoming" | "open" | "closed";
 }) {
   const fields = useMemo(() => {
@@ -53,8 +57,8 @@ export function CfpForm({
     }
   }, [fieldsJson]);
 
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [name, setName] = useState(initialName);
+  const [email, setEmail] = useState(initialEmail);
   const [title, setTitle] = useState("");
   const [abstract, setAbstract] = useState("");
   const [answers, setAnswers] = useState<Answers>({});
@@ -81,7 +85,7 @@ export function CfpForm({
       const draft = drafts.find((candidate) => candidate.lifecycle === "draft");
       if (!draft) return;
       setDraftId(draft.id);
-      setName(draft.name);
+      if (draft.name) setName(draft.name);
       setTitle(draft.title);
       setAbstract(draft.abstract ?? "");
       setAnswers(draft.answersJson ?? {});

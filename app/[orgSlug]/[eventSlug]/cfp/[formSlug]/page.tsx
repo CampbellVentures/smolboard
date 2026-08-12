@@ -49,6 +49,12 @@ export default function CfpFormPage({
     closesAt: form.closesAt,
   });
   const deadline = formatCfpInstant(form.closesAt, event.timezone);
+  // A signed-in speaker should not retype what the session already proves.
+  // These were blank, so submitting meant filling in your own name and email
+  // again, and leaving either one failed the save after the rest was written.
+  const me = auth.user_id
+    ? use(serverData.get<{ email?: string; displayName?: string }>("User", auth.user_id))
+    : null;
 
   return (
     <PublicEventShell event={publicEventInfo(org, event)} active="cfp">
@@ -67,6 +73,8 @@ export default function CfpFormPage({
           fieldsJson={form.fieldsJson}
           confirmationMessage={form.confirmationMessage}
           signedIn={Boolean(auth.user_id)}
+          initialName={me?.displayName ?? ""}
+          initialEmail={me?.email ?? ""}
           windowState={windowState}
         />
       </div>
