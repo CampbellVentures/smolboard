@@ -5,12 +5,12 @@ import { COMPANY, bySlug } from "@/lib/site";
 
 export function generateMetadata({ params }: PageProps): Metadata {
   const page = bySlug(COMPANY, params.slug);
-  if (!page) return { title: "Not found — Acme", robots: "noindex" };
-  return { title: `${page.navLabel} — Acme`, description: page.summary };
+  if (!page) return { title: "Not found · smolboard", robots: "noindex" };
+  return { title: `${page.navLabel} · smolboard`, description: page.summary };
 }
 
-// `/company/:slug` — about, blog, careers, contact, privacy. Driven by COMPANY
-// in lib/site.ts. Unknown slugs 404.
+// `/company/:slug` — terms and privacy, the two pages signup links to.
+// Driven by COMPANY in lib/site.config.ts. Unknown slugs 404.
 export default function CompanyPage({ params, auth, response }: PageProps) {
   const page = bySlug(COMPANY, params.slug);
   if (!page) {

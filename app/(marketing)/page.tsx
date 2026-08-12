@@ -13,9 +13,9 @@ import { BRAND_GRADIENT, DashboardIconChip, type DashboardChipTone } from "@/com
 import { siteConfig } from "@/lib/site.config";
 import { HeroShowcase } from "./hero-showcase";
 
-// `/` — the smolboard landing. Self-contained copy (the Acme template's
-// product-catalog sections don't apply to a single-product tool); SEO strings
-// come from siteConfig so <head> and the page can't drift.
+// `/` — the smolboard landing. The copy lives here rather than in siteConfig,
+// which now only carries brand, colors, SEO, and the legal pages. SEO strings
+// still come from siteConfig so <head> and the page can't drift.
 export const metadata: Metadata = {
   title: siteConfig.seo.title,
   description: siteConfig.seo.description,

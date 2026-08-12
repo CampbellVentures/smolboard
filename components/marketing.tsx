@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "@pylonsync/react";
-import type { SitePage, Comparison } from "@/lib/site";
+import type { SitePage } from "@/lib/site";
 
 // Reusable presentational pieces for the marketing pages (homepage +
 // /products/[slug]). All server-rendered — no client JS. Restyle here and every
@@ -269,96 +269,6 @@ export function ContentPage({
                   className="rounded-xl border border-zinc-200 bg-paper px-4 py-3 text-[14px] font-medium text-zinc-700 transition-colors hover:border-zinc-300 hover:bg-white hover:text-zinc-900"
                 >
                   {s.navLabel} →
-                </Link>
-              ))}
-            </div>
-          </section>
-        </>
-      )}
-    </div>
-  );
-}
-
-// A comparison page: hero + a feature-by-feature table + links to the other
-// comparisons.
-export function ComparePage({
-  cmp,
-  all,
-  ctaHref,
-}: {
-  cmp: Comparison;
-  all: Comparison[];
-  ctaHref: string;
-}) {
-  const others = all.filter((c) => c.slug !== cmp.slug);
-  return (
-    <div className="bg-white text-zinc-900">
-      <section className={`${WRAP} pt-16 pb-16 sm:pt-20`}>
-        <Link
-          href="/"
-          className="text-[13px] text-zinc-500 transition-colors hover:text-zinc-900"
-        >
-          ← Home
-        </Link>
-        <div className="mt-6">
-          <Eyebrow>Compare</Eyebrow>
-        </div>
-        <h1 className="mt-4 max-w-2xl text-balance text-[2.25rem] font-semibold leading-[1.05] tracking-[-0.02em] sm:text-[3rem]">
-          {cmp.title}
-        </h1>
-        <p className="mt-6 max-w-xl text-[17px] leading-relaxed text-zinc-500">
-          {cmp.summary}
-        </p>
-        <div className="mt-8">
-          <PrimaryButton href={ctaHref}>Get started</PrimaryButton>
-        </div>
-      </section>
-
-      <Divider />
-      <section className={`${WRAP} py-16`}>
-        <div className="overflow-hidden rounded-2xl border border-zinc-200">
-          <table className="w-full text-[14px]">
-            <thead>
-              <tr className="border-b border-zinc-200 bg-paper text-left">
-                <th className="px-5 py-3 font-medium text-zinc-400"></th>
-                <th className="px-5 py-3 font-semibold text-zinc-900">Acme</th>
-                <th className="px-5 py-3 font-medium text-zinc-500">
-                  {cmp.competitor}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {cmp.rows.map((r) => (
-                <tr
-                  key={r.dim}
-                  className="border-b border-zinc-100 last:border-0"
-                >
-                  <td className="px-5 py-3.5 text-zinc-600">{r.dim}</td>
-                  <td className="px-5 py-3.5 font-medium text-zinc-900">
-                    <span className="mr-2 text-brand">✓</span>
-                    {r.acme}
-                  </td>
-                  <td className="px-5 py-3.5 text-zinc-500">{r.them}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      {others.length > 0 && (
-        <>
-          <Divider />
-          <section className={`${WRAP} py-16`}>
-            <Eyebrow>More comparisons</Eyebrow>
-            <div className="mt-6 grid gap-3 sm:grid-cols-3">
-              {others.map((c) => (
-                <Link
-                  key={c.slug}
-                  href={`/compare/${c.slug}`}
-                  className="rounded-xl border border-zinc-200 bg-paper px-4 py-3 text-[14px] font-medium text-zinc-700 transition-colors hover:border-zinc-300 hover:bg-white hover:text-zinc-900"
-                >
-                  {c.navLabel} →
                 </Link>
               ))}
             </div>

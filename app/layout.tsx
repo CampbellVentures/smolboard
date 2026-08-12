@@ -32,10 +32,9 @@ export default function RootLayout({ children }: LayoutProps) {
         {/* Assets live under /assets/img/ (3 path segments) so the top-level
             [orgSlug]/[eventSlug] routes can never shadow them. */}
         <link rel="icon" type="image/svg+xml" href="/assets/img/icon.svg" />
-        {/* No <title> here on purpose — each page's exported `metadata` /
-            `generateMetadata` sets it. A hardcoded title in the layout would
-            render first and win over the page's, so every tab would read
-            "Acme". */}
+        {/* No <title> here on purpose. Each page's exported `metadata` /
+            `generateMetadata` sets it; a hardcoded title in the layout would
+            render first and win, so every tab would read the same thing. */}
         {/* Inter is declared in app.ts (`fonts: [font({ family: "Inter", … })]`)
             and self-hosted by the build — the runtime injects the @font-face,
             <link rel=preload>, and a size-adjusted fallback here automatically.
