@@ -65,7 +65,10 @@ export function HeroShowcase() {
         role="tablist"
         aria-label="Product screens"
         onKeyDown={onKeyDown}
-        className="-mx-6 flex gap-1 overflow-x-auto px-6 pb-2 sm:mx-0 sm:justify-center sm:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        // A segmented control on a track, NOT a row of buttons. The active tab
+        // used to be a solid dark pill, identical to the primary CTA directly
+        // above it, so a selection state read as a second call to action.
+        className="-mx-6 flex gap-1 overflow-x-auto px-6 pb-2 sm:mx-auto sm:w-fit sm:gap-0.5 sm:rounded-full sm:bg-zinc-100/80 sm:px-1 sm:py-1 sm:pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {SURFACES.map((surface, index) => {
           const selected = index === active;
@@ -86,8 +89,8 @@ export function HeroShowcase() {
                 "h-10 shrink-0 rounded-full px-4 text-[13.5px] font-medium transition-colors",
                 "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900",
                 selected
-                  ? "bg-zinc-900 text-white"
-                  : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900",
+                  ? "bg-white text-zinc-900 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.06)]"
+                  : "text-zinc-500 hover:text-zinc-900",
               )}
             >
               {surface.label}
