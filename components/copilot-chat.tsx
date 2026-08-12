@@ -6,6 +6,7 @@ import { callFn } from "@/lib/fn";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { Markdown } from "@/components/markdown";
 import { toolByName } from "@/lib/agent-tools";
 import type { CopilotMessageRow, CopilotThreadRow } from "@/lib/types";
 import { Bot, Loader2, Plus, Send, Wrench, X } from "lucide-react";
@@ -165,7 +166,7 @@ export function CopilotChat({
                   <ToolChip key={`${t.name}-${i}`} event={t} />
                 ))}
                 {streamText ? (
-                  <p className="whitespace-pre-wrap text-[13px] leading-6">{streamText}</p>
+                  <Markdown className="text-[13px] text-foreground">{streamText}</Markdown>
                 ) : (
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <Loader2 className="size-3.5 animate-spin" /> Thinking…
@@ -259,14 +260,11 @@ function MessageBubble({ message }: { message: CopilotMessageRow }) {
             ))}
           </div>
         )}
-        <p
-          className={cn(
-            "whitespace-pre-wrap text-[13px] leading-6",
-            isUser ? "" : "text-foreground",
-          )}
-        >
-          {message.text}
-        </p>
+        {isUser ? (
+          <p className="whitespace-pre-wrap text-[13px] leading-6">{message.text}</p>
+        ) : (
+          <Markdown className="text-[13px] text-foreground">{message.text}</Markdown>
+        )}
       </div>
     </div>
   );
