@@ -9,6 +9,11 @@ export default query({
   async handler(ctx, args) {
     const event = await ctx.db.unsafe.get("Event", args.eventId);
     if (!event) return [];
+    // `internal: true` blocks the HTTP route, NOT the caller's identity: this
+    // runs under whoever invoked triageSubmissions, and any signed-in user can
+    // read a non-draft event's id off /api/entities/Event. Without this check
+    // an outsider could read every org's titles and abstracts.
+    await ctx.requireMember(event.orgId as string, { role: ["owner", "admin"] });
     const rounds = (await ctx.db.unsafe.query("ReviewRound", { eventId: args.eventId })).filter(
       (row) => row.orgId === event.orgId,
     );

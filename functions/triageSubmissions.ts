@@ -19,6 +19,10 @@ export default action<
   timeout: 120,
   args: { eventId: v.id("Event"), limit: v.optional(v.int()) },
   async handler(ctx, args) {
+    // An action has no ctx.db, so the membership gate lives in getTriageTargets
+    // (and again in recordTriage). That call is FIRST on purpose: a caller who
+    // is not an owner/admin of this event's org is rejected there, before a
+    // single token is spent. Do not reorder or cache past it.
     const targets = await ctx.runQuery<TriageTarget[]>("getTriageTargets", {
       eventId: args.eventId,
       limit: Math.min(Math.max(args.limit ?? 10, 1), 25),
