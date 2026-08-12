@@ -193,18 +193,27 @@ export function CfpForm({
   }
 
   async function inviteParticipant() {
-    if (!draftId) return;
+    if (!name.trim() || !title.trim()) {
+      setTopError("Add your name and a talk title before inviting a co-presenter.");
+      return;
+    }
     setBusy(true);
+    setTopError(null);
     try {
+      // A participant hangs off a draft, so make one if there is not one yet.
+      // The section used to render only after the speaker happened to click
+      // "Save draft", which meant anyone who filled the form and finalized
+      // never learned co-presenters existed.
+      const id = draftId ?? (await persistDraft(false));
       await callFn("inviteSubmissionParticipant", {
-        draftId,
+        draftId: id,
         name: participantName,
         email: participantEmail,
         roleLabel: participantRole,
       });
       setParticipantName("");
       setParticipantEmail("");
-      await loadParticipants(draftId);
+      await loadParticipants(id);
     } catch (error) {
       setTopError(error instanceof Error ? error.message : "Could not invite this participant.");
     } finally {
@@ -319,7 +328,7 @@ export function CfpForm({
         </div>
       )}
 
-      {authenticated && draftId ? (
+      {authenticated ? (
         <section className="rounded-lg border p-4">
           <h3 className="text-sm font-semibold">Co-presenters</h3>
           <p className="mt-1 text-xs text-zinc-500">Every invited participant must verify the exact invited email before finalization.</p>
