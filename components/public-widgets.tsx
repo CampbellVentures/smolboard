@@ -83,7 +83,10 @@ function ExpandableText({ text, label }: { text: string; label: string }) {
         ref={ref}
         id={id}
         className={
-          "mt-2 text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400" +
+          // Cap the measure. The host page sets the iframe width, and at 1440px
+          // this paragraph ran 217 characters per line, about three times a
+          // readable line.
+          "mt-2 max-w-[68ch] text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400" +
           (open ? "" : " line-clamp-2")
         }
       >
