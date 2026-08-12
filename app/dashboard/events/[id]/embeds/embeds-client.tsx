@@ -173,6 +173,21 @@ export function EmbedsPage({ event }: { event: EventRow }) {
               Paste one line of HTML. The widget stays in sync with your program, so
               accepting a talk or moving a session updates every embed.
             </p>
+            {/* The one dashboard page whose visitor is integrating rather than
+                organizing, so the API reference belongs here and nowhere else
+                in the shell. */}
+            <p className="mt-2 text-[13px] text-muted-foreground">
+              Building something custom?{" "}
+              <a
+                href="https://docs.smolboard.app"
+                target="_blank"
+                rel="noreferrer"
+                className="font-medium text-foreground underline underline-offset-2"
+              >
+                Read the API docs
+              </a>
+              .
+            </p>
           </div>
           {base ? (
             <div className="flex shrink-0 flex-wrap gap-2">

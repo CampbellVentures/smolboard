@@ -267,6 +267,12 @@ export default function LandingPage({ auth }: PageProps) {
             >
               Live demo
             </a>
+            <a
+              href="https://docs.smolboard.app"
+              className="text-[13px] text-zinc-500 transition-colors hover:text-zinc-900"
+            >
+              Docs
+            </a>
             <Link
               href="/portal"
               className="text-[13px] text-zinc-500 transition-colors hover:text-zinc-900"
