@@ -91,11 +91,15 @@ export default mutation<{ orgId: string }, { eventId: string }>({
         { type: "long_text", key: "outline", label: "Rough outline", required: false },
       ],
       routingJson: {
+        // op + value, the shape routeSubmission reads. These once said
+        // `equals: "Engineering"`, which parsed to an undefined op and sent
+        // every submission to the first rule's category.
         rules: [
-          { field: "track", equals: "Engineering", category: "engineering" },
-          { field: "track", equals: "Product", category: "product" },
-          { field: "track", equals: "Data", category: "data" },
+          { field: "track", op: "equals", value: "Engineering", category: "engineering" },
+          { field: "track", op: "equals", value: "Product", category: "product" },
+          { field: "track", op: "equals", value: "Data", category: "data" },
         ],
+        defaultCategory: "general",
       },
     })) as string;
 

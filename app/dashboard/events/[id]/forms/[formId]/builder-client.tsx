@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { callFn } from "@pylonsync/react";
 
 import {
@@ -64,7 +64,7 @@ import {
 
 // The form builder: field list + settings on the left, always-live preview on
 // the right (the SAME FormRenderer the public CFP page uses, so the preview is
-// the truth). Editing is local state; Save persists fieldsJson/routingJson.
+// the truth). Edits live in local state and autosave 700ms after they settle.
 
 const PALETTE: { type: FieldType; label: string; Icon: typeof Type }[] = [
   { type: "short_text", label: "Short text", Icon: Type },
@@ -143,6 +143,7 @@ export function FormBuilder({
   const [previewAnswers, setPreviewAnswers] = useState<Answers>({});
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<number | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const takenKeys = useMemo(() => new Set(fields.map((f) => f.key)), [fields]);
 
@@ -188,8 +189,30 @@ export function FormBuilder({
     });
   }
 
-  async function save() {
+  // The editor holds the whole form in local state, so every field of it has
+  // to be watched. Serializing is what makes reordering count as a change:
+  // moving a field swaps two array entries without changing the array's
+  // length or identity of any entry.
+  const snapshot = JSON.stringify({
+    name,
+    description,
+    confirmation,
+    status,
+    opensAt,
+    closesAt,
+    fields,
+    routing,
+    handoff,
+  });
+  const savedSnapshot = useRef(snapshot);
+  const inFlight = useRef(false);
+
+  const save = useCallback(async () => {
+    if (inFlight.current) return;
+    const pending = snapshot;
+    inFlight.current = true;
     setSaving(true);
+    setSaveError(null);
     try {
       await callFn("saveSubmissionForm", {
         eventId: event.id,
@@ -209,11 +232,33 @@ export function FormBuilder({
       // taking submissions, so the funnel's last step is the open transition,
       // not any save.
       if (status === "open" && form.status !== "open") track("cfp_published");
+      savedSnapshot.current = pending;
       setSavedAt(Date.now());
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Couldn't save this form.");
     } finally {
+      inFlight.current = false;
       setSaving(false);
     }
-  }
+  }, [snapshot, event.id, event.timezone, form.id, form.name, form.status, name, description, confirmation, status, opensAt, closesAt, fields, routing, handoff]);
+
+  // Autosave. Reordering a field then refreshing used to throw the change
+  // away, because persisting was a button nothing pointed you at.
+  useEffect(() => {
+    if (snapshot === savedSnapshot.current) return;
+    const timer = setTimeout(() => void save(), 700);
+    return () => clearTimeout(timer);
+  }, [snapshot, save]);
+
+  // A save in flight when the last edit lands would otherwise leave that edit
+  // unwritten until the next keystroke.
+  useEffect(() => {
+    if (saving || snapshot === savedSnapshot.current) return;
+    const timer = setTimeout(() => void save(), 200);
+    return () => clearTimeout(timer);
+  }, [saving, snapshot, save]);
+
+  const dirty = snapshot !== savedSnapshot.current;
 
   return (
     <DashboardWidePage className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
@@ -257,11 +302,16 @@ export function FormBuilder({
             >
               Public URL: /{orgSlug ?? "…"}/{event.slug}/cfp/{slugify(name) || form.slug}
             </span>
-            <div className="flex items-center gap-3">
-              {savedAt && !saving && <span className="text-xs text-emerald-600">Saved</span>}
-              <Button type="button" size="sm" onClick={save} disabled={saving}>
-                {saving ? "Saving…" : "Save form"}
-              </Button>
+            <div className="flex items-center gap-3" aria-live="polite">
+              {saveError ? (
+                <span className="text-xs text-red-600">{saveError}</span>
+              ) : saving ? (
+                <span className="text-xs text-zinc-500">Saving…</span>
+              ) : dirty ? (
+                <span className="text-xs text-zinc-400">Unsaved changes</span>
+              ) : savedAt ? (
+                <span className="text-xs text-emerald-600">Saved</span>
+              ) : null}
             </div>
           </div>
         </DashboardPanel>

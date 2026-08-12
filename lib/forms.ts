@@ -64,6 +64,11 @@ function answerMatches(answer: Answers[string], op: ShowIfOp, value?: string): b
     answer !== false &&
     !(Array.isArray(answer) && answer.length === 0);
   if (op === "is_answered") return answered;
+  // An operator we don't recognize matches nothing. This used to fall through
+  // to not_equals, so a malformed rule became an always-true rule: a routing
+  // config written in the wrong shape sent EVERY submission to the first
+  // rule's category, whatever the answer said.
+  if (op !== "equals" && op !== "not_equals" && op !== "contains") return false;
   if (!answered) return false;
   const target = value ?? "";
   if (Array.isArray(answer)) {

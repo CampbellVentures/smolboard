@@ -176,6 +176,22 @@ describe("routeSubmission", () => {
   test("no routing config → undefined", () => {
     expect(routeSubmission(undefined, { format: "Talk" })).toBeUndefined();
   });
+  test("a rule with an unrecognized operator matches nothing", () => {
+    // The sample event once wrote `equals: "Engineering"` instead of
+    // op + value. An undefined op fell through to not_equals, so the first
+    // rule matched every answered submission and the whole form routed to one
+    // category. A malformed rule has to be inert, not universally true.
+    const malformed = {
+      rules: [
+        { field: "track", equals: "Engineering", category: "engineering" },
+        { field: "track", equals: "Product", category: "product" },
+      ],
+      defaultCategory: "general",
+    } as unknown as RoutingConfig;
+    expect(routeSubmission(malformed, { track: "Product" })).toBe("general");
+    expect(routeSubmission(malformed, { track: "Engineering" })).toBe("general");
+    expect(routeSubmission(malformed, { track: "Data" })).toBe("general");
+  });
   test("no default → undefined", () => {
     expect(routeSubmission({ rules: [] }, {})).toBeUndefined();
   });
