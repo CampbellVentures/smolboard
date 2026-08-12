@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { callFn, db } from "@pylonsync/react";
 import {
   Check,
@@ -114,6 +114,8 @@ export function BrandingPage({ event }: { event: EventRow }) {
   const [heroUrl, setHeroUrl] = useState(initial.heroUrl ?? "");
   const [tagline, setTagline] = useState(initial.tagline ?? "");
   const [saving, setSaving] = useState(false);
+  const [savedAt, setSavedAt] = useState<number | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const publicUrl = orgSlug ? `/${orgSlug}/${event.slug}` : null;
   const activeAccent = accent || null;
@@ -135,12 +137,20 @@ export function BrandingPage({ event }: { event: EventRow }) {
     ? `${publicUrl}?brandPreview=${encodeURIComponent(previewJson)}`
     : null;
 
-  async function save() {
-    if (activeAccent && !isValidAccent(activeAccent)) {
-      toast.error("Accent must be a 6-digit hex color like #7c3aed.");
-      return;
-    }
+  // Autosave. Uploading a logo filled the field, said "Uploaded", and showed
+  // a preview, all of which read as committed. It was not: the change lived in
+  // local state until you found the Save button, so a refresh threw the image
+  // away. An accent mid-edit is skipped rather than written as garbage.
+  const savedSnapshot = useRef(draftJson);
+  const inFlight = useRef(false);
+
+  const save = useCallback(async () => {
+    if (inFlight.current) return;
+    if (activeAccent && !isValidAccent(activeAccent)) return;  // mid-edit hex
+    const pending = draftJson;
+    inFlight.current = true;
     setSaving(true);
+    setSaveError(null);
     try {
       const branding: EventBranding = {
         accent: activeAccent,
@@ -149,13 +159,24 @@ export function BrandingPage({ event }: { event: EventRow }) {
         heroUrl: heroUrl.trim() || null,
       };
       await db.update("Event", event.id, { brandingJson: JSON.stringify(branding) });
-      toast.success("Branding saved. The public site is updated.");
+      savedSnapshot.current = pending;
+      setSavedAt(Date.now());
     } catch {
-      toast.error("Couldn't save branding. Try again.");
+      setSaveError("Couldn't save branding.");
     } finally {
+      inFlight.current = false;
       setSaving(false);
     }
-  }
+  }, [draftJson, activeAccent, logoUrl, heroUrl, tagline, event.id]);
+
+  useEffect(() => {
+    if (saving || draftJson === savedSnapshot.current) return;
+    const timer = setTimeout(() => void save(), 700);
+    return () => clearTimeout(timer);
+  }, [saving, draftJson, save]);
+
+  const accentInvalid = Boolean(activeAccent) && !isValidAccent(activeAccent as string);
+  const dirty = draftJson !== savedSnapshot.current;
 
   return (
     <DashboardWidePage>
@@ -273,8 +294,13 @@ export function BrandingPage({ event }: { event: EventRow }) {
               <UploadImageButton eventId={event.id} label="Upload" onUploaded={setLogoUrl} />
             </div>
             {logoUrl.trim() ? (
-              <div className="mt-3 flex h-16 items-center rounded-lg border border-dashed bg-muted/30 px-4">
+              <div className="mt-3 flex h-16 items-center justify-between gap-3 rounded-lg border border-dashed bg-muted/30 px-4">
                 <img src={logoUrl} alt="Logo preview" className="h-8 w-auto max-w-48 object-contain" />
+                {/* Uploading was one-way: the only way back to no logo was to
+                    select the URL text and delete it. */}
+                <Button type="button" size="sm" variant="ghost" onClick={() => setLogoUrl("")}>
+                  Remove
+                </Button>
               </div>
             ) : null}
           </DashboardPanel>
@@ -298,12 +324,23 @@ export function BrandingPage({ event }: { event: EventRow }) {
               <UploadImageButton eventId={event.id} label="Upload" onUploaded={setHeroUrl} />
             </div>
             {heroUrl.trim() ? (
-              <div
-                className="mt-3 h-24 rounded-lg border bg-cover bg-center"
-                style={{ backgroundImage: `url(${heroUrl})` }}
-                role="img"
-                aria-label="Header image preview"
-              />
+              <div className="mt-3">
+                <div
+                  className="h-24 rounded-lg border bg-cover bg-center"
+                  style={{ backgroundImage: `url(${heroUrl})` }}
+                  role="img"
+                  aria-label="Header image preview"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="mt-1"
+                  onClick={() => setHeroUrl("")}
+                >
+                  Remove
+                </Button>
+              </div>
             ) : null}
           </DashboardPanel>
 
@@ -324,9 +361,19 @@ export function BrandingPage({ event }: { event: EventRow }) {
             />
           </DashboardPanel>
 
-          <Button type="button" onClick={() => void save()} disabled={saving} className="self-start">
-            {saving ? "Saving…" : "Save branding"}
-          </Button>
+          <p className="self-start text-xs" aria-live="polite">
+            {accentInvalid ? (
+              <span className="text-red-600">Accent must be a 6-digit hex color like #7c3aed.</span>
+            ) : saveError ? (
+              <span className="text-red-600">{saveError}</span>
+            ) : saving ? (
+              <span className="text-muted-foreground">Saving…</span>
+            ) : dirty ? (
+              <span className="text-muted-foreground">Unsaved changes</span>
+            ) : savedAt ? (
+              <span className="text-emerald-600">Saved. The public site is updated.</span>
+            ) : null}
+          </p>
         </div>
 
         {publicUrl ? (
