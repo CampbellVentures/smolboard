@@ -7,6 +7,10 @@ import type { RawRouteHandler } from "@pylonsync/react";
 // it from here points beacons at functions/ingestEvent.ts, which relays them
 // server-side and sidesteps the CORS block on the upstream endpoint. And a
 // first-party script path is not on the third-party host lists ad blockers use.
+//
+// No .js extension on purpose: a top-level /rt/track.js is claimed by static
+// asset serving before routing sees it, and 404s. The tracker only reads the
+// script URL's ORIGIN, so the path it lives at does not matter.
 const UPSTREAM = "https://userevtrail.com/track.js";
 
 // Cached in-process so we are not fetching the same file on every page load.

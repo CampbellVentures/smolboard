@@ -11,13 +11,13 @@ import React from "react";
 // in the browser and visitor hashes rotate every day.
 const SITE_KEY = "0fa94ce5a7535140";
 
-// Loaded from our own origin (app/rt/track.js/route.ts), not userevtrail.com.
+// Loaded from our own origin (app/rt/track/route.ts), not userevtrail.com.
 // The upstream ingest endpoint only allows its own origin, so a direct
 // cross-origin beacon is blocked by CORS on every page load; the tracker reads
 // its endpoint off this script's URL, which routes beacons through
 // functions/ingestEvent.ts instead.
 export function Analytics() {
-  return <script defer src="/rt/track.js" data-site={SITE_KEY} />;
+  return <script defer src="/rt/track" data-site={SITE_KEY} />;
 }
 
 // Fire a named conversion event. Safe to call before track.js has loaded or
