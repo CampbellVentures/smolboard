@@ -448,6 +448,9 @@ function SessionDetailDialog({
             {fmtTime(minutesInDay(session.startTime, tz))}–{fmtTime(minutesInDay(session.endTime, tz))}
             {roomName ? ` · ${roomName}` : ""}
             {trackName ? ` · ${trackName}` : ""}
+            {/* Session format (keynote, workshop, panel…) — the dimension the
+                CFP form collected and the handoff carried onto the session. */}
+            {session.kind ? ` · ${session.kind.replace(/^./, (c) => c.toUpperCase())}` : ""}
           </DialogDescription>
         </DialogHeader>
         {session.description ? (
