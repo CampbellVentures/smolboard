@@ -367,7 +367,17 @@ export function AbstractsView({
                       />
                     </TableCell>
                     <TableCell className="max-w-xs">
-                      <div className="truncate font-medium text-zinc-900">{s.title}</div>
+                      <div className="flex min-w-0 items-center gap-1.5">
+                        <span className="truncate font-medium text-zinc-900">{s.title}</span>
+                        {s.emailUnverified ? (
+                          <span
+                            title="This submitter has not confirmed their email address yet."
+                            className="shrink-0 rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700"
+                          >
+                            Email unverified
+                          </span>
+                        ) : null}
+                      </div>
                       <div className="truncate text-xs text-zinc-400">
                         {profile?.name ?? "—"}
                         {profile?.company ? ` · ${profile.company}` : ""}
