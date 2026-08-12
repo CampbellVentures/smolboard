@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useId, useMemo, useRef, useState } from "react";
 import { CalendarDays, ChevronLeft, MapPin, Search, Star } from "lucide-react";
 import { PersonAvatar } from "@/components/person-avatar";
 import { dayKey, eventSessionTime, fmtTime } from "@/lib/agenda";
@@ -51,6 +51,60 @@ function Empty({ label }: { label: string }) {
   );
 }
 
+// A description clamped to two lines, with the toggle shown only when there is
+// something hidden to reveal. Whether text overflows depends on the rendered
+// width, which the server does not know, so this measures after paint and
+// re-measures when the box resizes — the widget is embedded in iframes at
+// widths we do not control.
+function ExpandableText({ text, label }: { text: string; label: string }) {
+  const ref = useRef<HTMLParagraphElement | null>(null);
+  const [open, setOpen] = useState(false);
+  const [overflows, setOverflows] = useState(false);
+  const id = useId();
+
+  useEffect(() => {
+    // Only measure while clamped. Expanded, the paragraph always fits itself,
+    // so measuring would drop the toggle and strand the reader open.
+    if (open) return;
+    const el = ref.current;
+    if (!el) return;
+    // A pixel of tolerance: line-height rounding leaves sub-pixel residue on
+    // text that fits exactly.
+    const measure = () => setOverflows(el.scrollHeight - el.clientHeight > 1);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [open, text]);
+
+  return (
+    <>
+      <p
+        ref={ref}
+        id={id}
+        className={
+          "mt-2 text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400" +
+          (open ? "" : " line-clamp-2")
+        }
+      >
+        {text}
+      </p>
+      {overflows ? (
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          aria-controls={id}
+          aria-label={`${open ? "Show less" : "Show more"} of ${label}`}
+          className="mt-1 text-[12.5px] font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-900"
+        >
+          {open ? "Show less" : "Show more"}
+        </button>
+      ) : null}
+    </>
+  );
+}
+
 /* ------------------------------ Sessions list ------------------------------ */
 
 export function SessionsListWidget({
@@ -64,7 +118,6 @@ export function SessionsListWidget({
   const [track, setTrack] = useState("");
   const [format, setFormat] = useState("");
   const [room, setRoom] = useState("");
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const tz = feed?.event?.timezone ?? "UTC";
 
   const sessions = useMemo(() => {
@@ -159,7 +212,6 @@ export function SessionsListWidget({
       <div className="mt-3 grid gap-3">
         {sessions.map((s) => {
           const track = trackOf(s.trackId);
-          const open = expanded.has(s.id);
           return (
             <article
               key={s.id}
@@ -203,25 +255,7 @@ export function SessionsListWidget({
                 </div>
               ) : null}
               {s.description ? (
-                <>
-                  <p className={"mt-2 text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400" + (open ? "" : " line-clamp-2")}>
-                    {s.description}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setExpanded((prev) => {
-                        const next = new Set(prev);
-                        if (next.has(s.id)) next.delete(s.id);
-                        else next.add(s.id);
-                        return next;
-                      })
-                    }
-                    className="mt-1 text-[12.5px] font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-900"
-                  >
-                    {open ? "Show less" : "Show more"}
-                  </button>
-                </>
+                <ExpandableText text={s.description} label={s.title} />
               ) : null}
             </article>
           );
