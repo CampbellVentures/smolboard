@@ -324,14 +324,33 @@ function ScheduleSection({
                     const t = track(s.trackId);
                     const isBreak = s.kind === "break";
                     return (
+                      // A break is not interactive; a talk is. The interactive
+                      // one carries a role, a tab stop, and Enter/Space, so it
+                      // exists in the accessibility tree — it was a bare
+                      // click-only div, which meant keyboard users (and
+                      // anything driving by role) could not open a session at
+                      // all.
                       <article
                         key={s.id}
                         onClick={isBreak ? undefined : () => setDetail(s)}
+                        onKeyDown={
+                          isBreak
+                            ? undefined
+                            : (event) => {
+                                if (event.key === "Enter" || event.key === " ") {
+                                  event.preventDefault();
+                                  setDetail(s);
+                                }
+                              }
+                        }
+                        role={isBreak ? undefined : "button"}
+                        tabIndex={isBreak ? undefined : 0}
+                        aria-label={isBreak ? undefined : `${s.title} — session details`}
                         className={
                           "min-w-0 rounded-xl bg-white p-4 shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.04)] " +
                           (isBreak
                             ? "opacity-70"
-                            : "cursor-pointer transition-shadow hover:shadow-[0_0_0_1px_rgba(0,0,0,0.1),0_2px_6px_rgba(0,0,0,0.06)]")
+                            : "cursor-pointer transition-shadow hover:shadow-[0_0_0_1px_rgba(0,0,0,0.1),0_2px_6px_rgba(0,0,0,0.06)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900")
                         }
                       >
                         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">

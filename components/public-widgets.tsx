@@ -68,7 +68,13 @@ export function SessionsListWidget({
   const tz = feed?.event?.timezone ?? "UTC";
 
   const sessions = useMemo(() => {
-    const all = (feed?.sessions ?? []).filter((s) => s.startTime);
+    // Chronological. The catalogue arrived in storage order, so the 9am
+    // keynote sat fifth — which reads as a bug beside the agenda and
+    // itinerary, both of which are correctly ordered.
+    const all = (feed?.sessions ?? [])
+      .filter((s) => s.startTime)
+      .slice()
+      .sort((a, b) => (a.startTime! < b.startTime! ? -1 : a.startTime! > b.startTime! ? 1 : 0));
     const needle = q.trim().toLowerCase();
     return all.filter((s) => {
       if (track && s.trackId !== track) return false;
