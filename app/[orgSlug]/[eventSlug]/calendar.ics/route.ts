@@ -15,8 +15,14 @@ import type {
 // approved-content gate as getPublicSchedule (approved revision's title and
 // description — never the live draft). Anonymous by design — calendar apps
 // poll without cookies.
+//
+// ?sessions=<id>,<id> narrows the feed to one attendee's picks, which is what
+// the itinerary widget's "Add to calendar" sends. The ids are filtered against
+// the same published set the full feed serves, so an unknown or unpublished id
+// simply matches nothing.
 export const GET: RawRouteHandler<{ orgSlug: string; eventSlug: string }> = async ({
   params,
+  searchParams,
   db,
 }) => {
   const orgs = await db.list<OrgRow>("Org");
@@ -33,11 +39,17 @@ export const GET: RawRouteHandler<{ orgSlug: string; eventSlug: string }> = asyn
     db.query<SessionContentRevisionRow>("SessionContentRevision", { eventId: event.id }),
   ]);
   const roomName = new Map(rooms.map((room) => [room.id, room.name]));
+  const picked = (searchParams.sessions ?? "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
+  const wanted = picked.length > 0 ? new Set(picked) : null;
   const url = `https://www.smolboard.app/${params.orgSlug}/${params.eventSlug}`;
   const ics = buildScheduleCalendar({
-    calendarName: event.name,
+    calendarName: wanted ? `${event.name} — my schedule` : event.name,
     events: sessions
       .filter((session) => session.startTime && session.endTime)
+      .filter((session) => !wanted || wanted.has(session.id))
       .sort((a, b) => (a.startTime! < b.startTime! ? -1 : 1))
       .flatMap((session) => {
         const content = approvedContent(session, revisions);

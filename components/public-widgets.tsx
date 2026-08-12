@@ -314,11 +314,18 @@ export function ItineraryWidget({
           <Star className={"size-3.5 " + (mineOnly ? "fill-amber-500 text-amber-500" : "text-zinc-400")} aria-hidden="true" />
           My schedule ({stars.size})
         </button>
+        {/* Starred sessions go to the calendar feed as an id list, so what you
+            download is the schedule you built. With nothing starred it stays
+            the whole event. */}
         <a
-          href={icsHref}
+          href={
+            stars.size > 0
+              ? `${icsHref}${icsHref.includes("?") ? "&" : "?"}sessions=${[...stars].join(",")}`
+              : icsHref
+          }
           className="rounded-full bg-white px-3 py-1.5 text-[13px] font-medium text-zinc-600 shadow-[0_0_0_1px_rgba(0,0,0,0.06)] hover:text-zinc-900"
         >
-          Add to calendar
+          {stars.size > 0 ? `Add ${stars.size} to calendar` : "Add to calendar"}
         </a>
       </div>
 
