@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { packLanes, type LaneItem } from "../lib/agenda";
+import { eventSessionTime, packLanes, type LaneItem } from "../lib/agenda";
 
 // packLanes drives the week view: one column per day holding every room, so
 // concurrent talks need horizontal lanes instead of stacking.
@@ -78,4 +78,29 @@ test("every input id gets a placement", () => {
 
 test("empty input yields no placements", () => {
   expect(packLanes([]).size).toBe(0);
+});
+
+// eventSessionTime is what every public surface uses to render a session time.
+// The speaker detail panels used to call toLocaleString(undefined, …), so the
+// same talk read 9am on the schedule and 4pm in a speaker card for anyone
+// outside the event's timezone. These pin the property that broke.
+test("a session renders the same time regardless of who is looking", () => {
+  const start = "2026-10-01T16:00:00.000Z";
+  const end = "2026-10-01T16:45:00.000Z";
+  const tz = "America/Los_Angeles";
+  // 16:00Z is 9am Pacific in October, whatever the viewer's clock says.
+  expect(eventSessionTime(start, end, tz)).toBe("Oct 1 · 9am–9:45am");
+});
+
+test("the event timezone decides the calendar day, not the viewer's", () => {
+  // 03:00Z on Oct 2 is still the evening of Oct 1 in Los Angeles.
+  expect(eventSessionTime("2026-10-02T03:00:00.000Z", null, "America/Los_Angeles")).toBe(
+    "Oct 1 · 8pm",
+  );
+  // The same instant is already mid-morning on Oct 2 in Tokyo.
+  expect(eventSessionTime("2026-10-02T03:00:00.000Z", null, "Asia/Tokyo")).toBe("Oct 2 · 12pm");
+});
+
+test("a session with no end time renders just the start", () => {
+  expect(eventSessionTime("2026-10-01T16:00:00.000Z", undefined, "UTC")).toBe("Oct 1 · 4pm");
 });

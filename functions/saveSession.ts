@@ -91,17 +91,24 @@ export default mutation({
   },
 });
 
+// Absent key = leave the column alone. Present key with null = CLEAR it.
+//
+// These used to collapse null to undefined, and an update ignores undefined —
+// so an optional column could never be emptied once set. That made
+// "Unschedule" a silent no-op (it sends roomId/startTime/endTime as null, got
+// a 200, and changed nothing) and left deleteRoom's sessions pointing at a
+// room that no longer exists. Keep null.
 function cleanPayload(data: SessionData) {
   const payload: Record<string, unknown> = {};
-  if ("submissionId" in data) payload.submissionId = data.submissionId ?? undefined;
+  if ("submissionId" in data) payload.submissionId = data.submissionId ?? null;
   if ("title" in data) {
     payload.title = data.title!.trim();
   }
-  if ("description" in data) payload.description = data.description?.trim() || undefined;
-  if ("roomId" in data) payload.roomId = data.roomId ?? undefined;
-  if ("trackId" in data) payload.trackId = data.trackId ?? undefined;
-  if ("startTime" in data) payload.startTime = data.startTime ?? undefined;
-  if ("endTime" in data) payload.endTime = data.endTime ?? undefined;
+  if ("description" in data) payload.description = data.description?.trim() || null;
+  if ("roomId" in data) payload.roomId = data.roomId ?? null;
+  if ("trackId" in data) payload.trackId = data.trackId ?? null;
+  if ("startTime" in data) payload.startTime = data.startTime ?? null;
+  if ("endTime" in data) payload.endTime = data.endTime ?? null;
   if ("speakerUserIdsJson" in data) payload.speakerUserIdsJson = data.speakerUserIdsJson;
   if ("kind" in data) payload.kind = data.kind?.trim() || "talk";
   return payload;

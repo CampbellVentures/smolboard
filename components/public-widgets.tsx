@@ -3,7 +3,7 @@
 import React, { useMemo, useState } from "react";
 import { CalendarDays, ChevronLeft, MapPin, Search, Star } from "lucide-react";
 import { PersonAvatar } from "@/components/person-avatar";
-import { dayKey, fmtTime } from "@/lib/agenda";
+import { dayKey, eventSessionTime, fmtTime } from "@/lib/agenda";
 import type { ScheduleFeed, SpeakersFeed } from "@/app/[orgSlug]/[eventSlug]/event-site-client";
 
 // The embeddable widget surfaces beyond the one-page site: a sessions list, a
@@ -380,7 +380,7 @@ export function ItineraryWidget({
 
 /* ---------------------------- Speaker gallery ----------------------------- */
 
-export function SpeakerGalleryWidget({ feed }: { feed: SpeakersFeed | null }) {
+export function SpeakerGalleryWidget({ feed, tz }: { feed: SpeakersFeed | null; tz: string }) {
   const [q, setQ] = useState("");
   const [open, setOpen] = useState<SpeakersFeed["speakers"][number] | null>(null);
   if (!feed?.published || feed.speakers.length === 0) return <Empty label="No speakers published yet." />;
@@ -459,12 +459,7 @@ export function SpeakerGalleryWidget({ feed }: { feed: SpeakersFeed | null }) {
                       <p className="text-[13px] font-medium text-zinc-700">{session.title}</p>
                       {session.startTime ? (
                         <p className="text-[12px] text-zinc-500">
-                          {new Date(session.startTime).toLocaleString(undefined, {
-                            month: "short",
-                            day: "numeric",
-                            hour: "numeric",
-                            minute: "2-digit",
-                          })}
+                          {eventSessionTime(session.startTime, session.endTime, tz)}
                           {session.room ? ` · ${session.room}` : ""}
                         </p>
                       ) : null}

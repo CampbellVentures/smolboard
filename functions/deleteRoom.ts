@@ -12,10 +12,14 @@ export default mutation({
       (row) => row.orgId === event.orgId,
     );
     for (const session of sessions.filter((row) => row.roomId === args.roomId)) {
+      // null CLEARS the column; undefined would be ignored, which used to
+      // leave these sessions pointing at a room that no longer exists —
+      // invisible in the day grid and impossible to re-place, despite the
+      // confirm dialog promising they move back to Unscheduled.
       await ctx.db.unsafe.update("Session", session.id as string, {
-        roomId: undefined,
-        startTime: undefined,
-        endTime: undefined,
+        roomId: null,
+        startTime: null,
+        endTime: null,
       });
     }
     await ctx.db.unsafe.delete("Room", args.roomId);

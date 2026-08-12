@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "@pylonsync/react";
 import { callFn } from "@/lib/fn";
-import { dayKey, fmtTime, minutesInDay } from "@/lib/agenda";
+import { dayKey, eventSessionTime, fmtTime, minutesInDay } from "@/lib/agenda";
 import { buildCalendarUrls, buildIcsInvite } from "@/lib/ics";
 import {
   Dialog,
@@ -114,7 +114,8 @@ export function EventSite({
   }, [orgSlug, eventSlug, initialSchedule, initialSpeakers]);
 
   if (section === "schedule") return <ScheduleSection feed={schedule} error={error} embedded eventInfo={event} />;
-  if (section === "speakers") return <SpeakersSection feed={speakers} embedded />;
+  if (section === "speakers")
+    return <SpeakersSection feed={speakers} embedded tz={schedule?.event?.timezone ?? "UTC"} />;
 
   return (
     <>
@@ -141,7 +142,7 @@ export function EventSite({
       )}
 
       <ScheduleSection feed={schedule} error={error} eventInfo={event} />
-      <SpeakersSection feed={speakers} />
+      <SpeakersSection feed={speakers} tz={schedule?.event?.timezone ?? "UTC"} />
     </>
   );
 }
@@ -511,9 +512,13 @@ function SessionDetailDialog({
 function SpeakersSection({
   feed,
   embedded = false,
+  // Session times belong to the event, not the viewer. SpeakersFeed has no
+  // timezone of its own, so the caller passes the schedule feed's.
+  tz = "UTC",
 }: {
   feed: SpeakersFeed | null;
   embedded?: boolean;
+  tz?: string;
 }) {
   const [q, setQ] = useState("");
   const [open, setOpen] = useState<SpeakersFeed["speakers"][number] | null>(null);
@@ -591,7 +596,7 @@ function SpeakersSection({
       ) : null}
 
       {open ? (
-        <SpeakerDetailDialog speaker={open} onClose={() => setOpen(null)} />
+        <SpeakerDetailDialog speaker={open} onClose={() => setOpen(null)} tz={tz} />
       ) : null}
     </section>
   );
@@ -606,7 +611,9 @@ function speakerSurname(name: string): string {
 function SpeakerDetailDialog({
   speaker,
   onClose,
+  tz,
 }: {
+  tz: string;
   speaker: SpeakersFeed["speakers"][number];
   onClose: () => void;
 }) {
@@ -642,12 +649,7 @@ function SpeakerDetailDialog({
                   <p className="text-[13.5px] font-medium text-zinc-800">{session.title}</p>
                   {session.startTime ? (
                     <p className="text-[12.5px] text-zinc-500">
-                      {new Date(session.startTime).toLocaleString(undefined, {
-                        month: "short",
-                        day: "numeric",
-                        hour: "numeric",
-                        minute: "2-digit",
-                      })}
+                      {eventSessionTime(session.startTime, session.endTime, tz)}
                       {session.room ? ` · ${session.room}` : ""}
                     </p>
                   ) : session.room ? (

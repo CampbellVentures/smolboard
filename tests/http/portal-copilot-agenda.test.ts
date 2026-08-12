@@ -2,6 +2,7 @@ import { afterAll, beforeAll, expect, test } from "bun:test";
 import {
   callFn,
   createTwoOrgFixture,
+  entityList,
   jsonRequest,
   type TestIdentity,
 } from "../helpers/http-fixtures";
@@ -197,4 +198,55 @@ test("agenda scheduling persists a placement and refuses a conflicting one", asy
     data: { roomId: room.id, startTime: start, endTime: end },
   });
   expect(cross.status).toBeGreaterThanOrEqual(400);
+});
+
+test("a scheduled session can be unscheduled, and deleting a room frees its sessions", async () => {
+  const fixture = await createTwoOrgFixture(server.baseUrl, "unschedule");
+  const { owner, eventId, sessionId } = fixture.a;
+  const room = await callFn<{ id: string }>(owner, "saveRoom", {
+    eventId,
+    name: "Clearable Hall",
+    sortOrder: 0,
+  });
+
+  const place = async (id: string) =>
+    callFn(owner, "saveSession", {
+      eventId,
+      sessionId: id,
+      data: {
+        roomId: room.id,
+        startTime: "2027-05-12T17:00:00.000Z",
+        endTime: "2027-05-12T17:30:00.000Z",
+      },
+    });
+
+  async function read(id: string) {
+    const list = await entityList<{ id: string; roomId?: string | null; startTime?: string | null }>(
+      owner,
+      "Session",
+    );
+    return list.find((s) => s.id === id);
+  }
+
+  await place(sessionId);
+  expect((await read(sessionId))?.roomId).toBe(room.id);
+
+  // Unschedule: null must CLEAR the columns, not be ignored.
+  await callFn(owner, "saveSession", {
+    eventId,
+    sessionId,
+    data: { roomId: null, startTime: null, endTime: null },
+  });
+  const cleared = await read(sessionId);
+  expect(cleared?.roomId ?? null).toBeNull();
+  expect(cleared?.startTime ?? null).toBeNull();
+
+  // Deleting a room must free the sessions in it, as its confirm dialog says.
+  await place(sessionId);
+  expect((await read(sessionId))?.roomId).toBe(room.id);
+  await callFn(owner, "deleteRoom", { roomId: room.id });
+  const freed = await read(sessionId);
+  expect(freed).toBeDefined();
+  expect(freed?.roomId ?? null).toBeNull();
+  expect(freed?.startTime ?? null).toBeNull();
 });

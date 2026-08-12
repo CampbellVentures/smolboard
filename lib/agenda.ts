@@ -125,6 +125,33 @@ export function isoAt(day: string, minutes: number, timeZone: string): string {
   return new Date(naive.getTime() + deltaMin * 60_000).toISOString();
 }
 
+const SHORT_MONTHS = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
+/**
+ * "Oct 1 · 9am–9:45am" in the EVENT's timezone.
+ *
+ * Every public surface has to agree on when a session happens. The speaker
+ * detail panels used to call toLocaleString(undefined, …), which renders in
+ * the VIEWER's zone — so the same talk read 9am on the schedule and 4pm in a
+ * speaker's card for anyone outside the event's timezone, and a day later in
+ * Tokyo. Session times are a property of the event, not of who is looking.
+ */
+export function eventSessionTime(
+  startIso: string,
+  endIso: string | null | undefined,
+  timeZone: string,
+): string {
+  const day = dayKey(startIso, timeZone);
+  const [, month, date] = day.split("-");
+  const label = `${SHORT_MONTHS[Number(month) - 1]} ${Number(date)}`;
+  const start = fmtTime(minutesInDay(startIso, timeZone));
+  if (!endIso) return `${label} · ${start}`;
+  return `${label} · ${start}–${fmtTime(minutesInDay(endIso, timeZone))}`;
+}
+
 // Side-by-side placement for a calendar column that holds every room at once
 // (the week view). Two talks at 10:00 in different rooms must not stack on top
 // of each other, so each gets a horizontal lane.

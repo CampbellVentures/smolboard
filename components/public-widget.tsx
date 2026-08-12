@@ -29,5 +29,7 @@ export function PublicWidget({
   if (kind === "itinerary") {
     return <ItineraryWidget feed={schedule} eventSlug={eventSlug} icsHref={icsHref} accent={accent} />;
   }
-  return <SpeakerGalleryWidget feed={speakers} />;
+  // The speakers feed carries no timezone; session times must still read in
+  // the EVENT's zone, so borrow it from the schedule feed.
+  return <SpeakerGalleryWidget feed={speakers} tz={schedule?.event?.timezone ?? "UTC"} />;
 }
