@@ -12,6 +12,14 @@ import {
 import { BRAND_GRADIENT, DashboardIconChip, type DashboardChipTone } from "@/components/dashboard";
 import { siteConfig } from "@/lib/site.config";
 import { HeroShowcase } from "./hero-showcase";
+import {
+  AgendaIllustration,
+  EmailsIllustration,
+  EmbedsIllustration,
+  FormsIllustration,
+  PortalIllustration,
+  ReviewsIllustration,
+} from "./feature-illustrations";
 
 // `/` — the smolboard landing. The copy lives here rather than in siteConfig,
 // which now only carries brand, colors, SEO, and the legal pages. SEO strings
@@ -45,40 +53,56 @@ const FEATURES: {
   body: string;
   icon: LucideIcon;
   tone: DashboardChipTone;
+  illustration: () => React.ReactElement;
+  // Column span in the 6-wide bento at lg. 2 + 4 rows read better than a flat
+  // 3-up grid and give the wider illustrations room to be legible.
+  span: string;
 }[] = [
   {
     icon: FileText,
     tone: "violet",
+    illustration: FormsIllustration,
+    span: "lg:col-span-2",
     title: "CFP forms with conditional logic",
-    body: "A visual builder with show-when rules and category routing. The server re-validates everything, including conditionally required fields.",
-  },
-  {
-    icon: Mic2,
-    tone: "sky",
-    title: "Self-service speaker portal",
-    body: "Speakers get their own portal for profile, uploads, and onboarding tasks. They only ever see their own sessions.",
-  },
-  {
-    icon: Star,
-    tone: "amber",
-    title: "Reviews and scoring",
-    body: "Multi-round evaluation, weighted scorecards, blind review, per-reviewer assignment, and a results table you can sort and export.",
+    body: "Show-when rules and category routing, re-validated on the server.",
   },
   {
     icon: CalendarClock,
     tone: "emerald",
+    illustration: AgendaIllustration,
+    span: "lg:col-span-4",
     title: "Drag-and-drop agenda",
-    body: "Day-by-room grid with 15-minute slots. Room overlaps and double-booked speakers surface the moment you create them.",
+    body: "Day-by-room grid with 15-minute slots. Room overlaps and double-booked speakers surface the moment you create them, before you publish.",
+  },
+  {
+    icon: Star,
+    tone: "amber",
+    illustration: ReviewsIllustration,
+    span: "lg:col-span-3",
+    title: "Reviews and scoring",
+    body: "Multi-round evaluation, weighted scorecards, blind review, and a results table you can sort and export.",
+  },
+  {
+    icon: Mic2,
+    tone: "sky",
+    illustration: PortalIllustration,
+    span: "lg:col-span-3",
+    title: "Self-service speaker portal",
+    body: "Profile, uploads, and onboarding tasks. Speakers only ever see their own sessions.",
   },
   {
     icon: Mail,
     tone: "pink",
+    illustration: EmailsIllustration,
+    span: "lg:col-span-2",
     title: "Emails and real calendar invites",
-    body: "Templated accept and reject sends, scheduled reminders, and .ics invites that RSVP into Gmail and Outlook. Reschedules update the event instead of duplicating it.",
+    body: "Templated decisions, scheduled reminders, and .ics invites that RSVP into Gmail and Outlook.",
   },
   {
     icon: Code2,
     tone: "zinc",
+    illustration: EmbedsIllustration,
+    span: "lg:col-span-4",
     title: "Five embeddable widgets",
     body: "Sessions list, speakers, agenda, itinerary, and photo gallery. Paste a snippet into any site and it stays in sync with your data.",
   },
@@ -140,21 +164,29 @@ export default function LandingPage({ auth }: PageProps) {
             From the first submission to the published schedule, without paying
             per speaker or per event.
           </p>
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {FEATURES.map((f) => (
-              <div
-                key={f.title}
-                className="rounded-xl bg-white p-5 shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.04)]"
-              >
-                <DashboardIconChip icon={f.icon} tone={f.tone} />
-                <h3 className="mt-3.5 text-balance text-[15px] font-semibold text-zinc-900">
-                  {f.title}
-                </h3>
-                <p className="mt-1.5 text-pretty text-[13.5px] leading-relaxed text-zinc-500">
-                  {f.body}
-                </p>
-              </div>
-            ))}
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
+            {FEATURES.map((f) => {
+              const Illustration = f.illustration;
+              return (
+                <div
+                  key={f.title}
+                  className={`flex h-full flex-col rounded-2xl bg-white p-3 shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.04)] ${f.span}`}
+                >
+                  <Illustration />
+                  <div className="p-2 pt-3">
+                    <div className="flex items-center gap-2.5">
+                      <DashboardIconChip icon={f.icon} tone={f.tone} size="sm" />
+                      <h3 className="text-balance text-[15px] font-semibold text-zinc-900">
+                        {f.title}
+                      </h3>
+                    </div>
+                    <p className="mt-2 text-pretty text-[13.5px] leading-relaxed text-zinc-500">
+                      {f.body}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>

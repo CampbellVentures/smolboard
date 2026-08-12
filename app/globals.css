@@ -159,3 +159,84 @@
     cursor: pointer;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Landing page feature illustrations.
+   Ambient loops that show what each feature does. Every one is CSS only, so
+   the cards cost no JavaScript, and all of them stop under
+   prefers-reduced-motion — an animation that repeats forever is exactly the
+   kind a motion-sensitive visitor needs to be able to turn off.
+--------------------------------------------------------------------------- */
+@keyframes sb-field-in {
+  0%, 8% { opacity: 0; transform: translateY(6px); }
+  18%, 94% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(6px); }
+}
+@keyframes sb-select-swap {
+  0%, 14% { opacity: 0; }
+  20%, 100% { opacity: 1; }
+}
+@keyframes sb-drop-in {
+  0%, 6% { opacity: 0; transform: translate(-58px, 34px) scale(0.96); }
+  28%, 95% { opacity: 1; transform: translate(0, 0) scale(1); }
+  100% { opacity: 0; transform: translate(-58px, 34px) scale(0.96); }
+}
+@keyframes sb-conflict {
+  0%, 36% { opacity: 0; transform: scale(0.9); }
+  46%, 95% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.9); }
+}
+@keyframes sb-star {
+  0%, 8% { opacity: 0.18; transform: scale(0.85); }
+  18%, 95% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0.18; transform: scale(0.85); }
+}
+@keyframes sb-check {
+  0%, 8% { opacity: 0; transform: scale(0.6); }
+  20%, 95% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.6); }
+}
+@keyframes sb-strike {
+  0%, 12% { transform: scaleX(0); }
+  26%, 95% { transform: scaleX(1); }
+  100% { transform: scaleX(0); }
+}
+@keyframes sb-send {
+  0%, 6% { opacity: 0; transform: translate(-10px, 8px) rotate(-6deg); }
+  22%, 82% { opacity: 1; transform: translate(0, 0) rotate(0deg); }
+  100% { opacity: 0; transform: translate(22px, -14px) rotate(6deg); }
+}
+@keyframes sb-caret {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+@keyframes sb-type {
+  0%, 4% { width: 0; }
+  28%, 100% { width: 100%; }
+}
+@keyframes sb-widget-in {
+  0%, 30% { opacity: 0; transform: translateY(8px); }
+  44%, 100% { opacity: 1; transform: translateY(0); }
+}
+@keyframes sb-sweep {
+  0% { transform: translateX(-120%); }
+  100% { transform: translateX(320%); }
+}
+
+.sb-anim {
+  animation-duration: 6s;
+  animation-iteration-count: infinite;
+  animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sb-anim {
+    animation: none !important;
+  }
+  /* Without the loop, show each illustration in its resolved state rather
+     than its first keyframe, which is usually invisible. */
+  .sb-anim {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
