@@ -8,9 +8,10 @@ import type { RawRouteHandler } from "@pylonsync/react";
 // server-side and sidesteps the CORS block on the upstream endpoint. And a
 // first-party script path is not on the third-party host lists ad blockers use.
 //
-// No .js extension on purpose: a top-level /rt/track.js is claimed by static
-// asset serving before routing sees it, and 404s. The tracker only reads the
-// script URL's ORIGIN, so the path it lives at does not matter.
+// THREE path segments on purpose. A two-segment path is shadowed by the public
+// /:orgSlug/:eventSlug event page, which matches it, finds no such org, and
+// renders a 404 — the same trap app/layout.tsx notes for /assets/img. The
+// tracker only reads this script URL's ORIGIN, so the path is free.
 const UPSTREAM = "https://userevtrail.com/track.js";
 
 // Cached in-process so we are not fetching the same file on every page load.
