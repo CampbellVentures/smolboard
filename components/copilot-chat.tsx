@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { Markdown } from "@/components/markdown";
+import { MAX_COPILOT_MESSAGE_CHARS } from "@/lib/copilot-limits";
 import { toolByName } from "@/lib/agent-tools";
 import type { CopilotMessageRow, CopilotThreadRow } from "@/lib/types";
 import { Bot, Loader2, Plus, Send, Wrench, X } from "lucide-react";
@@ -95,9 +96,11 @@ export function CopilotChat({
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
   }, [messages.length, streamText, toolEvents.length]);
 
+  const tooLong = draft.length > MAX_COPILOT_MESSAGE_CHARS;
+
   async function send() {
     const message = draft.trim();
-    if (!message || busy) return;
+    if (!message || busy || tooLong) return;
     setDraft("");
     setBusy(true);
     setError(null);
@@ -196,12 +199,25 @@ export function CopilotChat({
             className="min-h-14 resize-none border-0 bg-transparent px-2 py-1.5 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
           />
           <div className="mt-1 flex items-center justify-between gap-2 px-1">
-            <span className="text-[10px] text-muted-foreground">smolboard tools</span>
+            {/* The counter only appears near the ceiling; a permanent digit
+                on an empty box is noise. */}
+            {draft.length > MAX_COPILOT_MESSAGE_CHARS - 300 ? (
+              <span
+                className={cn(
+                  "text-[10px] tabular-nums",
+                  tooLong ? "font-medium text-red-600" : "text-muted-foreground",
+                )}
+              >
+                {draft.length} / {MAX_COPILOT_MESSAGE_CHARS}
+              </span>
+            ) : (
+              <span className="text-[10px] text-muted-foreground">smolboard tools</span>
+            )}
             <Button
               type="button"
               size="icon"
               className="size-8 rounded-full"
-              disabled={busy || !draft.trim()}
+              disabled={busy || !draft.trim() || tooLong}
               onClick={() => void send()}
               aria-label="Send message"
             >
