@@ -28,6 +28,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { fmtDate, fmtDateTime } from "@/lib/format";
+import { eventSessionTime } from "@/lib/agenda";
 import type {
   EventRow,
   SessionRow,
@@ -303,6 +304,7 @@ export function SpeakersTable({
       )}
 
       <SpeakerEditor
+        tz={event.timezone || "UTC"}
         editor={editor}
         setEditor={setEditor}
         saving={saving}
@@ -362,7 +364,10 @@ function SpeakerEditor({
   templates,
   files,
   onInvite,
+  tz,
 }: {
+  // Session times belong to the event, not to whoever is looking at the screen.
+  tz: string;
   editor: SpeakerEditorState | null;
   setEditor: (value: SpeakerEditorState | null) => void;
   saving: boolean;
@@ -429,7 +434,7 @@ function SpeakerEditor({
             {profile ? (
               <>
                 <EditorSection title="Sessions">
-                  <DetailList empty="No sessions assigned.">{sessions.map((session) => <div key={session.id}><div className="font-medium">{session.title}</div><div className="text-xs text-muted-foreground">{session.startTime ? fmtDateTime(session.startTime) : "Unscheduled"}</div></div>)}</DetailList>
+                  <DetailList empty="No sessions assigned.">{sessions.map((session) => <div key={session.id}><div className="font-medium">{session.title}</div><div className="text-xs text-muted-foreground">{session.startTime ? eventSessionTime(session.startTime, session.endTime, tz) : "Unscheduled"}</div></div>)}</DetailList>
                 </EditorSection>
                 <EditorSection title="Tasks">
                   <DetailList empty="No tasks assigned.">{tasks.map((task) => <div key={task.id} className="flex items-center justify-between gap-2"><div><div className="font-medium">{templateById.get(task.taskTemplateId)?.title ?? "Task"}</div><div className="text-xs text-muted-foreground">{templateById.get(task.taskTemplateId)?.dueAt ? `Due ${fmtDate(templateById.get(task.taskTemplateId)!.dueAt!)}` : "No due date"}</div></div><DashboardStatusBadge status={task.status}>{task.status === "done" ? "Complete" : "Incomplete"}</DashboardStatusBadge></div>)}</DetailList>
