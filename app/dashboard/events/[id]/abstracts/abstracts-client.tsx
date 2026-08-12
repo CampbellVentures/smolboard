@@ -35,6 +35,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
+import { Markdown } from "@/components/markdown";
 import { fieldsOf, parseJson } from "@/lib/types";
 import { aggregateSubmissionScore, normalizeCriteria, reviewRoundForNumber } from "@/lib/reviews";
 import { ScorecardEditor, keyFor, type DraftCriterion } from "@/components/scorecard-editor";
@@ -567,9 +568,11 @@ function DetailDrawer({
                 AI first pass
                 {submission.triageScore ? ` · ${submission.triageScore.toFixed(1)} of 5` : ""}
               </p>
-              <p className="mt-1 text-[13px] leading-relaxed text-zinc-600">
+              {/* Also model output, so it formats through the same renderer
+                  as the copilot rather than printing raw markdown. */}
+              <Markdown className="mt-1 text-[13px] text-zinc-600">
                 {submission.triageSummary}
-              </p>
+              </Markdown>
               <p className="mt-1.5 text-[11px] text-muted-foreground">
                 Advisory only. It doesn&apos;t count toward reviewer scores or decide anything.
               </p>
