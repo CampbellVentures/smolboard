@@ -5,11 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "pylon dev",
-    "deploy": "pylon deploy",
+    "deploy": "pylon deploy && node scripts/warm.mjs",
     "check": "tsc --noEmit",
     "test": "pylon test",
     "smoke": "node scripts/smoke.mjs",
-    "docs:api": "pylon codegen openapi"
+    "docs:api": "pylon codegen openapi",
+    "warm": "node scripts/warm.mjs"
   },
   "dependencies": {
     "@pylonsync/client": "0.4.9",
