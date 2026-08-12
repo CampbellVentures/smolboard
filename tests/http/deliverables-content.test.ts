@@ -235,6 +235,57 @@ test("requesting changes reopens the speaker's task until a new version lands", 
   expect(await taskStatus()).toBe("done");
 }, 30_000);
 
+test("removing a deliverable clears its history, reopens the task, and unblocks the template", async () => {
+  const fixture = await createTwoOrgFixture(server.baseUrl, "deliverable-delete");
+  const speaker = fixture.a.speakers[0];
+  const template = await callFn<{ id: string }>(fixture.a.owner, "saveTaskTemplate", {
+    eventId: fixture.a.eventId,
+    title: "Upload Session Presentation",
+    kind: "upload",
+    target: "slides",
+    appliesTo: "selected",
+    speakerUserIds: [speaker.userId],
+  });
+  const task = (await entityList<{ id: string; taskTemplateId: string }>(speaker, "SpeakerTask"))
+    .find((row) => row.taskTemplateId === template.id)!;
+  const slot = await callFn<{ id: string }>(speaker, "ensureDeliverableSlot", { taskId: task.id });
+  const upload = await directUpload(speaker, "slides.pdf", "deck");
+  const version = await callFn<{ id: string }>(speaker, "recordDeliverableVersion", {
+    slotId: slot.id,
+    fileId: upload.id,
+    fileUrl: upload.url,
+    filename: "slides.pdf",
+    mimeType: "application/pdf",
+    size: upload.size,
+  });
+  await callFn(speaker, "addDeliverableComment", { slotId: slot.id, versionId: version.id, body: "Draft." });
+  await callFn(speaker, "completeTask", { taskId: task.id, completed: true });
+
+  // An upload used to pin the task template to the event permanently.
+  const blockedFirst = await jsonRequest(fixture.a.owner, "/api/fn/deleteTaskTemplate", "POST", { templateId: template.id });
+  expect(blockedFirst.response.ok).toBe(false);
+
+  // Only the owning org can remove it, and only an organizer.
+  const foreign = await jsonRequest(fixture.b.owner, "/api/fn/deleteDeliverable", "POST", { slotId: slot.id });
+  expect(foreign.response.ok).toBe(false);
+  const bySpeaker = await jsonRequest(speaker, "/api/fn/deleteDeliverable", "POST", { slotId: slot.id });
+  expect(bySpeaker.response.ok).toBe(false);
+  expect(await entityList<{ id: string }>(speaker, "DeliverableSlot")).toHaveLength(1);
+
+  await callFn(fixture.a.owner, "deleteDeliverable", { slotId: slot.id });
+  expect(await entityList<{ id: string }>(fixture.a.owner, "DeliverableSlot")).toHaveLength(0);
+  expect(await entityList<{ id: string }>(fixture.a.owner, "DeliverableVersion")).toHaveLength(0);
+  expect(await entityList<{ id: string }>(fixture.a.owner, "DeliverableComment")).toHaveLength(0);
+  // The speaker still owes the file, so the task goes back on their checklist.
+  const reopened = (await entityList<{ id: string; status: string }>(speaker, "SpeakerTask"))
+    .find((row) => row.id === task.id)!;
+  expect(reopened.status).toBe("pending");
+
+  await callFn(fixture.a.owner, "deleteTaskTemplate", { templateId: template.id });
+  const remaining = await entityList<{ id: string }>(fixture.a.owner, "TaskTemplate");
+  expect(remaining.some((row) => row.id === template.id)).toBe(false);
+}, 30_000);
+
 async function directUpload(actor: TestIdentity, filename: string, contents: string) {
   const bytes = new TextEncoder().encode(contents);
   const initialized = await jsonRequest<{ assetId: string; uploadUrl: string }>(actor, "/api/files/init", "POST", {

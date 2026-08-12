@@ -9,6 +9,17 @@ import {
   DashboardToolbar,
   DashboardWidePage,
 } from "@/components/dashboard";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,7 +41,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { Archive, Check, Download, FileStack, History, MessageSquareWarning } from "lucide-react";
+import { Archive, Check, Download, FileStack, History, MessageSquareWarning, Trash2 } from "lucide-react";
 import { buildZip, zipSafeName } from "@/lib/zip";
 import { latestVersion, versionsForSlot } from "@/lib/deliverables";
 import { reviewStatusLabel } from "@/lib/content";
@@ -256,6 +267,23 @@ export function ContentTable({
       setNote("");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Couldn't save that review.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function removeDeliverable(slot: DeliverableSlotRow) {
+    setBusyId(slot.id);
+    setError(null);
+    try {
+      await callFn("deleteDeliverable", { slotId: slot.id });
+      setSelected((prev) => {
+        const next = new Set(prev);
+        next.delete(slot.id);
+        return next;
+      });
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Couldn't remove that deliverable.");
     } finally {
       setBusyId(null);
     }
@@ -510,6 +538,38 @@ export function ContentTable({
                             <MessageSquareWarning className="size-3.5" /> Request changes
                           </Button>
                         )}
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              disabled={busyId === slot.id}
+                              aria-label={`Remove ${latest.filename}`}
+                            >
+                              <Trash2 className="size-3.5" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Remove “{latest.filename}”?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This deletes {slotVersions.length === 1 ? "the file" : `all ${slotVersions.length} versions`} and
+                                any comments on {speaker?.name ?? "this speaker"}&rsquo;s upload. The task goes back on their
+                                checklist.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                variant="destructive"
+                                onClick={() => void removeDeliverable(slot)}
+                              >
+                                Remove
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                     ) : null}
                   </TableCell>

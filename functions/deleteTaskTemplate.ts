@@ -15,7 +15,13 @@ export default mutation({
     for (const task of tasks) {
       const slots = await ctx.db.unsafe.query("DeliverableSlot", { taskId: task.id as string });
       if (slots.some((slot) => matchesEventAnchor(slot, template.eventId as string, template.orgId as string))) {
-        throw ctx.error("INVALID_ARGS", "A task with deliverable history cannot be deleted.");
+        // Say where to go. This used to be a dead end: the only way to clear
+        // the history was through a page that had no remove control, so an
+        // upload task became permanent the moment one speaker uploaded.
+        throw ctx.error(
+          "INVALID_ARGS",
+          "Speakers have uploaded files for this task. Remove them on the Content page first.",
+        );
       }
     }
     for (const task of tasks) await ctx.db.unsafe.delete("SpeakerTask", task.id as string);
