@@ -6,6 +6,7 @@ import {
   sanitizeSpeakerLinks,
   validatePublicHeadshotUrl,
 } from "../lib/speakers";
+import { requireVerifiedCfpUser } from "./_cfpLifecycle";
 
 export default mutation({
   args: {
@@ -19,6 +20,9 @@ export default mutation({
     linksJson: v.optional(v.json()),
   },
   async handler(ctx, args) {
+    // Uploads, task completion, and the public-facing profile all need a
+    // proven inbox; open intake stops at the proposal itself.
+    await requireVerifiedCfpUser(ctx);
     const profile = await ctx.db.unsafe.get("SpeakerProfile", args.profileId);
     const user = await ctx.db.unsafe.get("User", ctx.auth.userId);
     if (!profile || profile.userId !== ctx.auth.userId || !user) {

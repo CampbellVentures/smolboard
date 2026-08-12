@@ -174,6 +174,10 @@ const Submission = entity(
     // "withdrawn". Status changes go through functions so emails can fire.
     status: field.string().default("submitted"),
     currentRound: field.int().default(1),
+    // True when the submitter had not proven their inbox at submit time.
+    // Intake is open to anyone, so organizers get to see which addresses are
+    // unproven rather than the CFP silently refusing them.
+    emailUnverified: field.boolean().default(false),
     // AI first-pass triage: advisory only, never a decision.
     triageScore: field.float().optional(),
     triageSummary: field.string().optional(),

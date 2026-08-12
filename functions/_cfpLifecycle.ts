@@ -16,10 +16,26 @@ import type { SubmissionParticipantSnapshot } from "../lib/submission-participan
 type Row = Record<string, unknown>;
 type Ctx = MutationCtx<"required">;
 
-export async function requireVerifiedCfpUser(ctx: Ctx) {
+// Submitting a proposal is public intake: a call for speakers is open to
+// anyone, so an unproven inbox is allowed to write one and to read back its own
+// submissions. What an unverified account CANNOT do is anything that publishes
+// or takes over an identity — upload files, edit a speaker profile that appears
+// on the public site, or complete onboarding tasks (see requireVerifiedSpeaker).
+// So registering with someone else's address gains nothing beyond a proposal
+// the organizer sees flagged as unverified.
+export async function requireCfpUser(ctx: Ctx) {
   const user = await ctx.db.unsafe.get("User", ctx.auth.userId);
-  if (!user?.emailVerified || typeof user.email !== "string") {
-    throw ctx.error("FORBIDDEN", "Verify your email with a magic code before saving a CFP draft.");
+  if (!user || typeof user.email !== "string") {
+    throw ctx.error("FORBIDDEN", "Sign in to work on a submission.");
+  }
+  return user;
+}
+
+// The gate for everything downstream of intake. Kept deliberately strict.
+export async function requireVerifiedCfpUser(ctx: Ctx) {
+  const user = await requireCfpUser(ctx);
+  if (!user.emailVerified) {
+    throw ctx.error("FORBIDDEN", "Verify your email with a magic code first.");
   }
   return user;
 }
@@ -75,7 +91,7 @@ export async function finalizeDraft(ctx: Ctx, draft: Row) {
   if (draft.lifecycle === "finalized" && draft.finalizedSubmissionId) {
     return { submissionId: draft.finalizedSubmissionId as string, portalPath: "/portal", alreadyFinalized: true };
   }
-  const user = await requireVerifiedCfpUser(ctx);
+  const user = await requireCfpUser(ctx);
   const { form, event } = await requireOpenCfp(ctx, draft.formId as string);
   if (
     draft.formId !== form.id || draft.eventId !== event.id || draft.orgId !== event.orgId
@@ -143,6 +159,7 @@ export async function finalizeDraft(ctx: Ctx, draft: Row) {
     category: content.category,
     status: "submitted",
     currentRound: 1,
+    emailUnverified: !user.emailVerified,
     submittedAt: now,
     finalizedAt: now,
   });

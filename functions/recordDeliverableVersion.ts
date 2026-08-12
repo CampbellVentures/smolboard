@@ -1,6 +1,7 @@
 import { mutation, v } from "@pylonsync/functions";
 import { logActivity } from "../lib/activity";
 import { MAX_DELIVERABLE_BYTES } from "../lib/deliverables";
+import { requireVerifiedCfpUser } from "./_cfpLifecycle";
 
 export default mutation({
   args: {
@@ -12,6 +13,9 @@ export default mutation({
     size: v.int(),
   },
   async handler(ctx, args) {
+    // Uploads, task completion, and the public-facing profile all need a
+    // proven inbox; open intake stops at the proposal itself.
+    await requireVerifiedCfpUser(ctx);
     const slot = await ctx.db.unsafe.get("DeliverableSlot", args.slotId);
     if (!slot || slot.speakerUserId !== ctx.auth.userId) throw ctx.error("NOT_FOUND", "Deliverable not found.");
     const event = await ctx.db.unsafe.get("Event", slot.eventId as string);

@@ -1,5 +1,6 @@
 import { mutation, v } from "@pylonsync/functions";
 import { parseFields, pruneAnswers, validateAnswers, type Answers } from "../lib/forms";
+import { requireVerifiedCfpUser } from "./_cfpLifecycle";
 
 export default mutation({
   args: {
@@ -8,6 +9,9 @@ export default mutation({
     response: v.optional(v.any()),
   },
   async handler(ctx, args) {
+    // Uploads, task completion, and the public-facing profile all need a
+    // proven inbox; open intake stops at the proposal itself.
+    await requireVerifiedCfpUser(ctx);
     const task = await ctx.db.unsafe.get("SpeakerTask", args.taskId);
     if (!task || task.speakerUserId !== ctx.auth.userId) {
       throw ctx.error("NOT_FOUND", "Task not found.");

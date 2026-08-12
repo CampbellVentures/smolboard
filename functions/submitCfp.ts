@@ -2,7 +2,7 @@ import { mutation, v } from "@pylonsync/functions";
 import {
   finalizeDraft,
   requireOpenCfp,
-  requireVerifiedCfpUser,
+  requireCfpUser,
   validatedDraftContent,
 } from "./_cfpLifecycle";
 import { normalizeSpeakerEmail } from "../lib/speakers";
@@ -19,7 +19,7 @@ export default mutation({
     answers: v.optional(v.json()),
   },
   async handler(ctx, args) {
-    const user = await requireVerifiedCfpUser(ctx);
+    const user = await requireCfpUser(ctx);
     if (normalizeSpeakerEmail(user.email as string) !== normalizeSpeakerEmail(args.email)) {
       throw ctx.error("FORBIDDEN", "Use the verified email for your signed-in account.");
     }

@@ -1,5 +1,5 @@
 import { mutation, v } from "@pylonsync/functions";
-import { requireOpenCfp, requireVerifiedCfpUser, validatedDraftContent } from "./_cfpLifecycle";
+import { requireOpenCfp, requireCfpUser, validatedDraftContent } from "./_cfpLifecycle";
 
 export default mutation({
   args: {
@@ -11,7 +11,7 @@ export default mutation({
     answers: v.optional(v.json()),
   },
   async handler(ctx, args) {
-    await requireVerifiedCfpUser(ctx);
+    await requireCfpUser(ctx);
     const { form, event } = await requireOpenCfp(ctx, args.formId);
     const draftContent = (previousAnswers?: unknown) => {
       const content = validatedDraftContent(ctx, form, args, false, previousAnswers);

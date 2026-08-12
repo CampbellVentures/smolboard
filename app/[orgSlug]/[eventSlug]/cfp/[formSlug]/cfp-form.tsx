@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { callFn } from "@/lib/fn";
 
-import { sendMagicLink, verifyMagicLink } from "@pylonsync/client";
+import { sendMagicLink, verifyMagicLink, passwordRegister, persistSession } from "@pylonsync/client";
 import { Button } from "@/components/ui/button";
 import { FormRenderer } from "@/components/form-renderer";
 import {
@@ -20,6 +20,14 @@ import { CheckCircle2 } from "lucide-react";
 // SpeakerProfile + Submission columns) + the organizer's custom fields via the
 // shared renderer. Client-side validation mirrors the server's — the server
 // re-validates everything in submitCfp.
+
+// The submitter never needs this: they sign back in with an emailed code, which
+// proves the inbox. It exists only because registration takes a password.
+function throwawayPassword(): string {
+  const bytes = new Uint8Array(24);
+  crypto.getRandomValues(bytes);
+  return `Cfp-${Array.from(bytes, (b) => b.toString(36)).join("")}`;
+}
 
 const inputCls =
   "h-8 w-full rounded-lg border border-zinc-200 bg-white px-3 text-[13px] text-zinc-900 outline-none transition-[border-color,box-shadow] placeholder:text-zinc-400 focus:border-zinc-400 focus:ring-2 focus:ring-zinc-900/10";
@@ -124,10 +132,22 @@ export function CfpForm({
     setBusy(true);
     try {
       if (!authenticated && authStage === "idle") {
-        await sendMagicLink(email.trim().toLowerCase());
-        setAuthStage("code");
-        setTopError("Enter the emailed code to verify ownership and save your draft.");
-        setBusy(false);
+        // A call for speakers is open to anyone, so a brand-new address gets an
+        // account right here and submits. An address that ALREADY has an
+        // account cannot be claimed this way: registration fails and we fall
+        // back to the emailed code, so this is never a takeover path.
+        const address = email.trim().toLowerCase();
+        try {
+          const session = await passwordRegister({ email: address, password: throwawayPassword() });
+          persistSession(session);
+          setAuthenticated(true);
+          await persistDraft(true);
+        } catch {
+          await sendMagicLink(address);
+          setAuthStage("code");
+          setTopError("That email already has an account. Enter the emailed code to continue.");
+          setBusy(false);
+        }
       } else if (authenticated) {
         await persistDraft(true);
       }
@@ -290,7 +310,7 @@ export function CfpForm({
         <div className="flex flex-wrap gap-2">
           {authenticated ? <Button type="button" variant="outline" disabled={busy || !title.trim()} onClick={() => void saveDraft()}>Save draft</Button> : null}
           <Button type="submit" disabled={busy}>
-            {busy ? "Working…" : authenticated ? "Finalize submission" : "Verify email to continue"}
+            {busy ? "Working…" : authenticated ? "Finalize submission" : "Submit proposal"}
           </Button>
         </div>
       )}
