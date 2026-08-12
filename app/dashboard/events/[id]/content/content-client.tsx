@@ -192,6 +192,12 @@ export function ContentTable({
       }
     }
     const owed: DeskRow[] = tasks
+      // A task outlives the speaker it was assigned to: nothing removes tasks
+      // when a profile is deleted, and there is no un-assign. Without this the
+      // desk listed "Unknown speaker" owing a file for an event they are no
+      // longer on. A row backed by a real upload still shows, because a file
+      // that exists is worth seeing even when its speaker record is gone.
+      .filter((task) => speakerByUser.has(task.speakerUserId))
       .filter((task) => !claimed.has(task.id) && uploadTemplates.has(task.taskTemplateId))
       .map((task) => {
         const template = uploadTemplates.get(task.taskTemplateId)!;
@@ -205,7 +211,7 @@ export function ContentTable({
         };
       });
     return [...fromSlots, ...owed];
-  }, [slots, tasks, templates, sessions]);
+  }, [slots, tasks, templates, sessions, speakerByUser]);
 
   let rows = allRows
     .slice()
