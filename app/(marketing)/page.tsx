@@ -1,5 +1,15 @@
 import React from "react";
 import { Link, type Metadata, type PageProps } from "@pylonsync/react";
+import {
+  CalendarClock,
+  Code2,
+  FileText,
+  Mail,
+  Mic2,
+  Star,
+  type LucideIcon,
+} from "lucide-react";
+import { BRAND_GRADIENT, DashboardIconChip, type DashboardChipTone } from "@/components/dashboard";
 import { siteConfig } from "@/lib/site.config";
 import { HeroShowcase } from "./hero-showcase";
 
@@ -30,30 +40,47 @@ export const metadata: Metadata = {
   },
 };
 
-const FEATURES: { title: string; body: string }[] = [
+const FEATURES: {
+  title: string;
+  body: string;
+  icon: LucideIcon;
+  tone: DashboardChipTone;
+}[] = [
   {
+    icon: FileText,
+    tone: "violet",
     title: "CFP forms with conditional logic",
     body: "A visual builder with show-when rules and category routing. The server re-validates everything, including conditionally required fields.",
   },
   {
+    icon: Mic2,
+    tone: "sky",
     title: "Self-service speaker portal",
-    body: "Speakers are created on submission and sign in with a 6-digit email code. Status, profile, uploads, and onboarding tasks all update live.",
+    body: "Speakers get their own portal for profile, uploads, and onboarding tasks. They only ever see their own sessions.",
   },
   {
-    title: "Emails and real calendar invites",
-    body: "Templated accept/reject sends, cron reminders, and .ics invites that RSVP into Gmail and Outlook. Reschedules update the event, not duplicate it.",
-  },
-  {
+    icon: Star,
+    tone: "amber",
     title: "Reviews and scoring",
-    body: "Score-sorted queue, per-criterion stars, committee comments, multi-round advancement, bulk accept with one confirmation.",
+    body: "Multi-round evaluation, weighted scorecards, blind review, per-reviewer assignment, and a results table you can sort and export.",
   },
   {
+    icon: CalendarClock,
+    tone: "emerald",
     title: "Drag-and-drop agenda",
     body: "Day-by-room grid with 15-minute slots. Room overlaps and double-booked speakers surface the moment you create them.",
   },
   {
-    title: "Live dashboard",
-    body: "Submissions, review progress, and speaker onboarding as live queries. Two reviewers see each other's scores land in real time.",
+    icon: Mail,
+    tone: "pink",
+    title: "Emails and real calendar invites",
+    body: "Templated accept and reject sends, scheduled reminders, and .ics invites that RSVP into Gmail and Outlook. Reschedules update the event instead of duplicating it.",
+  },
+  {
+    icon: Code2,
+    tone: "zinc",
+    title: "Five embeddable widgets",
+    body: "Sessions list, speakers, agenda, itinerary, and photo gallery. Paste a snippet into any site and it stays in sync with your data.",
   },
 ];
 
@@ -106,14 +133,26 @@ export default function LandingPage({ auth }: PageProps) {
       {/* ---------------- Features ---------------- */}
       <section className="border-t border-zinc-200/70 bg-zinc-50/60">
         <div className="mx-auto max-w-5xl px-6 py-16">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <h2 className="text-balance text-2xl font-semibold tracking-tight text-zinc-900">
+            Everything a call for speakers needs
+          </h2>
+          <p className="mt-2 max-w-2xl text-pretty text-[15px] leading-relaxed text-zinc-500">
+            From the first submission to the published schedule, without paying
+            per speaker or per event.
+          </p>
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map((f) => (
               <div
                 key={f.title}
                 className="rounded-xl bg-white p-5 shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.04)]"
               >
-                <h2 className="text-[15px] font-semibold text-zinc-900">{f.title}</h2>
-                <p className="mt-1.5 text-[13.5px] leading-relaxed text-zinc-500">{f.body}</p>
+                <DashboardIconChip icon={f.icon} tone={f.tone} />
+                <h3 className="mt-3.5 text-balance text-[15px] font-semibold text-zinc-900">
+                  {f.title}
+                </h3>
+                <p className="mt-1.5 text-pretty text-[13.5px] leading-relaxed text-zinc-500">
+                  {f.body}
+                </p>
               </div>
             ))}
           </div>
@@ -132,10 +171,10 @@ export default function LandingPage({ auth }: PageProps) {
             </h2>
             <p className="mt-3 text-pretty text-[15px] leading-relaxed text-zinc-500">
               Ask the copilot to review submissions, accept the top ten, or
-              schedule a talk — it uses the same conflict-checked functions as
-              the UI, so you watch its changes land in the tables next to the
-              conversation. Prefer your own agent? Point any MCP client at
-              smolboard and run your CFP from chat.
+              schedule a talk. It calls the same conflict-checked functions the
+              UI does, so its changes land in the tables next to the
+              conversation. Point any MCP client at smolboard to run the same
+              tools from your own agent.
             </p>
           </div>
           <div className="overflow-x-auto rounded-xl bg-zinc-900 p-5 font-mono text-[12.5px] leading-relaxed text-zinc-300 shadow-[0_16px_40px_-16px_rgba(0,0,0,0.4)]">
@@ -153,31 +192,64 @@ export default function LandingPage({ auth }: PageProps) {
       </section>
 
       {/* ---------------- CTA ---------------- */}
-      <section className="border-t border-zinc-200/70">
-        <div className="mx-auto max-w-3xl px-6 py-16 text-center">
-          <h2 className="text-balance text-2xl font-semibold tracking-tight text-zinc-900">
-            Your next event, off the enterprise treadmill
+      <section className="px-6 pb-20">
+        <div
+          className={`mx-auto max-w-5xl overflow-hidden rounded-3xl px-6 py-16 text-center ${BRAND_GRADIENT}`}
+        >
+          <h2 className="mx-auto max-w-2xl text-balance text-[28px] font-semibold leading-tight tracking-tight text-white sm:text-[32px]">
+            Run your next call for speakers on software you own
           </h2>
-          <p className="mt-2 text-[15px] text-zinc-500">
-            Free and open source. One process to deploy. Speakers never pay, and
-            neither should you.
+          <p className="mx-auto mt-3 max-w-xl text-pretty text-[15px] leading-relaxed text-zinc-300">
+            Free and open source. One process, one port, one command to deploy.
+            Speakers never pay, and neither do you.
           </p>
-          <div className="mt-6 flex items-center justify-center gap-3">
+          <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
             <Link
               href={primaryHref}
-              className="inline-flex h-10 items-center rounded-full bg-zinc-900 px-5 text-[14px] font-medium text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition-colors hover:bg-zinc-700"
+              className="inline-flex h-11 items-center rounded-full bg-white px-6 text-[14px] font-medium text-zinc-900 transition-[background-color,scale] duration-150 ease-out hover:bg-zinc-200 active:scale-[0.96] motion-reduce:transform-none"
             >
               {signedIn ? "Open dashboard" : "Create your event"}
             </Link>
             <a
               href="https://github.com/CampbellVentures/smolboard"
-              className="inline-flex h-10 items-center rounded-full px-4 text-[14px] font-medium text-zinc-600 transition-colors hover:text-zinc-900"
+              className="inline-flex h-11 items-center rounded-full px-5 text-[14px] font-medium text-zinc-300 transition-colors hover:text-white"
             >
               Read the source →
             </a>
           </div>
         </div>
       </section>
+
+      {/* ---------------- Footer ---------------- */}
+      <footer className="border-t border-zinc-200/70">
+        <div className="mx-auto flex max-w-5xl flex-col gap-6 px-6 py-10 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2.5">
+            <img src="/assets/img/icon.svg" alt="" width={24} height={24} className="rounded-md" />
+            <span className="text-[14px] font-semibold tracking-tight text-zinc-900">smolboard</span>
+            <span className="text-[13px] text-zinc-400">Open-source speaker &amp; CFP management</span>
+          </div>
+          <nav className="flex flex-wrap items-center gap-x-6 gap-y-2">
+            <a
+              href="/ai-engineer/ai-engineer-sandbox"
+              className="text-[13px] text-zinc-500 transition-colors hover:text-zinc-900"
+            >
+              Live demo
+            </a>
+            <Link
+              href="/portal"
+              className="text-[13px] text-zinc-500 transition-colors hover:text-zinc-900"
+            >
+              Speaker portal
+            </Link>
+            <a
+              href="https://github.com/CampbellVentures/smolboard"
+              className="text-[13px] text-zinc-500 transition-colors hover:text-zinc-900"
+            >
+              GitHub
+            </a>
+          </nav>
+        </div>
+      </footer>
     </div>
   );
 }

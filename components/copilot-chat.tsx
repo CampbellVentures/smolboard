@@ -26,8 +26,33 @@ interface ToolEvent {
   isError?: boolean;
 }
 
-export function CopilotChat({ eventId, eventName }: { eventId: string; eventName: string }) {
-  const [threadId, setThreadId] = useState<string | null>(null);
+// Recent conversations for this event, newest first. Lives in the nav sidebar
+// so the chat pane itself only ever shows the conversation you're in.
+export function useCopilotThreads(eventId: string): CopilotThreadRow[] {
+  const threadsQ = db.useQuery<CopilotThreadRow>("CopilotThread");
+  return useMemo(
+    () =>
+      threadsQ.data
+        .filter((t) => t.eventId === eventId)
+        .sort((a, b) => ((a.updatedAt ?? a.createdAt) < (b.updatedAt ?? b.createdAt) ? 1 : -1)),
+    [threadsQ.data, eventId],
+  );
+}
+
+// The conversation list lives in the nav sidebar (copilotThreads below), so the
+// active thread is owned by AppShell and passed in. This component renders one
+// conversation and reports the thread it creates on the first send.
+export function CopilotChat({
+  eventId,
+  eventName,
+  threadId,
+  onSelectThread,
+}: {
+  eventId: string;
+  eventName: string;
+  threadId: string | null;
+  onSelectThread: (id: string | null) => void;
+}) {
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [streamText, setStreamText] = useState("");
@@ -35,24 +60,6 @@ export function CopilotChat({ eventId, eventName }: { eventId: string; eventName
   const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Restore the last thread per event.
-  useEffect(() => {
-    setThreadId(localStorage.getItem(`sb.copilot.thread.${eventId}`) || null);
-  }, [eventId]);
-  function selectThread(id: string | null) {
-    setThreadId(id);
-    if (id) localStorage.setItem(`sb.copilot.thread.${eventId}`, id);
-    else localStorage.removeItem(`sb.copilot.thread.${eventId}`);
-  }
-
-  const threadsQ = db.useQuery<CopilotThreadRow>("CopilotThread");
-  const threads = useMemo(
-    () =>
-      threadsQ.data
-        .filter((t) => t.eventId === eventId)
-        .sort((a, b) => ((a.updatedAt ?? a.createdAt) < (b.updatedAt ?? b.createdAt) ? 1 : -1)),
-    [threadsQ.data, eventId],
-  );
   const messagesQ = db.useQuery<CopilotMessageRow>("CopilotMessage");
   const messages = useMemo(
     () =>
@@ -101,7 +108,7 @@ export function CopilotChat({ eventId, eventName }: { eventId: string; eventName
         threadId: threadId ?? undefined,
         message,
       });
-      if (!threadId) selectThread(res.threadId);
+      if (!threadId) onSelectThread(res.threadId);
     } catch (e) {
       setError(e instanceof Error ? e.message : "The copilot hit an error. Try again.");
     } finally {
@@ -119,42 +126,6 @@ export function CopilotChat({ eventId, eventName }: { eventId: string; eventName
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      {/* Thread strip */}
-      <div
-        // Fades the trailing edge so a cut-off thread chip reads as "scroll for
-        // more" instead of a broken layout.
-        className="flex items-center gap-1.5 overflow-x-auto border-b border-border/60 px-3 py-2 [mask-image:linear-gradient(to_right,black_calc(100%-2rem),transparent)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-      >
-        <button
-          type="button"
-          onClick={() => selectThread(null)}
-          className={cn(
-            "flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors",
-            threadId === null
-              ? "bg-primary text-primary-foreground"
-              : "bg-muted text-muted-foreground hover:text-foreground",
-          )}
-        >
-          <Plus className="size-3" /> New
-        </button>
-        {threads.slice(0, 6).map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => selectThread(t.id)}
-            title={t.title}
-            className={cn(
-              "max-w-36 shrink-0 truncate rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors",
-              threadId === t.id
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted text-muted-foreground hover:text-foreground",
-            )}
-          >
-            {t.title}
-          </button>
-        ))}
-      </div>
-
       {/* Messages */}
       <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
         {messages.length === 0 && !streamText && !busy ? (

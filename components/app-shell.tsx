@@ -29,6 +29,7 @@ import {
   UserRound,
   ArrowLeft,
   ChevronRight,
+  Plus,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -49,7 +50,7 @@ import { SyncDebug } from "./sync-debug";
 import { ActivityBell } from "./activity-bell";
 import { CommandPalette, type PaletteDestination } from "./command-palette";
 import { lastEventStorageKey } from "@/lib/dashboard-routing";
-import { CopilotChat } from "@/components/copilot-chat";
+import { CopilotChat, useCopilotThreads } from "@/components/copilot-chat";
 import { useEnsureOrgSlug } from "@/components/use-org-slug";
 
 // Three-pane organizer shell (SPEC.md → "Organizer UI shell"):
@@ -322,20 +323,62 @@ function GroupedNav<K extends string>({
   );
 }
 
-function CopilotShortcut({ onOpen }: { onOpen: () => void }) {
+function CopilotShortcut({
+  eventId,
+  activeThreadId,
+  onOpen,
+}: {
+  eventId: string;
+  activeThreadId: string | null;
+  onOpen: (threadId: string | null) => void;
+}) {
+  const threads = useCopilotThreads(eventId);
   return (
     <div className="px-3 pb-3">
-      <div className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-        Copilot
+      <div className="mb-1 flex items-center justify-between gap-2 pl-3 pr-1">
+        <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+          Copilot
+        </span>
+        <button
+          type="button"
+          onClick={() => onOpen(null)}
+          aria-label="New conversation"
+          className="flex size-6 items-center justify-center rounded-md text-muted-foreground transition-[background-color,color,scale] duration-150 ease-out hover:bg-accent/60 hover:text-foreground active:scale-[0.96] motion-reduce:transform-none"
+        >
+          <Plus className="size-3.5" aria-hidden="true" />
+        </button>
       </div>
-      <button
-        type="button"
-        onClick={onOpen}
-        className="flex h-10 w-full items-center gap-3 rounded-lg px-3 text-[13px] font-medium text-muted-foreground transition-[background-color,color,scale] duration-150 ease-out hover:bg-accent/60 hover:text-foreground active:scale-[0.96] motion-reduce:transform-none"
-      >
-        <MessageSquareText className="size-[17px] shrink-0" aria-hidden="true" />
-        <span>New conversation</span>
-      </button>
+      {threads.length === 0 ? (
+        <button
+          type="button"
+          onClick={() => onOpen(null)}
+          className="flex h-10 w-full items-center gap-3 rounded-lg px-3 text-[13px] font-medium text-muted-foreground transition-[background-color,color,scale] duration-150 ease-out hover:bg-accent/60 hover:text-foreground active:scale-[0.96] motion-reduce:transform-none"
+        >
+          <MessageSquareText className="size-[17px] shrink-0" aria-hidden="true" />
+          <span>New conversation</span>
+        </button>
+      ) : (
+        <ul className="flex flex-col">
+          {threads.slice(0, 6).map((thread) => (
+            <li key={thread.id}>
+              <button
+                type="button"
+                onClick={() => onOpen(thread.id)}
+                title={thread.title}
+                className={cn(
+                  "flex h-9 w-full items-center gap-3 rounded-lg px-3 text-left text-[13px] transition-[background-color,color,scale] duration-150 ease-out active:scale-[0.98] motion-reduce:transform-none",
+                  thread.id === activeThreadId
+                    ? "bg-accent/70 font-medium text-foreground"
+                    : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
+                )}
+              >
+                <MessageSquareText className="size-[17px] shrink-0" aria-hidden="true" />
+                <span className="min-w-0 truncate">{thread.title}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
@@ -395,12 +438,34 @@ export function AppShell({
     localStorage.setItem("sb.copilot.open", next ? "1" : "0");
   }
 
+  // The active conversation is owned here because two places drive it: the
+  // sidebar's conversation list and the pane's own "New" button.
+  const [copilotThreadId, setCopilotThreadId] = useState<string | null>(null);
+  const threadStorageKey = event ? `sb.copilot.thread.${event.id}` : null;
+  useEffect(() => {
+    setCopilotThreadId(threadStorageKey ? localStorage.getItem(threadStorageKey) : null);
+  }, [threadStorageKey]);
+  function selectCopilotThread(id: string | null) {
+    setCopilotThreadId(id);
+    if (!threadStorageKey) return;
+    if (id) localStorage.setItem(threadStorageKey, id);
+    else localStorage.removeItem(threadStorageKey);
+  }
+  function openCopilotThread(id: string | null) {
+    selectCopilotThread(id);
+    setCopilot(true);
+  }
+
   const paletteDestinations: PaletteDestination[] = [
     ...(event ? eventNav(event.id) : []),
     ...WORKSPACE_NAV,
   ].map((entry) => ({ label: entry.label, href: entry.href, group: "Go to", icon: entry.Icon }));
   return (
-    <div className="flex min-h-screen bg-background text-foreground">
+    // From md up the shell is exactly one viewport tall and each pane scrolls
+    // inside itself, so the copilot composer and the account card stay put
+    // instead of sitting at the bottom of however long the page happens to be.
+    // Below md there are no side panes, so the document scrolls normally.
+    <div className="flex min-h-dvh bg-background text-foreground md:h-dvh md:overflow-hidden">
       <SessionReconcile />
       <SyncHeartbeat />
       <SyncDebug />
@@ -412,7 +477,7 @@ export function AppShell({
         />
       ) : null}
       {/* ---------- Pane 1: nav sidebar ---------- */}
-      <aside className="hidden w-60 shrink-0 flex-col border-r border-border/70 bg-muted/35 md:flex">
+      <aside className="hidden w-60 shrink-0 flex-col border-r border-border/70 bg-muted/35 md:flex md:min-h-0">
         <div className="flex flex-col gap-1.5 px-3 pb-2 pt-3">
             <OrganizationSwitcher
               hidePersonal
@@ -426,7 +491,11 @@ export function AppShell({
         {event ? (
           <>
             <GroupedNav items={eventNav(event.id)} active={active} />
-            <CopilotShortcut onOpen={() => setCopilot(true)} />
+            <CopilotShortcut
+              eventId={event.id}
+              activeThreadId={copilotOpen ? copilotThreadId : null}
+              onOpen={openCopilotThread}
+            />
           </>
         ) : (
           <GroupedNav
@@ -446,11 +515,13 @@ export function AppShell({
       <CopilotPane
         open={copilotOpen}
         event={event}
+        threadId={copilotThreadId}
+        onSelectThread={selectCopilotThread}
         onClose={() => setCopilot(false)}
       />
 
       {/* ---------- Pane 3: content ---------- */}
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col md:min-h-0">
         <header className="flex h-14 shrink-0 items-center justify-between border-b border-border/60 px-3 sm:px-4 lg:px-6">
           <div className="flex min-w-0 items-center gap-1.5">
             <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
@@ -496,9 +567,11 @@ export function AppShell({
                   />
                   {event ? (
                     <CopilotShortcut
-                      onOpen={() => {
+                      eventId={event.id}
+                      activeThreadId={copilotOpen ? copilotThreadId : null}
+                      onOpen={(id) => {
                         setMobileNavOpen(false);
-                        setCopilot(true);
+                        openCopilotThread(id);
                       }}
                     />
                   ) : null}
@@ -560,7 +633,7 @@ export function AppShell({
             </div>
           </div>
         </header>
-        <main className="min-w-0 flex-1 overflow-x-auto p-4 md:p-5 xl:p-6">
+        <main className="min-w-0 flex-1 overflow-x-auto p-4 md:min-h-0 md:overflow-y-auto md:p-5 xl:p-6">
           {children}
         </main>
       </div>
@@ -573,10 +646,14 @@ export function AppShell({
 function CopilotPane({
   open,
   event,
+  threadId,
+  onSelectThread,
   onClose,
 }: {
   open: boolean;
   event?: { id: string; name: string };
+  threadId: string | null;
+  onSelectThread: (id: string | null) => void;
   onClose: () => void;
 }) {
   const [draft, setDraft] = useState("");
@@ -585,7 +662,7 @@ function CopilotPane({
   const prompts = ["Summarize this workspace", "What needs attention?", "Help me plan an event"];
 
   return (
-    <aside className="hidden w-80 shrink-0 flex-col border-l border-border/60 bg-background shadow-[0_16px_48px_-16px_rgba(0,0,0,0.22)] md:fixed md:inset-y-0 md:right-0 md:z-40 md:flex xl:static xl:z-auto xl:border-l-0 xl:border-r xl:shadow-none">
+    <aside className="hidden w-80 shrink-0 flex-col border-l border-border/60 bg-background shadow-[0_16px_48px_-16px_rgba(0,0,0,0.22)] md:fixed md:inset-y-0 md:right-0 md:z-40 md:flex md:min-h-0 xl:static xl:z-auto xl:border-l-0 xl:border-r xl:shadow-none">
       <div className="flex h-14 items-center justify-between border-b border-border/60 px-4">
         <div className="flex min-w-0 items-center gap-2 text-[13.5px] font-semibold">
           <Bot className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
@@ -596,20 +673,36 @@ function CopilotPane({
             </span>
           )}
         </div>
-        <button
-          type="button"
-          aria-label="Collapse copilot"
-          onClick={onClose}
-          className="flex size-10 items-center justify-center rounded-lg text-muted-foreground transition-[background-color,color,scale] duration-150 ease-out hover:bg-muted hover:text-foreground active:scale-[0.96] motion-reduce:transform-none"
-        >
-          <PanelRightClose className="size-4" aria-hidden="true" />
-        </button>
+        <div className="flex shrink-0 items-center gap-1">
+          {event ? (
+            <button
+              type="button"
+              onClick={() => onSelectThread(null)}
+              className="flex h-8 items-center gap-1 rounded-full bg-muted px-2.5 text-[11px] font-medium text-muted-foreground transition-[background-color,color,scale] duration-150 ease-out hover:bg-accent hover:text-foreground active:scale-[0.96] motion-reduce:transform-none"
+            >
+              <Plus className="size-3" aria-hidden="true" /> New
+            </button>
+          ) : null}
+          <button
+            type="button"
+            aria-label="Collapse copilot"
+            onClick={onClose}
+            className="flex size-10 items-center justify-center rounded-lg text-muted-foreground transition-[background-color,color,scale] duration-150 ease-out hover:bg-muted hover:text-foreground active:scale-[0.96] motion-reduce:transform-none"
+          >
+            <PanelRightClose className="size-4" aria-hidden="true" />
+          </button>
+        </div>
       </div>
       {event ? (
         // Inside an event: the real agent (functions/copilotChat.ts over the
         // shared tool belt). Workspace level keeps the teaser below — the
         // copilot's tools are all event-scoped.
-        <CopilotChat eventId={event.id} eventName={event.name} />
+        <CopilotChat
+          eventId={event.id}
+          eventName={event.name}
+          threadId={threadId}
+          onSelectThread={onSelectThread}
+        />
       ) : (
         <WorkspaceCopilotTeaser draft={draft} setDraft={setDraft} prompts={prompts} eventName={eventName} />
       )}
