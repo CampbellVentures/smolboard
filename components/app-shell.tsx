@@ -30,6 +30,7 @@ import {
   ArrowLeft,
   ChevronRight,
   Plus,
+  X,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,8 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
+import { callFn } from "@/lib/fn";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { PersonAvatar } from "./person-avatar";
 import { SessionReconcile } from "./session-reconcile";
@@ -328,10 +331,12 @@ function CopilotShortcut({
   eventId,
   activeThreadId,
   onOpen,
+  onDelete,
 }: {
   eventId: string;
   activeThreadId: string | null;
   onOpen: (threadId: string | null) => void;
+  onDelete: (threadId: string) => void;
 }) {
   const threads = useCopilotThreads(eventId);
   return (
@@ -361,13 +366,13 @@ function CopilotShortcut({
       ) : (
         <ul className="flex flex-col">
           {threads.slice(0, 6).map((thread) => (
-            <li key={thread.id}>
+            <li key={thread.id} className="group/thread relative">
               <button
                 type="button"
                 onClick={() => onOpen(thread.id)}
                 title={thread.title}
                 className={cn(
-                  "flex h-9 w-full items-center gap-3 rounded-lg px-3 text-left text-[13px] transition-[background-color,color,scale] duration-150 ease-out active:scale-[0.98] motion-reduce:transform-none",
+                  "flex h-9 w-full items-center gap-3 rounded-lg py-0 pl-3 pr-9 text-left text-[13px] transition-[background-color,color,scale] duration-150 ease-out active:scale-[0.98] motion-reduce:transform-none",
                   thread.id === activeThreadId
                     ? "bg-accent/70 font-medium text-foreground"
                     : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
@@ -375,6 +380,16 @@ function CopilotShortcut({
               >
                 <MessageSquareText className="size-[17px] shrink-0" aria-hidden="true" />
                 <span className="min-w-0 truncate">{thread.title}</span>
+              </button>
+              {/* Shown on hover and whenever focused, so it is reachable by
+                  keyboard rather than hover-only. */}
+              <button
+                type="button"
+                aria-label={`Delete conversation: ${thread.title}`}
+                onClick={() => onDelete(thread.id)}
+                className="absolute right-1 top-1/2 flex size-7 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-[opacity,background-color,color] hover:bg-background hover:text-foreground focus-visible:opacity-100 group-hover/thread:opacity-100"
+              >
+                <X className="size-3.5" aria-hidden="true" />
               </button>
             </li>
           ))}
@@ -456,6 +471,16 @@ export function AppShell({
     selectCopilotThread(id);
     setCopilot(true);
   }
+  async function deleteCopilotThread(id: string) {
+    // Drop the selection first so the pane doesn't render a thread that is
+    // about to stop existing.
+    if (copilotThreadId === id) selectCopilotThread(null);
+    try {
+      await callFn("deleteCopilotThread", { threadId: id });
+    } catch {
+      toast.error("Could not delete that conversation.");
+    }
+  }
 
   const paletteDestinations: PaletteDestination[] = [
     ...(event ? eventNav(event.id) : []),
@@ -499,6 +524,7 @@ export function AppShell({
               eventId={event.id}
               activeThreadId={copilotOpen ? copilotThreadId : null}
               onOpen={openCopilotThread}
+              onDelete={(id) => void deleteCopilotThread(id)}
             />
           </>
         ) : (
@@ -577,6 +603,7 @@ export function AppShell({
                         setMobileNavOpen(false);
                         openCopilotThread(id);
                       }}
+                      onDelete={(id) => void deleteCopilotThread(id)}
                     />
                   ) : null}
                   <div className="border-t border-border/70 p-3">
