@@ -22,6 +22,16 @@ import {
 } from "@/components/email-composer";
 import { EmailBlockRail, type MergeVariable } from "@/components/email-block-rail";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -464,9 +474,37 @@ function TemplateEditor({
   const [editorReady, setEditorReady] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  // Editing here is explicit-save on purpose: an enabled template can be sent
+  // by a queued email at any moment, so autosaving would put half-written copy
+  // in front of a speaker. That makes losing the work the risk instead, and
+  // Back used to discard it silently, including an image already uploaded into
+  // the body.
+  const [confirmLeave, setConfirmLeave] = useState(false);
+  // Compared against what is actually stored, not set by an event: the
+  // composer emits onDocumentChange while it initialises, so a flag flipped
+  // there claimed unsaved work the moment a template was opened and prompted
+  // on the way out of an editor nobody had touched.
+  // Baseline is the composer's OWN export of the unedited template, taken once
+  // it is ready. Comparing against the stored template text instead reported
+  // dirty on mount, because the editor round-trips markup into a form that is
+  // equivalent but not byte-identical.
+  const saved = useRef<{ subject: string; enabled: boolean; text: string } | null>(null);
   const editorContent = useMemo(() => templateEditorContent(effective), [editorKey]);
   const { vars, selector } = usePreviewVars(event, profiles);
   const uploadImage = useMemo(() => makeImageUploader(event.id), [event.id]);
+
+  useEffect(() => {
+    if (!editorReady) return;
+    let cancelled = false;
+    void composerRef.current?.exportDocument().then((doc) => {
+      if (!cancelled && doc) saved.current = { subject, enabled, text: doc.text };
+    });
+    return () => {
+      cancelled = true;
+    };
+    // Baseline is per template; subject/enabled are read at capture time.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editorReady, editorKey]);
 
   async function saveTemplate(notify = true) {
     setSaving(true);
@@ -477,6 +515,7 @@ function TemplateEditor({
         return false;
       }
       setDocument(nextDocument);
+      saved.current = { subject, enabled, text: nextDocument.text };
       const existing = templates.find((row) => row.key === templateKey);
       const fields = {
         subject,
@@ -510,9 +549,17 @@ function TemplateEditor({
     }
   }
 
+  // Until the baseline exists there is nothing to compare, so nothing is dirty.
+  const dirty = saved.current
+    ? subject !== saved.current.subject ||
+      enabled !== saved.current.enabled ||
+      document.text !== saved.current.text
+    : false;
+
   return (
+    <>
     <EditorShell
-      onBack={onBack}
+      onBack={() => (dirty ? setConfirmLeave(true) : onBack())}
       title="Messages"
       controls={
         <>
@@ -533,6 +580,9 @@ function TemplateEditor({
           <Button type="button" variant="outline" size="sm" onClick={sendTest} disabled={saving || !editorReady}>
             <Send data-icon="inline-start" /> Send test
           </Button>
+          {dirty && !saving ? (
+            <span className="text-xs text-muted-foreground">Unsaved changes</span>
+          ) : null}
           <Button
             type="button"
             size="sm"
@@ -566,6 +616,31 @@ function TemplateEditor({
           : null
       }
     />
+    <AlertDialog open={confirmLeave} onOpenChange={setConfirmLeave}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Leave without saving?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Your changes to this template have not been saved, including any image you uploaded
+            into it.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Keep editing</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={async () => {
+              if (await saveTemplate()) onBack();
+            }}
+          >
+            Save and leave
+          </AlertDialogAction>
+          <AlertDialogAction variant="destructive" onClick={onBack}>
+            Discard
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
 
