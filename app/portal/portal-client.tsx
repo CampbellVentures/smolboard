@@ -793,6 +793,7 @@ function SpeakerTaskItem({
   comments: DeliverableCommentRow[];
 }) {
   const [answers, setAnswers] = useState<Answers>(() => parseJson<Answers>(task.responseJson) ?? {});
+  const [showFinishedUpload, setShowFinishedUpload] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const complete = task.status === "done";
@@ -852,13 +853,29 @@ function SpeakerTaskItem({
             </Button>
           ) : null}
           {template.kind === "upload" ? (
-            <DeliverableUploader
-              task={task}
-              slot={slot}
-              versions={taskVersions}
-              comments={slot ? comments.filter((comment) => comment.slotId === slot.id) : []}
-              fileKind={neededFileKind}
-            />
+            complete && !changesRequested && !showFinishedUpload ? (
+              <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-500">
+                <span className="truncate">
+                  {latestVersion(versions, slot?.id ?? "")?.filename ?? "Uploaded"}
+                </span>
+                <span aria-hidden="true">·</span>
+                <button
+                  type="button"
+                  onClick={() => setShowFinishedUpload(true)}
+                  className="rounded font-medium text-zinc-700 underline underline-offset-2 hover:text-zinc-900"
+                >
+                  Replace or view history
+                </button>
+              </div>
+            ) : (
+              <DeliverableUploader
+                task={task}
+                slot={slot}
+                versions={taskVersions}
+                comments={slot ? comments.filter((comment) => comment.slotId === slot.id) : []}
+                fileKind={neededFileKind}
+              />
+            )
           ) : null}
           {error ? <p className="mt-3 text-xs text-red-600">{error}</p> : null}
           {/* No "Mark complete" while changes are pending: the server rejects
