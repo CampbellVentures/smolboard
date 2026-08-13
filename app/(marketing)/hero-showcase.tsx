@@ -43,6 +43,13 @@ const SURFACES = [
   },
 ] as const;
 
+// Bump when the screenshots are regenerated. They are served
+// public, max-age=14400 with no content hash, so without a new filename
+// Cloudflare serves the previous deploy's images for four hours. Measured:
+// the plain URL returned the old 66680-byte file while a cache-busted one
+// returned the new 66720-byte file from the same deploy.
+const SHOT_VERSION = "v2";
+
 const SM_BREAKPOINT = "(min-width: 640px)";
 
 export function HeroShowcase() {
@@ -128,12 +135,12 @@ export function HeroShowcase() {
               >
                 <source
                   media={SM_BREAKPOINT}
-                  srcSet={`/assets/img/tab-${surface.id}.webp`}
+                  srcSet={`/assets/img/tab-${surface.id}.${SHOT_VERSION}.webp`}
                   width={2040}
                   height={1290}
                 />
                 <img
-                  src={`/assets/img/tab-${surface.id}-sm.webp`}
+                  src={`/assets/img/tab-${surface.id}-sm.${SHOT_VERSION}.webp`}
                   alt={surface.alt}
                   width={780}
                   height={1240}
