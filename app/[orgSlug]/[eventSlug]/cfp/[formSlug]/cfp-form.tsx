@@ -333,9 +333,9 @@ export function CfpForm({
           <h3 className="text-sm font-semibold">Co-presenters</h3>
           <p className="mt-1 text-xs text-zinc-500">Every invited participant must verify the exact invited email before finalization.</p>
           <div className="mt-3 grid gap-2 sm:grid-cols-3">
-            <input value={participantName} onChange={(event) => setParticipantName(event.target.value)} placeholder="Name" className={inputCls} />
-            <input type="email" value={participantEmail} onChange={(event) => setParticipantEmail(event.target.value)} placeholder="Email" className={inputCls} />
-            <input value={participantRole} onChange={(event) => setParticipantRole(event.target.value)} placeholder="Role" className={inputCls} />
+            <input value={participantName} onChange={(event) => setParticipantName(event.target.value)} placeholder="Name" aria-label="Co-presenter name" className={inputCls} />
+            <input type="email" value={participantEmail} onChange={(event) => setParticipantEmail(event.target.value)} placeholder="Email" aria-label="Co-presenter email" className={inputCls} />
+            <input value={participantRole} onChange={(event) => setParticipantRole(event.target.value)} placeholder="Role" aria-label="Co-presenter role" className={inputCls} />
           </div>
           <Button type="button" size="sm" variant="outline" className="mt-2" disabled={busy || !participantName || !participantEmail || !participantRole} onClick={() => void inviteParticipant()}>Invite participant</Button>
           {participants.length > 0 ? <ul className="mt-3 text-xs text-zinc-600">{participants.map((participant) => <li key={participant.id}>{participant.name} · {participant.roleLabel} · {participant.status}</li>)}</ul> : null}

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { callFn, db } from "@pylonsync/react";
 import { fmtDate, fmtDateTime } from "@/lib/format";
 import { sendMagicLink, verifyMagicLink, useAuth } from "@pylonsync/client";
@@ -315,9 +315,9 @@ export function PortalHome({
     <div className="min-h-screen bg-zinc-50">
       <header className="border-b border-zinc-200 bg-white">
         <div className="mx-auto flex h-14 max-w-3xl items-center justify-between px-6">
-          <span className="flex items-center gap-2 text-[15px] font-semibold tracking-tight text-zinc-900">
+          <h1 className="flex items-center gap-2 text-[15px] font-semibold tracking-tight text-zinc-900">
             <BrandMark size={18} /> Speaker portal
-          </span>
+          </h1>
           <div className="flex items-center gap-3">
             <span className="hidden text-xs text-zinc-400 sm:block">{email}</span>
             <button
@@ -895,6 +895,7 @@ function DeliverableUploader({
   fileKind: string;
 }) {
   const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [comment, setComment] = useState("");
   const [commenting, setCommenting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -960,20 +961,36 @@ function DeliverableUploader({
           Organizer: “{slot.reviewNote}”
         </p>
       ) : null}
-      <label className="block text-xs font-medium text-zinc-700">
-        {versions.length > 0 ? `Upload a new ${fileKind} version` : `Upload ${fileKind}`}
+      {/* The bare file input rendered the browser's "Choose File / No file
+          chosen" control, the only unstyled widget left in the product and the
+          one a speaker meets first. Same hidden-input-behind-a-Button pattern
+          the organizer side already uses for logo uploads. */}
+      <div>
+        <p className="text-xs font-medium text-zinc-700">
+          {versions.length > 0 ? `Upload a new ${fileKind} version` : `Upload ${fileKind}`}
+        </p>
         <input
+          ref={fileInputRef}
           type="file"
-          className="mt-2 block w-full text-xs file:mr-3 file:rounded-md file:border-0 file:bg-zinc-900 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-white"
+          className="hidden"
           accept={fileKind === "headshot" ? "image/*" : fileKind === "slides" ? ".pdf,.ppt,.pptx,application/pdf" : undefined}
-          disabled={uploading}
           onChange={(event) => {
             const file = event.target.files?.[0];
             if (file) void upload(file);
             event.currentTarget.value = "";
           }}
         />
-      </label>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="mt-2"
+          disabled={uploading}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          {uploading ? "Uploading…" : versions.length > 0 ? "Choose a new file" : "Choose a file"}
+        </Button>
+      </div>
       <p className="text-[11px] text-zinc-500">
         {fileKind === "slides" ? "PDF or PowerPoint" : fileKind === "headshot" ? "Image files" : "Documents"}; maximum 25 MB. Re-uploading creates a retained version.
       </p>

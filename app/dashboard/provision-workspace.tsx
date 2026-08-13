@@ -11,10 +11,20 @@ import { reconcileStaleToken } from "@/components/session-reconcile";
 // or deleted their last workspace. Pick an existing org if one turned up,
 // otherwise create "My Workspace", make it active, and reload into the ready
 // dashboard. No multi-step onboarding — there's nothing for the user to decide.
-export function ProvisionWorkspace() {
+export function ProvisionWorkspace({ toPortal = false }: { toPortal?: boolean }) {
   const [error, setError] = useState<string | null>(null);
 
+  // A speaker landing here belongs in the portal. The redirect has to happen
+  // on the client: the page can only know they are a speaker by reading
+  // getMySurface, that read suspends, and Pylon drops a response.redirect
+  // issued after the shell has committed. It used to drop it and then return
+  // null, which is why signing in as a speaker produced a blank page.
   useEffect(() => {
+    if (toPortal) window.location.replace("/portal");
+  }, [toPortal]);
+
+  useEffect(() => {
+    if (toPortal) return;
     let cancelled = false;
     void (async () => {
       try {
@@ -39,7 +49,7 @@ export function ProvisionWorkspace() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [toPortal]);
 
   async function signOut() {
     await db.sync.signOut();

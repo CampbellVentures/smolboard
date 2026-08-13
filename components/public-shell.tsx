@@ -3,6 +3,8 @@ import { fmtDateRange } from "@/lib/format";
 import { Link } from "@pylonsync/react";
 import { CalendarDays, MapPin } from "lucide-react";
 import { BrandMark } from "@/components/brand";
+import { HashScroll } from "@/components/hash-scroll";
+import { SectionTab } from "@/components/section-tab";
 import type { EventBranding } from "@/lib/branding";
 import { initialsOf } from "@/components/person-avatar";
 
@@ -45,7 +47,7 @@ export function PublicEventShell({
   // With a hero image the masthead goes full-bleed (image + dark scrim, white
   // text, ai.engineer-style); without one it stays the quiet white header.
   const heading = (
-    <div className={hero ? "pb-8 pt-10" : "pt-10"}>
+    <div className={hero ? "pb-16 pt-24" : "pt-10"}>
       <Link href={`/${event.orgSlug}/${event.slug}`} className="inline-flex items-center gap-3">
         {branding.logoUrl ? (
           <img
@@ -127,10 +129,18 @@ export function PublicEventShell({
           <nav className={"-mb-px flex gap-6" + (hero ? " mt-1" : " mt-6")} aria-label="Event pages">
             {TABS.map((t) => {
               const isActive = t.cfp === true && active === "cfp";
+              const href = `/${event.orgSlug}/${event.slug}${t.path}`;
+              // Schedule and Speakers are anchors into THIS page. Routing them
+              // through <Link> made the router treat them as a navigation to
+              // the path it is already on: it swallowed the click, dropped the
+              // hash, and the page never scrolled. A plain <a> lets the browser
+              // do what it does with a fragment. Only the CFP is a real route.
+              const Tag = (t.cfp ? Link : SectionTab) as React.ElementType;
               return (
-                <Link
+                <Tag
                   key={t.key}
-                  href={`/${event.orgSlug}/${event.slug}${t.path}`}
+                  href={href}
+                  {...(t.cfp ? {} : { targetId: t.path.slice(1) })}
                   aria-current={isActive ? "page" : undefined}
                   className={
                     "flex h-11 items-center border-b-2 text-[13.5px] font-medium transition-colors " +
@@ -141,13 +151,14 @@ export function PublicEventShell({
                   style={isActive && accent ? { borderColor: accent } : undefined}
                 >
                   {t.label}
-                </Link>
+                </Tag>
               );
             })}
           </nav>
         </div>
       </header>
 
+      <HashScroll />
       <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-8">{children}</main>
 
       <footer className="mx-auto flex w-full max-w-3xl items-center justify-center gap-1.5 px-6 pb-10 text-xs text-zinc-400">
