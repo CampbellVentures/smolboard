@@ -193,6 +193,22 @@ export function SpeakersTable({
     }
   }
 
+  // Claiming is one-way, so a profile claimed by the wrong identity had no way
+  // back short of deleting the speaker and losing their sessions with them.
+  async function resetClaim() {
+    if (!editor?.id) return;
+    setSaving(true);
+    try {
+      await callFn("resetSpeakerClaim", { eventId: event.id, profileId: editor.id });
+      setEditor((current) => (current ? { ...current, claimed: false } : current));
+      toast.success("Portal access reset. Their email can be corrected now.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not reset portal access.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function invite(profileId: string) {
     try {
       await callFn("inviteSpeaker", { profileId });
@@ -326,6 +342,7 @@ export function SpeakersTable({
         templates={initialTemplates}
         files={initialFiles.filter((file) => file.userId === selectedProfile?.userId)}
         onInvite={invite}
+        onResetClaim={resetClaim}
       />
 
       <ResponsiveFormOverlay.Root open={importOpen} onOpenChange={setImportOpen}>
@@ -375,6 +392,7 @@ function SpeakerEditor({
   templates,
   files,
   onInvite,
+  onResetClaim,
   tz,
 }: {
   // Session times belong to the event, not to whoever is looking at the screen.
@@ -389,6 +407,7 @@ function SpeakerEditor({
   templates: TaskTemplateRow[];
   files: SpeakerFileRow[];
   onInvite: (profileId: string) => Promise<void>;
+  onResetClaim: () => Promise<void>;
 }) {
   if (!editor) return null;
   const set = <K extends keyof SpeakerEditorState>(key: K, value: SpeakerEditorState[K]) => setEditor({ ...editor, [key]: value });
@@ -420,9 +439,22 @@ function SpeakerEditor({
                   <Input id="speaker-email" type="email" value={editor.email} onChange={(event) => set("email", event.target.value)} disabled={Boolean(editor.claimed)} required />
                   {editor.id ? (
                     <FieldDescription>
-                      {editor.claimed
-                        ? "This speaker has signed in, so their email is now their login and cannot be changed here."
-                        : "This is how the speaker signs in. Correcting it moves their profile, notes, and portal access."}
+                      {editor.claimed ? (
+                        <>
+                          This speaker has signed in, so their email is now their login.{" "}
+                          <button
+                            type="button"
+                            onClick={onResetClaim}
+                            disabled={saving}
+                            className="rounded font-medium text-zinc-700 underline underline-offset-2 hover:text-zinc-900 disabled:opacity-50"
+                          >
+                            Reset their portal access
+                          </button>{" "}
+                          to change it.
+                        </>
+                      ) : (
+                        "This is how the speaker signs in. Correcting it moves their profile, notes, and portal access."
+                      )}
                     </FieldDescription>
                   ) : null}
                 </Field>

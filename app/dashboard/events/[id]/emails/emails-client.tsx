@@ -119,6 +119,17 @@ export function EmailsClient({
   );
   const [view, setView] = useState<View>({ kind: "index" });
 
+  // Setting an event up leaves test sends in the log with no way to take them
+  // back out. This removes the row only; ActivityLog keeps the audit trail.
+  async function removeLogEntry(logId: string) {
+    try {
+      await callFn("deleteEmailLogEntries", { eventId: event.id, logIds: [logId] });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not remove that log entry.");
+    }
+  }
+
+
   if (!hydrated) return <DashboardWidePage>{null}</DashboardWidePage>;
 
   if (view.kind === "template") {
@@ -150,6 +161,7 @@ export function EmailsClient({
       logs={logs}
       onOpenTemplate={(templateKey) => setView({ kind: "template", templateKey })}
       onCompose={() => setView({ kind: "compose" })}
+      onRemoveLogEntry={removeLogEntry}
     />
   );
 }
@@ -161,11 +173,13 @@ function EmailsIndex({
   logs,
   onOpenTemplate,
   onCompose,
+  onRemoveLogEntry,
 }: {
   templates: EmailTemplateRow[];
   logs: EmailLogRow[];
   onOpenTemplate: (key: string) => void;
   onCompose: () => void;
+  onRemoveLogEntry: (logId: string) => Promise<void>;
 }) {
   const sent = logs.filter((log) => log.status === "sent").length;
   const failed = logs.filter((log) => log.status === "failed").length;
@@ -238,6 +252,7 @@ function EmailsIndex({
                     <TableHead>Message</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Sent</TableHead>
+                    <TableHead><span className="sr-only">Remove</span></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -259,6 +274,16 @@ function EmailsIndex({
                         </TableCell>
                         <TableCell className="whitespace-nowrap text-sm tabular-nums text-muted-foreground">
                           {new Date(log.sentAt).toLocaleString()}
+                        </TableCell>
+                        <TableCell className="w-0">
+                          <button
+                            type="button"
+                            aria-label={`Remove the log entry for ${log.toEmail}`}
+                            onClick={() => onRemoveLogEntry(log.id)}
+                            className="-m-1.5 rounded-full p-1.5 text-muted-foreground opacity-60 transition-opacity hover:text-destructive hover:opacity-100"
+                          >
+                            <X className="size-3.5" />
+                          </button>
                         </TableCell>
                       </TableRow>
                     ))}
