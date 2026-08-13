@@ -5,10 +5,10 @@
     "": {
       "name": "smolboard",
       "dependencies": {
-        "@pylonsync/client": "0.4.10",
-        "@pylonsync/functions": "0.4.10",
-        "@pylonsync/react": "0.4.10",
-        "@pylonsync/sdk": "0.4.10",
+        "@pylonsync/client": "0.4.11",
+        "@pylonsync/functions": "0.4.11",
+        "@pylonsync/react": "0.4.11",
+        "@pylonsync/sdk": "0.4.11",
         "@radix-ui/react-dialog": "^1.1.4",
         "@radix-ui/react-slot": "^1.1.0",
         "@react-email/editor": "1.7.1",
@@ -28,7 +28,7 @@
       },
       "devDependencies": {
         "@happy-dom/global-registrator": "^20.10.0",
-        "@pylonsync/cli": "0.4.10",
+        "@pylonsync/cli": "0.4.11",
         "@testing-library/dom": "^10.4.0",
         "@testing-library/react": "^16.3.0",
         "@types/node": "^22.0.0",
@@ -159,21 +159,21 @@
 
     "@parcel/watcher-win32-x64": ["@parcel/watcher-win32-x64@2.5.1", "", { "os": "win32", "cpu": "x64" }, "sha512-9lHBdJITeNR++EvSQVUcaZoWupyHfXe1jZvGZ06O/5MflPcuPLtEphScIBL+AiCWBO46tDSHzWyD0uDmmZqsgA=="],
 
-    "@pylonsync/cli": ["@pylonsync/cli@0.4.10", "", { "optionalDependencies": { "@pylonsync/cli-darwin-arm64": "0.4.10", "@pylonsync/cli-linux-x64": "0.4.10" }, "bin": { "pylon": "bin/pylon.js" } }, "sha512-TutkDHy4W/PYqoJsdX5WlGONs0dnU2nl39D15DFI3YO4erhTF8N0WbBocxlywkysYN73g3SmjYSkU5t/zCzt7A=="],
+    "@pylonsync/cli": ["@pylonsync/cli@0.4.11", "", { "optionalDependencies": { "@pylonsync/cli-darwin-arm64": "0.4.11", "@pylonsync/cli-linux-x64": "0.4.11" }, "bin": { "pylon": "bin/pylon.js" } }, "sha512-FQ+8nZiivGLDH1wmkndxZvbWJkHeYxjp+hnw0KM6OOgKy+K4V1HfskmaKoTmZgu21KZyDe00Y2FSuIlURjkTuw=="],
 
-    "@pylonsync/cli-darwin-arm64": ["@pylonsync/cli-darwin-arm64@0.4.10", "", { "os": "darwin", "cpu": "arm64" }, "sha512-wss2LnI1dRqnHpyYTrXDwZt6mvFJNvP7wtGZpXB4N6zk2E4XDTzfLtMVPzHIxnAQ3Thvslw3NxVYijluS00G3g=="],
+    "@pylonsync/cli-darwin-arm64": ["@pylonsync/cli-darwin-arm64@0.4.11", "", { "os": "darwin", "cpu": "arm64" }, "sha512-SFDChv349o1gfcaVAVq8i56KP4iefMM7ZfD2n7YZ9/565FgXN5IcEi2v0CqaWL9kL0QiXqpPhvOjugERoIhyXQ=="],
 
-    "@pylonsync/cli-linux-x64": ["@pylonsync/cli-linux-x64@0.4.10", "", { "os": "linux", "cpu": "x64" }, "sha512-+BB2VJEU8XUIqX7DMEs8i3XP0w1OOD+vld/V9dccCQ7lRnFhmHSrKMV64ls/WJXr5YLMlzJ1weK2AxAvm1zPDg=="],
+    "@pylonsync/cli-linux-x64": ["@pylonsync/cli-linux-x64@0.4.11", "", { "os": "linux", "cpu": "x64" }, "sha512-5YrB2rbJrlEIYhJ/hqwGCD7fP8rP0O8HfR6ldxYSUkpVmQ4BfWlbfAhVE0uwrToErMct+cTBkJYtkfYCNKaA1g=="],
 
-    "@pylonsync/client": ["@pylonsync/client@0.4.10", "", { "dependencies": { "@pylonsync/react": "0.4.10", "@pylonsync/sync": "0.4.10", "clsx": "^2.1.1" }, "peerDependencies": { "react": ">=19.0.0" } }, "sha512-QPL2hIwWOSK0HnaoynUDgNCzsD0IByht/ZTxzbXrVtMp0CLe7UwnoMjqB3NqkWx93VRbBcr365FnYthrIqMthw=="],
+    "@pylonsync/client": ["@pylonsync/client@0.4.11", "", { "dependencies": { "@pylonsync/react": "0.4.11", "@pylonsync/sync": "0.4.11", "clsx": "^2.1.1" }, "peerDependencies": { "react": ">=19.0.0" } }, "sha512-kbYoKjjm+WCg50mcnsBpFGn6giHriCZDhMW14J60gTA5qSBK5IRuhZrJ3xbT2xPdVK/lGFETjNAYoeIWHOAPTw=="],
 
-    "@pylonsync/functions": ["@pylonsync/functions@0.4.10", "", { "dependencies": { "@resvg/resvg-wasm": "^2.6.2", "satori": "^0.26.0" }, "peerDependencies": { "bun-types": "*" }, "optionalPeers": ["bun-types"], "bin": { "pylon-functions-runtime": "src/runtime.ts" } }, "sha512-4Ag8LdOEeAPpEJzhwo9RHVXbhd6+vHbEsrYV3qHWmCjXdgTLG0IN+Uw/Pflsk9rroCbZgZI2Vg3Pq+VNAHCeAg=="],
+    "@pylonsync/functions": ["@pylonsync/functions@0.4.11", "", { "dependencies": { "@resvg/resvg-wasm": "^2.6.2", "satori": "^0.26.0" }, "peerDependencies": { "bun-types": "*" }, "optionalPeers": ["bun-types"], "bin": { "pylon-functions-runtime": "src/runtime.ts" } }, "sha512-tvpwT4Rf5UDNfIkcQQ1pMvCXHREkpgsWzBcUEJmRsbntE+VZBJ8qV8nXoq1mSONHep2nQgyxuMEcFLakU9kEEg=="],
 
-    "@pylonsync/react": ["@pylonsync/react@0.4.10", "", { "dependencies": { "@pylonsync/sdk": "0.4.10", "@pylonsync/sync": "0.4.10" }, "peerDependencies": { "react": ">=19.0.0" } }, "sha512-1n3e8R3UFg55N6t4yGxiDij5EHyaMrdMJfrAmVku7PDwoeVkzq5Jc0bOPHhpxwHebsmhx8IFL40HanvUpb33hA=="],
+    "@pylonsync/react": ["@pylonsync/react@0.4.11", "", { "dependencies": { "@pylonsync/sdk": "0.4.11", "@pylonsync/sync": "0.4.11" }, "peerDependencies": { "react": ">=19.0.0" } }, "sha512-o3O3ZP6/PF5cAgZSTJwspbpFFG4dO+WJov8QeMWJOIjFvhaYaNY58YTRbt9wf1s6PfS6y6Ejsv6WhPKL5ndK/A=="],
 
-    "@pylonsync/sdk": ["@pylonsync/sdk@0.4.10", "", {}, "sha512-+9LKQpF3fCTF1EXCugBRz+6nIjsFz4y1xt/zUBMSshTzH0rwJSTpiJiZLUSyWGkXYZtdZ47oyLp8VSZ+NZOYeA=="],
+    "@pylonsync/sdk": ["@pylonsync/sdk@0.4.11", "", {}, "sha512-FB1dMkjoURuV5x4JFINiBwobMzwzbvK/M0jXE5iGfqkF4T3nx/Mh3xej3ON5pr0lqdDi5Ubxc5y15Tg80dKEgw=="],
 
-    "@pylonsync/sync": ["@pylonsync/sync@0.4.10", "", {}, "sha512-W0C5jwvVcOBB+FPpD1Z4BQY4ggeznuPMVTYi6OVnOkQ+M+kFn41o/y7puTVVx81Xe6wLNe7AeVVTKNd3czmO8g=="],
+    "@pylonsync/sync": ["@pylonsync/sync@0.4.11", "", {}, "sha512-iu6dFgL7rR1xNRIEPt8lVg4nqujl6oJPiUZnZeJQ8iQCnoa6LUnmkww5+XYj8fvzfjukY8q7ItJGBuLLuApjjw=="],
 
     "@radix-ui/number": ["@radix-ui/number@1.1.3", "", {}, "sha512-Road2bidD0uu/1BGDOWNdPI06g0lIRy6IF9GZcIrDK2KGItfor8IQwQa+yM2ERgHM1MmHxaxpTzk0/Jp42lNfA=="],
 
