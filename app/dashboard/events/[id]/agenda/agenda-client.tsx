@@ -1240,7 +1240,11 @@ function RoomsManager({
               <button
                 type="button"
                 aria-label={`Remove ${r.name}`}
-                className="rounded-full text-muted-foreground opacity-60 hover:text-destructive hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                // The glyph stays 12px so the chip keeps its shape, but the
+                // button itself was 12x12: a destructive control smaller than
+                // any pointer-target guideline allows. -m-1 p-1 grows the hit
+                // area to 20px without moving anything around it.
+                className="-m-1.5 rounded-full p-1.5 text-muted-foreground opacity-60 hover:text-destructive hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <X className="size-3" aria-hidden="true" />
               </button>
@@ -1635,7 +1639,7 @@ function SessionPopover({
                                 setSpeakerBusy(false);
                               }
                             }}
-                            className="size-4 rounded border-zinc-300 accent-zinc-900"
+                            className="relative size-4 rounded border-zinc-300 accent-zinc-900 before:absolute before:-inset-2 before:content-['']"
                           />
                           <span className="min-w-0 flex-1 truncate">{profile.name}</span>
                           {profile.company ? (

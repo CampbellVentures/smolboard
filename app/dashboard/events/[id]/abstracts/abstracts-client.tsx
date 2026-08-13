@@ -434,7 +434,7 @@ export function AbstractsView({
                     checked={allSelected}
                     onChange={toggleAll}
                     aria-label="Select all"
-                    className="size-4 rounded border-zinc-300 accent-zinc-900"
+                    className="relative size-4 rounded border-zinc-300 accent-zinc-900 before:absolute before:-inset-2 before:content-['']"
                   />
                 </TableHead>
                 <SortableHead sortKey="title" sort={sort} onSort={setSort}>
@@ -479,7 +479,7 @@ export function AbstractsView({
                         checked={selected.has(s.id)}
                         onChange={() => toggle(s.id)}
                         aria-label={`Select ${s.title}`}
-                        className="size-4 rounded border-zinc-300 accent-zinc-900"
+                        className="relative size-4 rounded border-zinc-300 accent-zinc-900 before:absolute before:-inset-2 before:content-['']"
                       />
                     </TableCell>
                     <TableCell className="max-w-xs">
@@ -1449,7 +1449,7 @@ function ReviewOperations({
                         await showProgress();
                       }
                     }}
-                    className="size-4 rounded border-zinc-300 accent-zinc-900"
+                    className="relative size-4 rounded border-zinc-300 accent-zinc-900 before:absolute before:-inset-2 before:content-['']"
                   />
                   <span className="min-w-0 flex-1 truncate">
                     {person.name || person.email || "Reviewer"}

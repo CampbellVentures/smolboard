@@ -50,6 +50,10 @@ interface SpeakerEditorState {
   status: string;
   headshotUrl: string;
   logistics: string;
+  // Set only when editing: the address the sheet opened with, so a save knows
+  // whether the identity email actually changed, and whether it is locked.
+  originalEmail?: string;
+  claimed?: boolean;
   website: string;
   twitter: string;
   linkedin: string;
@@ -133,6 +137,8 @@ export function SpeakersTable({
       status: profile.status || "invited",
       headshotUrl: profile.headshotUrl ?? "",
       logistics: profile.logistics ?? "",
+      originalEmail: profile.email,
+      claimed: profile.claimStatus === "claimed",
       website: links.website ?? "",
       twitter: links.twitter ?? "",
       linkedin: links.linkedin ?? "",
@@ -159,6 +165,11 @@ export function SpeakersTable({
     if (!editor) return;
     setSaving(true);
     try {
+      // saveSpeakerProfile refuses a changed identity email, so the correction
+      // has to land first. It fails closed on a claimed account.
+      if (editor.id && editor.originalEmail && editor.email.trim().toLowerCase() !== editor.originalEmail.toLowerCase()) {
+        await callFn("correctSpeakerEmail", { eventId: event.id, profileId: editor.id, email: editor.email });
+      }
       await callFn("saveSpeakerProfile", {
         eventId: event.id,
         profileId: editor.id,
@@ -404,7 +415,17 @@ function SpeakerEditor({
             <EditorSection title="Profile">
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field><FieldLabel htmlFor="speaker-name">Name</FieldLabel><Input id="speaker-name" value={editor.name} onChange={(event) => set("name", event.target.value)} required /></Field>
-                <Field><FieldLabel htmlFor="speaker-email">Email</FieldLabel><Input id="speaker-email" type="email" value={editor.email} onChange={(event) => set("email", event.target.value)} disabled={Boolean(editor.id)} required /></Field>
+                <Field>
+                  <FieldLabel htmlFor="speaker-email">Email</FieldLabel>
+                  <Input id="speaker-email" type="email" value={editor.email} onChange={(event) => set("email", event.target.value)} disabled={Boolean(editor.claimed)} required />
+                  {editor.id ? (
+                    <FieldDescription>
+                      {editor.claimed
+                        ? "This speaker has signed in, so their email is now their login and cannot be changed here."
+                        : "This is how the speaker signs in. Correcting it moves their profile, notes, and portal access."}
+                    </FieldDescription>
+                  ) : null}
+                </Field>
                 <Field><FieldLabel htmlFor="speaker-title">Job title</FieldLabel><Input id="speaker-title" value={editor.jobTitle} onChange={(event) => set("jobTitle", event.target.value)} /></Field>
                 <Field><FieldLabel htmlFor="speaker-company">Company</FieldLabel><Input id="speaker-company" value={editor.company} onChange={(event) => set("company", event.target.value)} /></Field>
               </div>

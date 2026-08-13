@@ -280,3 +280,25 @@ function parseTags(value: string): string[] | undefined {
   const tags = [...new Set(value.split(/[;|]/).map((tag) => tag.trim()).filter(Boolean))].slice(0, 20);
   return tags.length > 0 ? tags : undefined;
 }
+
+// Whether a speaker's identity email can still be corrected.
+//
+// The address ties a SpeakerProfile to its User, so rewriting it under a
+// signed-in speaker would hand their account to whoever holds the new inbox.
+// Before anyone proves inbox control the User row is a shell the organizer
+// created, and correcting a typo there is safe. A single claimed profile
+// anywhere on the account closes the window, because one account can speak at
+// several events and the email is shared across all of them.
+export function speakerEmailLock(
+  profiles: { claimStatus?: string }[],
+  isOrgMember: boolean,
+): { locked: boolean; reason?: string } {
+  if (isOrgMember) {
+    return { locked: true, reason: "This speaker also has a workspace account. Change the email from their account settings." };
+  }
+  // Legacy rows predate claimStatus and store "", which is not a claim.
+  if (profiles.some((profile) => profile.claimStatus === "claimed")) {
+    return { locked: true, reason: "This speaker has signed in and claimed their profile, so their email is now their login." };
+  }
+  return { locked: false };
+}

@@ -428,7 +428,7 @@ export function ContentTable({
                   onChange={toggleAllShown}
                   disabled={downloadable.length === 0}
                   aria-label="Select all files shown"
-                  className="size-4 rounded border-zinc-300 accent-zinc-900"
+                  className="relative size-4 rounded border-zinc-300 accent-zinc-900 before:absolute before:-inset-2 before:content-['']"
                 />
               </TableHead>
               <TableHead>Speaker</TableHead>
@@ -456,7 +456,7 @@ export function ContentTable({
                       onChange={() => toggleOne(row.id)}
                       disabled={!latest}
                       aria-label={`Select ${latest?.filename ?? row.title}`}
-                      className="size-4 rounded border-zinc-300 accent-zinc-900 disabled:opacity-40"
+                      className="relative size-4 rounded border-zinc-300 accent-zinc-900 before:absolute before:-inset-2 before:content-[''] disabled:opacity-40"
                     />
                   </TableCell>
                   <TableCell className="font-medium">{speaker?.name ?? "Unknown speaker"}</TableCell>

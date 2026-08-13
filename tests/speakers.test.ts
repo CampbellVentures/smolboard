@@ -9,6 +9,7 @@ import {
   parseSpeakerCsv,
   sanitizeSpeakerCustom,
   sanitizeSpeakerLinks,
+  speakerEmailLock,
   validatePublicHeadshotUrl,
 } from "../lib/speakers";
 import { matchesEventAnchor } from "../lib/tenantAnchors";
@@ -86,4 +87,28 @@ test("duplicate candidates exclude malformed legacy rows from another organizati
   expect(rows.filter((row) => matchesEventAnchor(row, "event-a", "org-a")).map((row) => row.email)).toEqual([
     "valid@example.com",
   ]);
+});
+
+test("speakerEmailLock: an unclaimed speaker can be corrected", () => {
+  expect(speakerEmailLock([{ claimStatus: "unclaimed" }], false).locked).toBe(false);
+});
+
+test("speakerEmailLock: legacy rows with no claimStatus are not a claim", () => {
+  expect(speakerEmailLock([{ claimStatus: "" }, {}], false).locked).toBe(false);
+});
+
+test("speakerEmailLock: one claimed profile locks every profile on the account", () => {
+  const lock = speakerEmailLock([{ claimStatus: "unclaimed" }, { claimStatus: "claimed" }], false);
+  expect(lock.locked).toBe(true);
+  expect(lock.reason).toContain("claimed their profile");
+});
+
+test("speakerEmailLock: a workspace account is locked even when unclaimed", () => {
+  const lock = speakerEmailLock([{ claimStatus: "unclaimed" }], true);
+  expect(lock.locked).toBe(true);
+  expect(lock.reason).toContain("workspace account");
+});
+
+test("speakerEmailLock: a speaker with no profiles is not locked", () => {
+  expect(speakerEmailLock([], false).locked).toBe(false);
 });
