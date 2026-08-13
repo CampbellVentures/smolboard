@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   createInvite,
   deleteOrg,
@@ -39,6 +39,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { PersonAvatar } from "@/components/person-avatar";
 import { Label } from "@/components/ui/label";
+import { isValidAccent, parseBranding } from "@/lib/branding";
 
 // Shared workspace-level client views (Members, Settings) + small UI helpers
 // reused across the dashboard. Event-specific views live under
@@ -87,6 +88,7 @@ export interface OrgInfo {
   id: string;
   name: string;
   slug?: string;
+  brandingJson?: unknown;
   createdAt: string;
 }
 
@@ -334,6 +336,127 @@ function Count({ n }: { n: number }) {
 
 /* ============================ Settings ============================ */
 
+// The public workspace index at /<org-slug> lists every event, and until now
+// it rendered smolboard's own mark because Org had nowhere to carry the
+// organizer's. Same accent + logo shape as an event's branding.
+function OrgBrandingEditor({ org, canManage }: { org: OrgInfo; canManage: boolean }) {
+  const initial = parseBranding(org.brandingJson);
+  const [accent, setAccent] = useState(initial.accent ?? "");
+  const [logoUrl, setLogoUrl] = useState(initial.logoUrl ?? "");
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  async function persist(next: { accent: string; logoUrl: string }) {
+    setBusy(true);
+    setNote(null);
+    try {
+      await callFn("saveOrgBranding", {
+        orgId: org.id,
+        accent: next.accent.trim() || null,
+        logoUrl: next.logoUrl.trim() || null,
+      });
+      setNote("Saved.");
+    } catch (error) {
+      setNote(error instanceof Error ? error.message : "Could not save branding.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onPick(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    if (file.size > 4 * 1024 * 1024) {
+      setNote("Images must be 4 MB or smaller.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      let binary = "";
+      for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+      const result = await callFn<{ url: string }>("uploadOrgImage", {
+        orgId: org.id,
+        filename: file.name,
+        mimeType: file.type || "image/png",
+        dataBase64: btoa(binary),
+      });
+      setLogoUrl(result.url);
+      await persist({ accent, logoUrl: result.url });
+    } catch (error) {
+      setNote(error instanceof Error ? error.message : "Upload failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!canManage) return null;
+  return (
+    <div className="mt-5 border-t border-zinc-100 pt-4">
+      <Label>Workspace logo</Label>
+      <p className="mt-1 text-xs text-zinc-500">
+        Shown on your public workspace page at /{org.slug ?? "<handle>"}.
+      </p>
+      <div className="mt-2 flex items-center gap-2">
+        <Input
+          value={logoUrl}
+          onChange={(e) => setLogoUrl(e.target.value)}
+          onBlur={() => void persist({ accent, logoUrl })}
+          placeholder="https://yoursite.com/logo.svg…"
+          aria-label="Workspace logo URL"
+          autoComplete="off"
+          spellCheck={false}
+        />
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml"
+          className="hidden"
+          onChange={onPick}
+        />
+        <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => fileRef.current?.click()}>
+          {busy ? "Working…" : "Upload"}
+        </Button>
+      </div>
+      {logoUrl.trim() ? (
+        <div className="mt-3 flex h-16 items-center justify-between gap-3 rounded-lg border border-dashed bg-zinc-50 px-4">
+          <img src={logoUrl} alt="Workspace logo preview" className="h-8 w-auto max-w-48 object-contain" />
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              setLogoUrl("");
+              void persist({ accent, logoUrl: "" });
+            }}
+          >
+            Remove
+          </Button>
+        </div>
+      ) : null}
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <Label htmlFor="workspace-accent" className="text-xs text-zinc-500">Accent</Label>
+        <Input
+          id="workspace-accent"
+          value={accent}
+          onChange={(e) => setAccent(e.target.value)}
+          onBlur={() => void persist({ accent, logoUrl })}
+          placeholder="#7c3aed"
+          className="w-32"
+          autoComplete="off"
+          spellCheck={false}
+        />
+        {accent.trim() && isValidAccent(accent.trim()) ? (
+          <span className="size-5 rounded-full border" style={{ background: accent.trim() }} aria-hidden="true" />
+        ) : null}
+      </div>
+      {note ? <p className="mt-2 text-xs text-zinc-500">{note}</p> : null}
+    </div>
+  );
+}
+
 export function Settings({
   org,
   role,
@@ -410,6 +533,8 @@ function SettingsView({
         </form>
 
         <OrgSlugEditor org={org} canManage={canManage} />
+
+        <OrgBrandingEditor org={org} canManage={canManage} />
 
         <dl className="mt-5 grid grid-cols-2 gap-y-3 border-t border-zinc-100 pt-4 text-sm">
           <dt className="text-zinc-500">Your role</dt>

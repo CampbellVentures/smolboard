@@ -7,10 +7,12 @@ Open-source speaker & CFP management — a [Sessionboard](https://www.sessionboa
 
 ## For graders
 
-**Organizer:** sign in at `/login` with email + password (or Google). A seeded
-organizer account is in the submission notes; it owns a populated event with
-submissions across every status, two open CFP forms, a published two-day
-agenda, a review round with scores, and an approved deck.
+**Organizer:** sign in at `/login` with email + password (or Google). The
+seeded organizer account is in the hackathon submission post; it owns a
+populated event with submissions across every status, two open CFP forms, a
+published two-day agenda, a review round with scores, and an approved deck.
+Signing up fresh works too — you get an empty workspace, so use the seeded
+account or the public links above if you want to see populated data.
 
 **Speaker (no inbox required):** `demo.speaker@smolboard.dev` /
 `demo-speaker-Kx7RtQ2wLp`. Sign in at `/login` like any other account; a
@@ -27,8 +29,7 @@ Where verification still applies, and why:
 
 - An address that **already has an account** cannot be claimed this way. The
   flow falls back to a 6-digit emailed code, so this is not a takeover path.
-  Sign in as that person with `pnpm run sbek -- auth --persona speaker`, or use
-  the seeded speaker above.
+  Use the seeded speaker above to exercise an already-registered account.
 - Uploading a file, completing an onboarding task, and editing the speaker
   profile that appears on the public site all require a verified inbox.
   Registering someone else's address therefore gains nothing that gets
@@ -87,8 +88,8 @@ Public read API (no auth): `POST /api/fn/getPublicSchedule` and `POST /api/fn/ge
 ```bash
 bun install
 bun run dev        # http://localhost:4321
-bun test           # form logic, conflicts, ICS, ZIP, branding, components
-pylon lint --strict
+bun run test       # form logic, conflicts, ICS, ZIP, branding, components
+bun run check      # tsc --noEmit
 ```
 
 Sign up, create a workspace, create an event, open its CFP — then submit to it from an incognito window and watch the dashboard update live.

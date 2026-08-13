@@ -26,6 +26,7 @@ export default function OrgSitePage({
     response.notFound();
     return null;
   }
+  const orgBranding = parseBranding((org as { brandingJson?: unknown }).brandingJson);
   const orgEvents = events
     .filter((e) => e.orgId === org.id)
     .sort((a, b) => ((a.startDate ?? "") < (b.startDate ?? "") ? 1 : -1));
@@ -34,7 +35,15 @@ export default function OrgSitePage({
     <div className="flex min-h-screen flex-col bg-zinc-50">
       <header className="border-b border-zinc-200/70 bg-white">
         <div className="mx-auto w-full max-w-3xl px-6 py-10">
-          <BrandMark size={22} />
+          {orgBranding.logoUrl ? (
+            <img
+              src={orgBranding.logoUrl}
+              alt={org.name}
+              className="h-8 w-auto max-w-56 object-contain"
+            />
+          ) : (
+            <BrandMark size={22} />
+          )}
           <h1 className="mt-4 text-balance text-3xl font-semibold tracking-tight text-zinc-900">
             {org.name}
           </h1>

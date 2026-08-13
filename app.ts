@@ -41,6 +41,10 @@ const Org = entity(
     // set by ensureOrgSlug on first dashboard load and editable in workspace
     // settings.
     slug: field.string().optional(),
+    // Workspace branding: { accent, logoUrl }. The org index page at
+    // /<org-slug> is public and had nowhere to carry the organizer's mark, so
+    // it fell back to smolboard's. Same JSON shape as Event.brandingJson.
+    brandingJson: field.json().optional(),
     createdBy: field.id("User").serverOnly(),
     createdAt: field.datetime(),
   },
