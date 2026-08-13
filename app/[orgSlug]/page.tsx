@@ -68,8 +68,12 @@ export default function OrgSitePage({
                 return (
                   <>
                     {branding.heroUrl ? (
+                      // A fixed h-24 cropped a 1200x630 conference poster to a
+                      // 96px slice through the middle, cutting the wordmark in
+                      // half. An aspect ratio keeps every card the same shape
+                      // while showing enough of the image to read it.
                       <div
-                        className="h-24 bg-cover bg-center"
+                        className="aspect-[3/1] bg-cover bg-center"
                         style={{ backgroundImage: `url(${branding.heroUrl})` }}
                         aria-hidden="true"
                       />

@@ -229,7 +229,7 @@ function ScheduleSection({
             The schedule isn&apos;t published yet
           </p>
           <p className="mt-1 text-sm text-zinc-400 dark:text-zinc-500">
-            Check back soon — talks are still being confirmed.
+            Check back soon. Talks are still being confirmed.
           </p>
         </div>
       )}
