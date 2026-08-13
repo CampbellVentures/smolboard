@@ -1,5 +1,5 @@
 import React, { use } from "react";
-import { type Metadata, type PageProps } from "@pylonsync/react";
+import { type GenerateMetadata, type PageProps } from "@pylonsync/react";
 import { CfpForm } from "./cfp-form";
 import { PublicEventShell } from "@/components/public-shell";
 import { publicEventInfo, resolvePublicEvent } from "@/lib/public-site";
@@ -7,8 +7,28 @@ import type { EventRow, OrgRow, SpeakerProfileRow, SubmissionFormRow } from "@/l
 import { cfpWindowState, formatCfpInstant } from "@/lib/cfp-window";
 import { CfpWindowNotice } from "./cfp-window-notice";
 
-export const metadata: Metadata = {
-  title: "Submit a talk",
+// This is the URL an organizer pastes into Slack, a newsletter, or a tweet.
+// It was titled "Submit a talk" with no description and no card, so every
+// share looked like a broken link to nowhere in particular.
+export const generateMetadata: GenerateMetadata<{
+  orgSlug: string;
+  eventSlug: string;
+  formSlug: string;
+}> = async ({ params, serverData }) => {
+  const [orgs, events, forms] = await Promise.all([
+    serverData.list<OrgRow>("Org"),
+    serverData.list<EventRow>("Event"),
+    serverData.list<SubmissionFormRow>("SubmissionForm"),
+  ]);
+  const resolved = resolvePublicEvent(orgs, events, params.orgSlug, params.eventSlug);
+  if (!resolved) return { title: "Not found", robots: "noindex" };
+  const { org, event } = resolved;
+  const form = forms.find((f) => f.eventId === event.id && f.slug === params.formSlug);
+  const title = form ? `${form.name} · ${event.name}` : `Submit a talk · ${event.name}`;
+  const description =
+    form?.description?.trim() ||
+    `Submit a talk to ${event.name}${event.location ? ` in ${event.location}` : ""}.`;
+  return { title, description, openGraph: { title: form?.name ?? "Submit a talk", description } };
 };
 
 // Public submission form: /<org-slug>/<event-slug>/cfp/<form-slug>. SSR

@@ -1,13 +1,26 @@
 import React, { use } from "react";
-import { Link, type Metadata, type PageProps } from "@pylonsync/react";
+import { Link, type GenerateMetadata, type PageProps } from "@pylonsync/react";
 import { ArrowRight, CalendarDays, MapPin } from "lucide-react";
 import { BrandMark } from "@/components/brand";
 import { formatRange } from "@/components/public-shell";
 import { parseBranding } from "@/lib/branding";
 import type { EventRow, OrgRow } from "@/lib/types";
 
-export const metadata: Metadata = {
-  title: "Events",
+// The org index is a public landing page people link to, and it was titled
+// the bare word "Events" with no description and no social card.
+export const generateMetadata: GenerateMetadata<{ orgSlug: string }> = async ({
+  params,
+  serverData,
+}) => {
+  const orgs = await serverData.list<OrgRow>("Org");
+  const org = orgs.find((o) => o.slug === params.orgSlug);
+  if (!org) return { title: "Not found", robots: "noindex" };
+  const description = `Events, schedules, and open calls for speakers from ${org.name}.`;
+  return {
+    title: `${org.name} events`,
+    description,
+    openGraph: { title: `${org.name} events`, description },
+  };
 };
 
 // The org's public site index: /<org-slug>. Lists every non-draft event —
