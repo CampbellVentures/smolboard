@@ -119,9 +119,19 @@ function PresenceIndicator({
   userAvatarUrl?: string | null;
   scopeName: string;
 }) {
-  const { peers, isConnected, error } = useRoom(roomId, userId, {
+  const { peers, isConnected, error: roomError } = useRoom(roomId, userId, {
     initialPresence: { name: userName, avatarUrl: userAvatarUrl ?? undefined },
   });
+  // The socket is never connected during SSR, so every isConnected-derived
+  // attribute here (the count, the aria-label, the status dot colour) rendered
+  // one way on the server and another on the first client render. React 19
+  // treats that as a hydration mismatch and threw #418 on every dashboard page.
+  // Holding the live values back until after mount makes the first client
+  // render byte-identical to the server's, then the effect reveals the truth.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const connected = mounted && isConnected;
+  const error = mounted ? roomError : null;
   const seen = new Set([userId]);
   const collaborators = peers.reduce<PresencePerson[]>((people, peer) => {
     if (seen.has(peer.user_id)) return people;
@@ -134,10 +144,10 @@ function PresenceIndicator({
   const hiddenCount = people.length - visiblePeople.length;
   const status = error
     ? "Presence unavailable"
-    : isConnected
+    : connected
       ? `${people.length} online`
       : "Connecting";
-  const title = isConnected
+  const title = connected
     ? `${people.map((person) => person.name).join(", ")} · ${scopeName}`
     : `${status} · ${scopeName}`;
 
@@ -147,7 +157,7 @@ function PresenceIndicator({
       aria-label={`${status} in ${scopeName}`}
       title={title}
       data-presence-room={roomId}
-      data-presence-count={isConnected ? people.length : 0}
+      data-presence-count={connected ? people.length : 0}
     >
       <div className="flex -space-x-2" aria-hidden="true">
         {visiblePeople.map((person, index) => (
@@ -168,7 +178,7 @@ function PresenceIndicator({
             {index === 0 ? (
               <span
                 className={`absolute bottom-0 right-0 size-2.5 rounded-full ring-2 ring-background ${
-                  error ? "bg-amber-400" : isConnected ? "bg-emerald-500" : "bg-zinc-300"
+                  error ? "bg-amber-400" : connected ? "bg-emerald-500" : "bg-zinc-300"
                 }`}
               />
             ) : null}
