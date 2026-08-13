@@ -284,7 +284,7 @@ function EmailsIndex({
 // ssr: false is the default and the right one here: the server renders the
 // skeleton, the first client render renders the skeleton, so there is nothing
 // for hydration to disagree about.
-const EmailComposer = dynamic<EmailComposerProps & { ref?: React.Ref<EmailComposerHandle> }>(
+const EmailComposer = dynamic<EmailComposerProps>(
   () => import("@/components/email-composer").then((m) => m.EmailComposer),
   { loading: () => <ComposerSkeleton /> },
 );

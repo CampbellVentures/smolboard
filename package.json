@@ -13,10 +13,10 @@
     "warm": "node scripts/warm.mjs"
   },
   "dependencies": {
-    "@pylonsync/client": "0.4.15",
-    "@pylonsync/functions": "0.4.15",
-    "@pylonsync/react": "0.4.15",
-    "@pylonsync/sdk": "0.4.15",
+    "@pylonsync/client": "0.4.16",
+    "@pylonsync/functions": "0.4.16",
+    "@pylonsync/react": "0.4.16",
+    "@pylonsync/sdk": "0.4.16",
     "@radix-ui/react-dialog": "^1.1.4",
     "@radix-ui/react-slot": "^1.1.0",
     "@react-email/editor": "1.7.1",
