@@ -403,11 +403,16 @@ export function EventOverview({
           </div>
         </DashboardPanel>
 
-        <DashboardPanel title="Submission activity" icon={TrendingUp} tone="violet" variant="subtle">
-          <SubmissionActivity submissions={submissions} />
-        </DashboardPanel>
         </div>
       </div>
+
+      {/* Full width, not a column. A 14-day series and four status counts are
+          horizontal data: in the 310px side column the sparkline had 20px per
+          day and the funnel bars were too short to compare, while the space
+          beside "Next steps" sat empty. */}
+      <DashboardPanel title="Submission activity" icon={TrendingUp} tone="violet" variant="subtle">
+        <SubmissionActivity submissions={submissions} />
+      </DashboardPanel>
 
       <DashboardPanel
         title="Latest submissions"
@@ -899,8 +904,8 @@ function SubmissionActivity({ submissions }: { submissions: SubmissionRow[] }) {
   const funnelMax = Math.max(1, ...FUNNEL_STEPS.map((step) => counts[step.status] ?? 0));
 
   return (
-    <div className="flex flex-col gap-4">
-      <div>
+    <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch lg:gap-8">
+      <div className="lg:flex-1">
         <div className="flex items-baseline justify-between">
           <span className="text-xs font-medium text-muted-foreground">Last 14 days</span>
           <span className="text-xs tabular-nums text-muted-foreground">{recent} new</span>
@@ -908,7 +913,7 @@ function SubmissionActivity({ submissions }: { submissions: SubmissionRow[] }) {
         <svg
           viewBox="0 0 100 30"
           preserveAspectRatio="none"
-          className="mt-2 h-10 w-full"
+          className="mt-2 h-16 w-full lg:h-20"
           aria-label={`${recent} submissions in the last 14 days`}
           role="img"
         >
@@ -924,7 +929,7 @@ function SubmissionActivity({ submissions }: { submissions: SubmissionRow[] }) {
           />
         </svg>
       </div>
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col justify-center gap-2 lg:w-80 lg:shrink-0">
         {FUNNEL_STEPS.map((step) => {
           const count = counts[step.status] ?? 0;
           if (count === 0) return null;

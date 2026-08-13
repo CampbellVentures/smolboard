@@ -31,12 +31,23 @@ interface ToolEvent {
 // so the chat pane itself only ever shows the conversation you're in.
 export function useCopilotThreads(eventId: string): CopilotThreadRow[] {
   const threadsQ = db.useQuery<CopilotThreadRow>("CopilotThread");
+  // Empty until mounted, on purpose. The sync replica can already hold threads
+  // on the FIRST client render while the server rendered none, and the list
+  // renders a <button> when empty and a <ul> when not — so reading the replica
+  // directly changed the DOM structure between the server HTML and hydration.
+  // React threw #418 on every dashboard page and re-rendered the subtree on the
+  // client. Every other list in the app already gates on a mounted flag; this
+  // one, in the shell, did not.
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
   return useMemo(
     () =>
-      threadsQ.data
-        .filter((t) => t.eventId === eventId)
-        .sort((a, b) => ((a.updatedAt ?? a.createdAt) < (b.updatedAt ?? b.createdAt) ? 1 : -1)),
-    [threadsQ.data, eventId],
+      hydrated
+        ? threadsQ.data
+            .filter((t) => t.eventId === eventId)
+            .sort((a, b) => ((a.updatedAt ?? a.createdAt) < (b.updatedAt ?? b.createdAt) ? 1 : -1))
+        : [],
+    [hydrated, threadsQ.data, eventId],
   );
 }
 

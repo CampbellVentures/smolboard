@@ -11,6 +11,7 @@ import {
   DashboardWidePage,
 } from "@/components/dashboard";
 import { ResponsiveFormOverlay } from "@/components/responsive-overlay";
+import { fmtDate } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -26,7 +27,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { ChevronRight, FilePlus2, FileText, ExternalLink, Trash2 } from "lucide-react";
+import { Check, ChevronRight, FilePlus2, FileText, ExternalLink, Link2 as LinkIcon, Trash2 } from "lucide-react";
 import { parseFields, slugify } from "@/lib/forms";
 import { useOrgSlug } from "@/components/use-org-slug";
 import { useOptimisticRemoval } from "@/components/use-optimistic-removal";
@@ -66,6 +67,27 @@ const STARTER_FIELDS = [
 
 function StatusBadge({ status }: { status: string }) {
   return <DashboardStatusBadge status={status} />;
+}
+
+// Same 1.5s confirm as the overview's copy control, so the two behave alike.
+function CopyLinkButton({ url, label }: { url: string; label: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <Button
+      type="button"
+      size="sm"
+      variant="ghost"
+      aria-label={`Copy the public link for ${label}`}
+      onClick={async () => {
+        await navigator.clipboard.writeText(`${window.location.origin}${url}`);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      }}
+    >
+      {copied ? <Check data-icon="inline-start" /> : <LinkIcon data-icon="inline-start" />}
+      {copied ? "Copied" : "Copy link"}
+    </Button>
+  );
 }
 
 export function FormsList({
@@ -223,7 +245,10 @@ export function FormsList({
                     </p>
                   </div>
                 </Link>
-                <dl className="grid grid-cols-2 gap-px border-t bg-border/60">
+                {/* Deadline sits here because it was the one thing an
+                    organizer could not learn without opening the builder, and
+                    it is the question they actually have about an open CFP. */}
+                <dl className="grid grid-cols-3 gap-px border-t bg-border/60">
                   <div className="bg-card px-4 py-2.5">
                     <dt className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                       Questions
@@ -235,6 +260,14 @@ export function FormsList({
                       Submissions
                     </dt>
                     <dd className="mt-0.5 text-sm font-semibold tabular-nums">{submissionCount}</dd>
+                  </div>
+                  <div className="bg-card px-4 py-2.5">
+                    <dt className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                      Closes
+                    </dt>
+                    <dd className="mt-0.5 truncate text-sm font-semibold">
+                      {f.closesAt ? fmtDate(f.closesAt) : <span className="text-muted-foreground">No deadline</span>}
+                    </dd>
                   </div>
                 </dl>
                 <div className="mt-auto flex items-center justify-between gap-2 border-t bg-muted/40 px-4 py-2.5">
@@ -278,7 +311,13 @@ export function FormsList({
                       </AlertDialogContent>
                     </AlertDialog>
                   </div>
-                  {f.status === "open" && orgSlug ? (
+                  {orgSlug ? (
+                    <div className="flex items-center gap-1">
+                      <CopyLinkButton
+                        url={`/${orgSlug}/${event.slug}/cfp/${f.slug}`}
+                        label={f.name}
+                      />
+                      {f.status === "open" ? (
                     <Button asChild size="sm" variant="outline">
                       <a
                         href={`/${orgSlug}/${event.slug}/cfp/${f.slug}`}
@@ -289,6 +328,8 @@ export function FormsList({
                         View public page
                       </a>
                     </Button>
+                      ) : null}
+                    </div>
                   ) : null}
                 </div>
               </section>
