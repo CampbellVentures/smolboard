@@ -31,7 +31,7 @@ export interface EmailComposerHandle {
   focusEditor: () => void;
 }
 
-interface EmailComposerProps {
+export interface EmailComposerProps {
   content: EmailComposerContent;
   initialDocument: EmailComposerDocument;
   onDocumentChange: (document: EmailComposerDocument) => void;

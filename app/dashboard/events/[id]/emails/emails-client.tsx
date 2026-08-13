@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { callFn, db } from "@pylonsync/react";
+import { callFn, db, dynamic } from "@pylonsync/react";
 import {
   ArrowLeft,
   Check,
@@ -14,11 +14,11 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { DashboardStatusBadge, DashboardWidePage } from "@/components/dashboard";
-import {
-  EmailComposer,
-  type EmailComposerContent,
-  type EmailComposerDocument,
-  type EmailComposerHandle,
+import type {
+  EmailComposerContent,
+  EmailComposerDocument,
+  EmailComposerHandle,
+  EmailComposerProps,
 } from "@/components/email-composer";
 import { EmailBlockRail, type MergeVariable } from "@/components/email-block-rail";
 import { Button } from "@/components/ui/button";
@@ -269,6 +269,35 @@ function EmailsIndex({
         </div>
       </div>
     </DashboardWidePage>
+  );
+}
+
+// The rich-text composer carries @react-email/editor, tiptap and marked. Left
+// as a static import it put all of that in this route's entry chunk, which the
+// sidebar then warmed on every dashboard page: 1,048,999 bytes brotli of editor
+// downloaded whether or not anyone opened a template. Deferred, it arrives on
+// the render that mounts it, which is the first time someone edits.
+//
+// Module level on purpose. A dynamic() per render is a new component type each
+// time and would remount the editor on every keystroke.
+//
+// ssr: false is the default and the right one here: the server renders the
+// skeleton, the first client render renders the skeleton, so there is nothing
+// for hydration to disagree about.
+const EmailComposer = dynamic<EmailComposerProps & { ref?: React.Ref<EmailComposerHandle> }>(
+  () => import("@/components/email-composer").then((m) => m.EmailComposer),
+  { loading: () => <ComposerSkeleton /> },
+);
+
+function ComposerSkeleton() {
+  return (
+    <div className="animate-pulse space-y-3 py-2" aria-busy="true">
+      <span className="sr-only">Loading the editor</span>
+      <div className="h-4 w-3/4 rounded bg-muted" />
+      <div className="h-4 w-full rounded bg-muted" />
+      <div className="h-4 w-5/6 rounded bg-muted" />
+      <div className="h-32 w-full rounded bg-muted" />
+    </div>
   );
 }
 
