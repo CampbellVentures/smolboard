@@ -72,6 +72,9 @@ export default function EventHomePage({
   const feedArgs = { orgSlug: params.orgSlug, eventSlug: params.eventSlug };
   const schedule = use(serverData.fn<ScheduleFeed>("getPublicSchedule", feedArgs));
   const speakers = use(serverData.fn<SpeakersFeed>("getPublicSpeakers", feedArgs));
+  // Same condition SpeakersSection renders on, so the nav can never offer a
+  // tab whose section is absent.
+  const hasSpeakers = Boolean(speakers?.published) && (speakers?.speakers.length ?? 0) > 0;
 
   // Widget mode: ?embed=schedule|speakers renders one section, chrome-less,
   // sized for an iframe on the organizer's own site.
@@ -169,7 +172,7 @@ export default function EventHomePage({
   }
 
   return (
-    <PublicEventShell event={eventInfo} active="home">
+    <PublicEventShell event={eventInfo} active="home" hasSpeakers={hasSpeakers}>
       <EventSite
         event={eventInfo}
         description={event.description ?? null}

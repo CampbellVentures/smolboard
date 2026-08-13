@@ -35,10 +35,16 @@ const TABS: { key: string; cfp?: boolean; label: string; path: string }[] = [
 export function PublicEventShell({
   event,
   active,
+  hasSpeakers,
   children,
 }: {
   event: PublicEventInfo;
   active: PublicTab;
+  // The speakers section only renders once the schedule is published and
+  // someone is on it. Without this the tab pointed at a section that was not
+  // in the document, and SectionTab fell through to a same-URL navigation:
+  // the click did nothing at all.
+  hasSpeakers: boolean;
   children: React.ReactNode;
 }) {
   const branding = event.branding ?? { accent: null, logoUrl: null, tagline: null, heroUrl: null };
@@ -127,7 +133,7 @@ export function PublicEventShell({
         <div className="mx-auto w-full max-w-3xl px-6">
           {hero ? null : heading}
           <nav className={"-mb-px flex gap-6" + (hero ? " mt-1" : " mt-6")} aria-label="Event pages">
-            {TABS.map((t) => {
+            {TABS.filter((t) => t.key !== "speakers" || hasSpeakers).map((t) => {
               const isActive = t.cfp === true && active === "cfp";
               const href = `/${event.orgSlug}/${event.slug}${t.path}`;
               // Schedule and Speakers are anchors into THIS page. Routing them

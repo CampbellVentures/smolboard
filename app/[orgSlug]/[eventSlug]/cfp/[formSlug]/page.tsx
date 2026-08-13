@@ -44,6 +44,10 @@ export default function CfpFormPage({
   const orgsPromise = serverData.list<OrgRow>("Org");
   const eventsPromise = serverData.list<EventRow>("Event");
   const formsPromise = serverData.list<SubmissionFormRow>("SubmissionForm");
+  const speakersPromise = serverData.fn<{ published: boolean; speakers: unknown[] }>("getPublicSpeakers", {
+    orgSlug: params.orgSlug,
+    eventSlug: params.eventSlug,
+  });
   const resolved = resolvePublicEvent(
     use(orgsPromise),
     use(eventsPromise),
@@ -55,6 +59,8 @@ export default function CfpFormPage({
     return null;
   }
   const { org, event } = resolved;
+  const speakersFeed = use(speakersPromise);
+  const hasSpeakers = Boolean(speakersFeed?.published) && (speakersFeed?.speakers.length ?? 0) > 0;
   const form = use(formsPromise).find(
     (f) => f.eventId === event.id && f.slug === params.formSlug,
   );
@@ -87,7 +93,7 @@ export default function CfpFormPage({
   const initialName = myProfile?.name || accountName;
 
   return (
-    <PublicEventShell event={publicEventInfo(org, event)} active="cfp">
+    <PublicEventShell event={publicEventInfo(org, event)} active="cfp" hasSpeakers={hasSpeakers}>
       <h2 className="text-xl font-semibold tracking-tight text-zinc-900">{form.name}</h2>
       {form.description && (
         <p className="mt-2 text-[15px] leading-relaxed text-zinc-600">{form.description}</p>

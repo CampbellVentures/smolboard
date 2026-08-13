@@ -21,6 +21,10 @@ export default function CfpIndexPage({
   const orgsPromise = serverData.list<OrgRow>("Org");
   const eventsPromise = serverData.list<EventRow>("Event");
   const formsPromise = serverData.list<SubmissionFormRow>("SubmissionForm");
+  const speakersPromise = serverData.fn<{ published: boolean; speakers: unknown[] }>("getPublicSpeakers", {
+    orgSlug: params.orgSlug,
+    eventSlug: params.eventSlug,
+  });
   const resolved = resolvePublicEvent(
     use(orgsPromise),
     use(eventsPromise),
@@ -32,6 +36,8 @@ export default function CfpIndexPage({
     return null;
   }
   const { org, event } = resolved;
+  const speakersFeed = use(speakersPromise);
+  const hasSpeakers = Boolean(speakersFeed?.published) && (speakersFeed?.speakers.length ?? 0) > 0;
   const forms = use(formsPromise).filter((f) => f.eventId === event.id && f.status !== "draft");
   const cfpOpen = forms.some((form) => cfpWindowState({
     eventStatus: event.cfpStatus,
@@ -41,7 +47,7 @@ export default function CfpIndexPage({
   }) === "open");
 
   return (
-    <PublicEventShell event={publicEventInfo(org, event)} active="cfp">
+    <PublicEventShell event={publicEventInfo(org, event)} active="cfp" hasSpeakers={hasSpeakers}>
       {forms.length === 0 ? (
         <div className="rounded-xl bg-white px-6 py-10 text-center shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.04)]">
           <p className="text-sm font-medium text-zinc-700">
