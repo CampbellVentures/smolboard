@@ -425,7 +425,14 @@ export function FormBuilder({
       </div>
 
       {/* ---------------- Right: live preview (browser frame) ---------------- */}
-      <div className="xl:sticky xl:top-6 xl:self-start">
+      {/* Not sticky. `main` carries overflow-x-auto, which computes to
+          overflow: auto on both axes and makes it the sticky scroll container;
+          since `main` never scrolls vertically (the document does), the
+          preview could never stick and top-6 only pushed it 24px below the
+          editor column. Measured: the preview tracked the page at every scroll
+          offset. Making it genuinely sticky means changing that overflow on the
+          shell, which is a wider change than this alignment fix. */}
+      <div className="xl:self-start">
         <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_-12px_rgba(0,0,0,0.12)]">
           <div className="flex items-center gap-3 border-b border-zinc-100 bg-zinc-50 px-4 py-2.5">
             <span className="flex gap-1.5" aria-hidden="true">

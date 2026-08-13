@@ -12,6 +12,7 @@ import {
 } from "@/components/dashboard";
 import { ResponsiveFormOverlay } from "@/components/responsive-overlay";
 import { fmtDate } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -221,9 +222,10 @@ export function FormsList({
           description="Create a submission form to open your CFP."
         />
       ) : (
-        <div className="grid items-start gap-4 md:grid-cols-2">
+        <div className={cn("grid items-start gap-4", forms.length > 1 && "md:grid-cols-2")}>
           {forms.map((f) => {
-            const fieldCount = parseFields(parseJson(f.fieldsJson) ?? []).length;
+            const fields = parseFields(parseJson(f.fieldsJson) ?? []);
+            const fieldCount = fields.length;
             const submissionCount = submissions.filter((s) => s.formId === f.id).length;
             return (
               <section
@@ -270,6 +272,27 @@ export function FormsList({
                     </dd>
                   </div>
                 </dl>
+                {forms.length === 1 && fields.length > 0 ? (
+                  <div className="border-t px-4 py-3">
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                      Questions asked
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
+                        Name, email, title, abstract
+                      </span>
+                      {fields.map((field) => (
+                        <span
+                          key={field.key}
+                          className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground"
+                        >
+                          {field.label}
+                          {field.required ? <span className="text-foreground"> *</span> : null}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
                 <div className="mt-auto flex items-center justify-between gap-2 border-t bg-muted/40 px-4 py-2.5">
                   <div className="flex items-center gap-1">
                     <Button asChild size="sm" variant="ghost">
