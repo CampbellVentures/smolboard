@@ -82,6 +82,7 @@ export type EventNavKey =
 interface PresencePerson {
   id: string;
   name: string;
+  avatarUrl?: string | null;
 }
 
 // One neutral treatment for every initials chip — never color-on-color.
@@ -97,28 +98,38 @@ function peerName(peer: RoomPeer): string {
   return name || "Organizer";
 }
 
+// Peers publish their avatar alongside their name, so the stack shows faces
+// rather than a row of coloured initials. Presence data is whatever the peer
+// put there, so treat a non-string as absent.
+function peerAvatar(peer: RoomPeer): string | null {
+  const url = typeof peer.data?.avatarUrl === "string" ? peer.data.avatarUrl.trim() : "";
+  return url || null;
+}
+
 function PresenceIndicator({
   roomId,
   userId,
   userName,
+  userAvatarUrl,
   scopeName,
 }: {
   roomId: string;
   userId: string;
   userName: string;
+  userAvatarUrl?: string | null;
   scopeName: string;
 }) {
   const { peers, isConnected, error } = useRoom(roomId, userId, {
-    initialPresence: { name: userName },
+    initialPresence: { name: userName, avatarUrl: userAvatarUrl ?? undefined },
   });
   const seen = new Set([userId]);
   const collaborators = peers.reduce<PresencePerson[]>((people, peer) => {
     if (seen.has(peer.user_id)) return people;
     seen.add(peer.user_id);
-    people.push({ id: peer.user_id, name: peerName(peer) });
+    people.push({ id: peer.user_id, name: peerName(peer), avatarUrl: peerAvatar(peer) });
     return people;
   }, []);
-  const people = [{ id: userId, name: userName }, ...collaborators];
+  const people = [{ id: userId, name: userName, avatarUrl: userAvatarUrl ?? null }, ...collaborators];
   const visiblePeople = people.slice(0, 4);
   const hiddenCount = people.length - visiblePeople.length;
   const status = error
@@ -145,7 +156,15 @@ function PresenceIndicator({
             className={`relative flex size-8 items-center justify-center rounded-full text-[10px] font-semibold ring-2 ring-background ${presenceTone(person.id)}`}
             style={{ zIndex: visiblePeople.length - index }}
           >
-            {initialsOf(person.name)}
+            {person.avatarUrl ? (
+              <img
+                src={person.avatarUrl}
+                alt=""
+                className="absolute inset-0 size-full rounded-full object-cover"
+              />
+            ) : (
+              initialsOf(person.name)
+            )}
             {index === 0 ? (
               <span
                 className={`absolute bottom-0 right-0 size-2.5 rounded-full ring-2 ring-background ${
@@ -424,6 +443,10 @@ export function AppShell({
 }) {
   const router = useRouter();
   const pathname = usePathname();
+  // Same source the account menu reads, so the presence chip and the sidebar
+  // card show the same face instead of one photo and one initial.
+  const { session } = useAuth();
+  const sessionAvatarUrl = (session as { avatarUrl?: string | null } | null)?.avatarUrl ?? null;
   const presenceRoomId = event
     ? `smolboard:event:${event.id}`
     : `smolboard:workspace:${workspaceId}`;
@@ -650,6 +673,7 @@ export function AppShell({
                 roomId={presenceRoomId}
                 userId={userId}
                 userName={userName}
+                userAvatarUrl={sessionAvatarUrl}
                 scopeName={presenceScopeName}
               />
             </div>
