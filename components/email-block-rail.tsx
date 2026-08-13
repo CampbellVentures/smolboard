@@ -107,17 +107,19 @@ function groups(variables: MergeVariable[]): RailGroup[] {
   ];
 }
 
+export interface EmailBlockRailProps {
+  composer: RefObject<EmailComposerHandle | null>;
+  variables: MergeVariable[];
+  disabled?: boolean;
+  onUploadImage?: (file: File) => Promise<{ url: string }>;
+}
+
 export function EmailBlockRail({
   composer,
   variables,
   disabled,
   onUploadImage,
-}: {
-  composer: RefObject<EmailComposerHandle | null>;
-  variables: MergeVariable[];
-  disabled?: boolean;
-  onUploadImage?: (file: File) => Promise<{ url: string }>;
-}) {
+}: EmailBlockRailProps) {
   const [open, setOpen] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);

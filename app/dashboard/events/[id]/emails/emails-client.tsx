@@ -20,7 +20,7 @@ import type {
   EmailComposerHandle,
   EmailComposerProps,
 } from "@/components/email-composer";
-import { EmailBlockRail, type MergeVariable } from "@/components/email-block-rail";
+import type { EmailBlockRailProps, MergeVariable } from "@/components/email-block-rail";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -287,6 +287,16 @@ function EmailsIndex({
 const EmailComposer = dynamic<EmailComposerProps & { ref?: React.Ref<EmailComposerHandle> }>(
   () => import("@/components/email-composer").then((m) => m.EmailComposer),
   { loading: () => <ComposerSkeleton /> },
+);
+
+// The slash-command rail imports 13 runtime constants from
+// @react-email/editor/ui, so leaving it static pulled the whole editor
+// library back into the entry even with the composer deferred: the chunk was
+// split correctly and then statically imported anyway. It renders beside the
+// composer and is needed at exactly the same moment, so it defers with it.
+const EmailBlockRail = dynamic<EmailBlockRailProps>(
+  () => import("@/components/email-block-rail").then((m) => m.EmailBlockRail),
+  { loading: () => <div className="h-64 w-10 animate-pulse rounded bg-muted" /> },
 );
 
 function ComposerSkeleton() {
