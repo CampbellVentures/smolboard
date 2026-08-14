@@ -181,9 +181,7 @@ export function CopilotChat({
                 {streamText ? (
                   <Markdown className="text-[13px] text-foreground">{streamText}</Markdown>
                 ) : (
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Loader2 className="size-3.5 animate-spin" /> Thinking…
-                  </div>
+                  <span className="t-shimmer text-xs" data-text="Thinking…">Thinking…</span>
                 )}
               </div>
             )}
@@ -231,7 +229,10 @@ export function CopilotChat({
               onClick={() => void send()}
               aria-label="Send message"
             >
-              {busy ? <Loader2 className="size-4 animate-spin" /> : <Send data-icon="inline-start" />}
+              <span className="t-icon-swap" data-state={busy ? "b" : "a"}>
+                <span className="t-icon" data-icon="a"><Send data-icon="inline-start" /></span>
+                <span className="t-icon" data-icon="b"><Loader2 className="animate-spin" /></span>
+              </span>
             </Button>
           </div>
         </div>
@@ -253,13 +254,10 @@ function ToolChip({ event }: { event: ToolEvent }) {
             : "bg-blue-50 text-blue-600",
       )}
     >
-      {event.phase === "start" ? (
-        <Loader2 className="size-3 animate-spin" />
-      ) : event.isError ? (
-        <X className="size-3" />
-      ) : (
-        <Wrench className="size-3" />
-      )}
+      <span className="t-icon-swap size-3" data-state={event.phase === "start" ? "a" : "b"}>
+        <span className="t-icon" data-icon="a"><Loader2 className="size-3 animate-spin" /></span>
+        <span className="t-icon" data-icon="b">{event.isError ? <X className="size-3" /> : <Wrench className="size-3" />}</span>
+      </span>
       {def?.name ?? event.name}
     </span>
   );

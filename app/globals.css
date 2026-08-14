@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "./transitions.css";
 @import "@react-email/editor/themes/default.css";
 
 /* Tailwind v4 scans these globs for class names. `components/` is here so
@@ -226,7 +227,7 @@
 .sb-anim {
   animation-duration: 6s;
   animation-iteration-count: infinite;
-  animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
+  animation-timing-function: var(--ease-smooth-out);
 }
 
 @media (prefers-reduced-motion: reduce) {

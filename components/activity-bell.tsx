@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { db, Link } from "@pylonsync/react";
+import { Popover } from "radix-ui";
 import {
   Bell,
   Bot,
@@ -39,6 +40,7 @@ export function ActivityBell({ workspaceId }: { workspaceId: string }) {
   const { data, loading } = db.useQuery<ActivityRow>("ActivityLog");
   const [hydrated, setHydrated] = useState(false);
   const [lastSeen, setLastSeen] = useState<string>("");
+  const [open, setOpen] = useState(false);
   useEffect(() => {
     setHydrated(true);
     try {
@@ -69,20 +71,32 @@ export function ActivityBell({ workspaceId }: { workspaceId: string }) {
   }
 
   return (
-    <details className="group relative" onToggle={(e) => e.currentTarget.open && markSeen()}>
-      <summary
+    <Popover.Root
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (next) markSeen();
+      }}
+    >
+      <Popover.Trigger asChild>
+      <button
+        type="button"
         className="relative flex size-10 cursor-pointer select-none list-none items-center justify-center rounded-lg transition-[background-color] hover:bg-muted marker:hidden [&::-webkit-details-marker]:hidden"
         aria-label={unread > 0 ? `Activity (${unread} new)` : "Activity"}
       >
         <Bell className="size-4.5 text-muted-foreground" aria-hidden="true" />
-        {unread > 0 ? (
-          <span
-            aria-hidden="true"
-            className="absolute right-2 top-2 size-2 rounded-full bg-red-500 ring-2 ring-background"
-          />
-        ) : null}
-      </summary>
-      <div className="absolute right-0 top-11 z-50 w-[min(22rem,calc(100vw-1.5rem))] overflow-hidden rounded-xl border border-border bg-card shadow-lg">
+        <span className="t-badge" style={{ right: "0.5rem", top: "0.5rem" }} data-open={unread > 0 ? "true" : "false"} aria-hidden="true">
+          <span className="t-badge-dot block size-2 rounded-full bg-red-500 ring-2 ring-background" />
+        </span>
+      </button>
+      </Popover.Trigger>
+      <Popover.Portal>
+      <Popover.Content
+        align="end"
+        sideOffset={4}
+        data-origin="top-right"
+        className="t-dropdown z-50 w-[min(22rem,calc(100vw-1.5rem))] overflow-hidden rounded-xl border border-border bg-card shadow-lg"
+      >
         <div className="flex items-center justify-between border-b bg-muted/40 px-4 py-2.5">
           <span className="text-sm font-semibold">Activity</span>
           <span className="text-[11px] text-muted-foreground">
@@ -125,7 +139,8 @@ export function ActivityBell({ workspaceId }: { workspaceId: string }) {
             })}
           </ul>
         )}
-      </div>
-    </details>
+      </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
   );
 }

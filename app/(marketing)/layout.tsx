@@ -3,6 +3,7 @@ import { Link, type PageAuth } from "@pylonsync/react";
 import { siteConfig } from "@/lib/site.config";
 import { Analytics } from "@/components/analytics";
 import { BrandMark } from "@/components/brand";
+import { MarketingMobileNav } from "@/components/marketing-mobile-nav";
 
 // `(marketing)` is a ROUTE GROUP: the parens segment is stripped from every
 // URL (so `(marketing)/page.tsx` still serves `/`), and this layout wraps
@@ -17,57 +18,6 @@ import { BrandMark } from "@/components/brand";
 interface LayoutProps {
   children: React.ReactNode;
   auth: PageAuth;
-}
-
-// Mobile menu — the desktop nav is `hidden md:flex`, so on phones this is the
-// only way to reach Product / Resources / Pricing. Pure-CSS via native
-// `<details>` (no client JS, same pattern as the FAQ + user menu); plain `<a>`
-// links do a full navigation, which closes the open panel. md:hidden so it
-// never shows alongside the desktop nav.
-function MobileNav({ signedIn }: { signedIn: boolean }) {
-  return (
-    <details className="md:hidden">
-      <summary
-        aria-label="Open menu"
-        className="flex size-9 cursor-pointer select-none list-none items-center justify-center rounded-md text-zinc-700 transition-colors marker:hidden hover:bg-zinc-100 [&::-webkit-details-marker]:hidden"
-      >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
-          <path d="M3 6h18M3 12h18M3 18h18" />
-        </svg>
-      </summary>
-      <div className="fixed inset-x-0 top-14 z-40 max-h-[calc(100vh-3.5rem)] overflow-y-auto border-b border-zinc-200 bg-white shadow-[0_24px_48px_-24px_rgba(0,0,0,0.25)]">
-        <div className="mx-auto max-w-5xl space-y-6 px-6 py-6">
-          <div className="flex flex-col">
-            <a href="/ai-engineer/ai-engineer-sandbox" className="rounded-lg px-2 py-2 text-[14px] font-medium text-zinc-700 transition-colors hover:bg-zinc-50">
-              Live demo
-            </a>
-            <a href="/portal" className="rounded-lg px-2 py-2 text-[14px] font-medium text-zinc-700 transition-colors hover:bg-zinc-50">
-              Speaker portal
-            </a>
-            <a href="https://github.com/CampbellVentures/smolboard" className="rounded-lg px-2 py-2 text-[14px] font-medium text-zinc-700 transition-colors hover:bg-zinc-50">
-              GitHub
-            </a>
-          </div>
-          <div className="flex flex-col gap-2 border-t border-zinc-100 pt-5">
-            {signedIn ? (
-              <a href="/dashboard" className="inline-flex h-10 items-center justify-center rounded-full bg-zinc-900 text-[14px] font-medium text-white transition-colors hover:bg-zinc-700">
-                Open dashboard
-              </a>
-            ) : (
-              <>
-                <a href="/login" className="inline-flex h-10 items-center justify-center rounded-full border border-zinc-300 text-[14px] font-medium text-zinc-900 transition-colors hover:bg-zinc-50">
-                  Log in
-                </a>
-                <a href="/signup" className="inline-flex h-10 items-center justify-center rounded-full bg-zinc-900 text-[14px] font-medium text-white transition-colors hover:bg-zinc-700">
-                  Get started
-                </a>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-    </details>
-  );
 }
 
 export default function MarketingLayout({ children, auth }: LayoutProps) {
@@ -106,7 +56,7 @@ export default function MarketingLayout({ children, auth }: LayoutProps) {
             </nav>
           </div>
           <nav className="flex items-center gap-2">
-            <MobileNav signedIn={signedIn} />
+            <MarketingMobileNav signedIn={signedIn} />
             {signedIn ? (
               <Link
                 href="/dashboard"

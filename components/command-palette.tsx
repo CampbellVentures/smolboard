@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { DashboardIconChip, type DashboardChipTone } from "@/components/dashboard";
 import type { EventRow, SpeakerProfileRow, SubmissionRow } from "@/lib/types";
+import { useMotionPresence } from "@/hooks/use-motion-presence";
 
 // Cmd+K: jump anywhere. Sources are the nav destinations the shell passes in
 // plus live entities (events, submissions, speakers) from the sync engine —
@@ -50,6 +51,7 @@ export function CommandPalette({
   const [q, setQ] = useState("");
   const [cursor, setCursor] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const presence = useMotionPresence(open, "--modal-close-dur", 150);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -66,8 +68,8 @@ export function CommandPalette({
   }, []);
 
   useEffect(() => {
-    if (open) inputRef.current?.focus();
-  }, [open]);
+    if (open && presence.mounted) inputRef.current?.focus();
+  }, [open, presence.mounted]);
 
   const eventQ = db.useQuery<EventRow>("Event");
   const submissionQ = db.useQuery<SubmissionRow>("Submission");
@@ -151,7 +153,7 @@ export function CommandPalette({
     router.push(item.href);
   }
 
-  if (!open) return null;
+  if (!presence.mounted) return null;
 
   return (
     <div
@@ -163,7 +165,7 @@ export function CommandPalette({
       aria-modal="true"
       aria-label="Command palette"
     >
-      <div className="mx-auto w-full max-w-lg overflow-hidden rounded-xl border border-border bg-card shadow-2xl">
+      <div className={`t-modal ${presence.motionClassName} mx-auto w-full max-w-lg overflow-hidden rounded-xl border border-border bg-card shadow-2xl`}>
         <div className="flex items-center gap-2.5 border-b px-4">
           <Search className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
           <input

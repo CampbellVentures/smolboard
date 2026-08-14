@@ -3,7 +3,10 @@
 import React, { useEffect, useId, useMemo, useRef, useState } from "react";
 import { CalendarDays, ChevronLeft, MapPin, Search, Star } from "lucide-react";
 import { PersonAvatar } from "@/components/person-avatar";
+import { AnimatedClearInput } from "@/components/animated-clear-input";
 import { dayKey, eventSessionTime, fmtTime } from "@/lib/agenda";
+import { useMotionPresence } from "@/hooks/use-motion-presence";
+import { useSlidingTabs } from "@/hooks/use-sliding-tabs";
 import type { ScheduleFeed, SpeakersFeed } from "@/app/[orgSlug]/[eventSlug]/event-site-client";
 
 // The embeddable widget surfaces beyond the one-page site: a sessions list, a
@@ -154,16 +157,13 @@ export function SessionsListWidget({
   return (
     <section>
       <div className="flex flex-wrap items-center gap-2">
-        <label className="relative flex-1 min-w-48">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-zinc-400 dark:text-zinc-500" aria-hidden="true" />
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Search sessions or speakers…"
-            aria-label="Search sessions"
-            className="h-9 w-full rounded-full bg-white dark:bg-zinc-900 pl-9 pr-3 text-[13px] text-zinc-700 dark:text-zinc-200 shadow-[0_0_0_1px_rgba(0,0,0,0.06)] outline-none placeholder:text-zinc-400 focus:shadow-[0_0_0_1px_rgba(0,0,0,0.15)]"
-          />
-        </label>
+        <AnimatedClearInput
+          value={q}
+          onChange={setQ}
+          onClear={() => { setQ(""); setTrack(""); setFormat(""); setRoom(""); }}
+          placeholder="Search sessions or speakers…"
+          label="Search sessions"
+        />
         <select
           value={track}
           onChange={(e) => setTrack(e.target.value)}
@@ -197,7 +197,7 @@ export function SessionsListWidget({
             <option key={r.id} value={r.id}>{r.name}</option>
           ))}
         </select>
-        {clearable ? (
+        {!q && clearable ? (
           <button
             type="button"
             onClick={() => { setQ(""); setTrack(""); setFormat(""); setRoom(""); }}
@@ -297,10 +297,23 @@ export function ItineraryWidget({
   const [stars, setStars] = useState<Set<string>>(new Set());
   const [mineOnly, setMineOnly] = useState(false);
   const [day, setDay] = useState<string | null>(null);
+  const [bursting, setBursting] = useState<string | null>(null);
+  const scheduled = feed?.sessions.filter((session) => session.startTime) ?? [];
+  const days = [...new Set(scheduled.map((session) => dayKey(session.startTime!, tz)))].sort();
+  const activeDay = day ?? days[0];
+  const activeDayIndex = Math.max(0, days.indexOf(activeDay));
+  const { barRef, pillRef, tabRefs } = useSlidingTabs(activeDayIndex, days.length);
   // Restore the personal schedule after mount so it survives a full reload.
   React.useEffect(() => setStars(loadStars(eventSlug)), [eventSlug]);
 
   function toggle(id: string) {
+    if (!stars.has(id)) {
+      setBursting(id);
+      const duration = parseFloat(
+        getComputedStyle(document.documentElement).getPropertyValue("--like-particle-dur"),
+      ) || 600;
+      window.setTimeout(() => setBursting((current) => current === id ? null : current), duration);
+    }
     setStars((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -315,9 +328,6 @@ export function ItineraryWidget({
   }
 
   if (!feed?.published) return <Empty label="The schedule isn't published yet." />;
-  const scheduled = feed.sessions.filter((s) => s.startTime);
-  const days = [...new Set(scheduled.map((s) => dayKey(s.startTime!, tz)))].sort();
-  const activeDay = day ?? days[0];
   const roomName = (id: string | null) => feed.rooms.find((r) => r.id === id)?.name;
   const trackOf = (id: string | null) => feed.tracks.find((t) => t.id === id);
   const rows = scheduled
@@ -328,23 +338,22 @@ export function ItineraryWidget({
   return (
     <section>
       <div className="flex flex-wrap items-center gap-2">
-        {days.map((d) => (
+        <div ref={barRef} className="t-tabs" role="tablist" aria-label="Schedule day">
+        <span ref={pillRef} className="t-tabs-pill" style={accent ? { background: accent } : undefined} aria-hidden="true" />
+        {days.map((d, index) => (
           <button
             key={d}
+            ref={(node) => { tabRefs.current[index] = node; }}
             type="button"
             onClick={() => setDay(d)}
-            aria-pressed={activeDay === d}
-            style={activeDay === d && accent ? { background: accent } : undefined}
-            className={
-              "rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-colors " +
-              (activeDay === d
-                ? "bg-zinc-900 text-white"
-                : "bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 shadow-[0_0_0_1px_rgba(0,0,0,0.06)] hover:text-zinc-900")
-            }
+            role="tab"
+            aria-selected={activeDay === d}
+            className="t-tab text-[13px] font-medium"
           >
             {dayHeading(d)}
           </button>
         ))}
+        </div>
         <button
           type="button"
           onClick={() => setMineOnly((v) => !v)}
@@ -405,10 +414,21 @@ export function ItineraryWidget({
                 type="button"
                 onClick={() => toggle(s.id)}
                 aria-pressed={starred}
+                data-liked={starred ? "true" : "false"}
                 aria-label={starred ? `Remove ${s.title} from my schedule` : `Add ${s.title} to my schedule`}
-                className="shrink-0 p-1"
+                className={`t-like relative shrink-0 p-1 ${bursting === s.id ? "is-bursting" : ""}`}
+                style={{ "--like-color": "#fbbf24" } as React.CSSProperties}
               >
-                <Star className={"size-4 " + (starred ? "fill-amber-400 text-amber-400" : "text-zinc-300 hover:text-zinc-400")} aria-hidden="true" />
+                <span className="t-like-icon block">
+                  <Star className="t-like-heart size-4 text-zinc-300 hover:text-zinc-400" aria-hidden="true" />
+                </span>
+                <span className="t-like-particles" aria-hidden="true">
+                  {Array.from({ length: 8 }, (_, index) => {
+                    const angle = (Math.PI * 2 * index) / 8;
+                    const distance = 16 + (index % 3) * 3;
+                    return <i key={index} style={{ "--px": `${Math.cos(angle) * distance}px`, "--py": `${Math.sin(angle) * distance}px`, "--pdelay": `${index * 12}ms` } as React.CSSProperties} />;
+                  })}
+                </span>
               </button>
             </li>
           );
@@ -426,6 +446,10 @@ export function ItineraryWidget({
 export function SpeakerGalleryWidget({ feed, tz }: { feed: SpeakersFeed | null; tz: string }) {
   const [q, setQ] = useState("");
   const [open, setOpen] = useState<SpeakersFeed["speakers"][number] | null>(null);
+  const lastOpen = useRef<SpeakersFeed["speakers"][number] | null>(null);
+  const presence = useMotionPresence(Boolean(open), "--modal-close-dur", 150);
+  if (open) lastOpen.current = open;
+  const shownSpeaker = open ?? lastOpen.current;
   if (!feed?.published || feed.speakers.length === 0) return <Empty label="No speakers published yet." />;
   const needle = q.trim().toLowerCase();
   const people = feed.speakers
@@ -464,15 +488,15 @@ export function SpeakerGalleryWidget({ feed, tz }: { feed: SpeakersFeed | null; 
         ))}
       </div>
 
-      {open ? (
+      {presence.mounted && shownSpeaker ? (
         <div
           className="fixed inset-0 z-50 flex items-start justify-center bg-black/25 p-4 pt-[10vh]"
           role="dialog"
           aria-modal="true"
-          aria-label={open.name}
+          aria-label={shownSpeaker.name}
           onMouseDown={(e) => { if (e.target === e.currentTarget) setOpen(null); }}
         >
-          <div className="w-full max-w-md rounded-xl bg-white dark:bg-zinc-900 p-5 shadow-xl">
+          <div className={`t-modal ${presence.motionClassName} w-full max-w-md rounded-xl bg-white p-5 shadow-xl dark:bg-zinc-900`}>
             <button
               type="button"
               onClick={() => setOpen(null)}
@@ -482,21 +506,21 @@ export function SpeakerGalleryWidget({ feed, tz }: { feed: SpeakersFeed | null; 
               Back
             </button>
             <div className="flex items-center gap-3">
-              <PersonAvatar name={open.name} src={open.headshotUrl} size="xl" />
+              <PersonAvatar name={shownSpeaker.name} src={shownSpeaker.headshotUrl} size="xl" />
               <div className="min-w-0">
-                <h3 className="truncate text-base font-semibold text-zinc-900 dark:text-zinc-50">{open.name}</h3>
+                <h3 className="truncate text-base font-semibold text-zinc-900 dark:text-zinc-50">{shownSpeaker.name}</h3>
                 <p className="truncate text-[12.5px] text-zinc-500 dark:text-zinc-400">
-                  {[open.jobTitle, open.company].filter(Boolean).join(", ")}
+                  {[shownSpeaker.jobTitle, shownSpeaker.company].filter(Boolean).join(", ")}
                 </p>
               </div>
             </div>
-            {open.bio ? (
-              <p className="mt-3 text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-300">{open.bio}</p>
+            {shownSpeaker.bio ? (
+              <p className="mt-3 text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-300">{shownSpeaker.bio}</p>
             ) : null}
-            {(open.sessions ?? []).length > 0 || open.talks.length > 0 ? (
+            {(shownSpeaker.sessions ?? []).length > 0 || shownSpeaker.talks.length > 0 ? (
               <div className="mt-3 border-t border-zinc-100 dark:border-zinc-800 pt-3">
                 <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-400 dark:text-zinc-500">Sessions</p>
-                {(open.sessions ?? open.talks.map((title) => ({ title, startTime: null, room: null }))).map(
+                {(shownSpeaker.sessions ?? shownSpeaker.talks.map((title) => ({ title, startTime: null, room: null }))).map(
                   (session) => (
                     <div key={session.title} className="mt-1.5">
                       <p className="text-[13px] font-medium text-zinc-700 dark:text-zinc-200">{session.title}</p>

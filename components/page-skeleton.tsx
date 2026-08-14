@@ -18,7 +18,7 @@ function Bar({ className }: { className?: string }) {
 export function PageSkeleton({ rows = 5 }: { rows?: number }) {
   return (
     <div
-      className="flex w-full min-w-0 animate-pulse flex-col gap-5"
+      className="route-page-skeleton t-skel-skeleton is-pulsing flex w-full min-w-0 flex-col gap-5"
       aria-busy="true"
       aria-live="polite"
     >

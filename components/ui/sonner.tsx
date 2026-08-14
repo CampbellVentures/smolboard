@@ -10,7 +10,11 @@ import {
 } from "lucide-react"
 import { Toaster as Sonner, type ToasterProps } from "sonner"
 
-const Toaster = ({ ...props }: ToasterProps) => {
+const Toaster = ({ toastOptions: providedToastOptions, ...props }: ToasterProps) => {
+  const toastOptions = {
+    ...providedToastOptions,
+    className: `t-toast ${providedToastOptions?.className ?? ""}`.trim(),
+  };
   return (
     <Sonner
       theme="system"
@@ -31,6 +35,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
         } as React.CSSProperties
       }
       {...props}
+      toastOptions={toastOptions}
     />
   )
 }

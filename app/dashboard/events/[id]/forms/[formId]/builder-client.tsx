@@ -551,25 +551,23 @@ function CollapsiblePanel({
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <section className="rounded-xl border bg-card">
+    <section className="t-acc rounded-xl border bg-card" data-open={open ? "true" : "false"}>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        className="flex min-h-12 w-full items-center gap-2.5 rounded-xl px-4 py-2 text-left"
+        className="t-acc-head flex min-h-12 w-full items-center gap-2.5 rounded-xl px-4 py-2 text-left"
       >
         {icon ? <DashboardIconChip icon={icon} tone={tone} size="sm" /> : null}
         <span className="text-sm font-semibold text-zinc-900">{title}</span>
         {hint && !open && <span className="text-xs text-zinc-400">{hint}</span>}
-        <ChevronDown
-          aria-hidden="true"
-          className={cn(
-            "ml-auto size-4 shrink-0 text-zinc-400 transition-transform duration-150",
-            !open && "-rotate-90",
-          )}
-        />
+        <span className="t-acc-chevron ml-auto" aria-hidden="true">
+          <ChevronDown className="size-4 shrink-0 text-zinc-400" />
+        </span>
       </button>
-      {open && <div className="border-t border-zinc-100 px-4 py-4">{children}</div>}
+      <div className="t-acc-panel" aria-hidden={!open} inert={!open}>
+        <div className="t-acc-panel-inner border-t border-zinc-100 px-4 py-4">{children}</div>
+      </div>
     </section>
   );
 }

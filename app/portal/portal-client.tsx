@@ -30,6 +30,7 @@ import { Markdown } from "@/components/markdown";
 import {
   CalendarDays,
   CheckCircle2,
+  ChevronDown,
   ExternalLink,
   LogOut,
   Loader2,
@@ -504,12 +505,12 @@ function ResourcesSection() {
         {resources.map((resource) => {
           const open = openId === resource.id;
           return (
-            <li key={resource.id}>
+            <li key={resource.id} className="t-acc" data-open={open ? "true" : "false"}>
               <button
                 type="button"
                 onClick={() => setOpenId(open ? null : resource.id)}
                 aria-expanded={open}
-                className="flex min-h-12 w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-zinc-50"
+                className="t-acc-head flex min-h-12 w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-zinc-50"
               >
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium text-zinc-900">
@@ -517,10 +518,12 @@ function ResourcesSection() {
                   </span>
                   <span className="block truncate text-xs text-zinc-400">{resource.eventName}</span>
                 </span>
-                <span className="text-xs text-zinc-400">{open ? "Hide" : "Open"}</span>
+                <span className="t-acc-chevron text-zinc-400" aria-hidden="true">
+                  <ChevronDown className="size-4" />
+                </span>
               </button>
-              {open ? (
-                <div className="space-y-3 border-t px-4 py-4">
+              <div className="t-acc-panel" aria-hidden={!open} inert={!open}>
+                <div className="t-acc-panel-inner space-y-3 border-t px-4 py-4">
                   {resource.body ? (
                     <Markdown className="text-[13.5px] text-zinc-700">{resource.body}</Markdown>
                   ) : null}
@@ -538,7 +541,7 @@ function ResourcesSection() {
                     />
                   ) : null}
                 </div>
-              ) : null}
+              </div>
             </li>
           );
         })}

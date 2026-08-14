@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { callFn, db, Link, type RoomPeer, usePathname, useRoom, useRouter } from "@pylonsync/react";
 import { useAuth, OrganizationSwitcher } from "@pylonsync/client";
+import { Popover } from "radix-ui";
 import {
   LayoutDashboard,
   CalendarDays,
@@ -863,8 +864,10 @@ function UserMenu({
   }
   const up = direction === "up";
   return (
-    <details className="group relative">
-      <summary
+    <Popover.Root>
+      <Popover.Trigger asChild>
+      <button
+        type="button"
         className={
           "cursor-pointer select-none list-none marker:hidden [&::-webkit-details-marker]:hidden " +
           (up
@@ -887,12 +890,15 @@ function UserMenu({
             <ChevronsUpDown className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={2} aria-hidden="true" />
           </>
         ) : null}
-      </summary>
-      <div
-        className={
-          "absolute z-40 w-56 overflow-hidden rounded-xl bg-popover p-1 text-popover-foreground shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_16px_48px_-16px_rgba(0,0,0,0.25)] " +
-          (up ? "bottom-full left-0 mb-2" : "right-0 top-full mt-2")
-        }
+      </button>
+      </Popover.Trigger>
+      <Popover.Portal>
+      <Popover.Content
+        side={up ? "top" : "bottom"}
+        align={up ? "start" : "end"}
+        sideOffset={8}
+        data-origin={up ? "bottom-left" : "top-right"}
+        className="t-dropdown z-40 w-56 overflow-hidden rounded-xl bg-popover p-1 text-popover-foreground shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_16px_48px_-16px_rgba(0,0,0,0.25)]"
       >
         <div className="border-b border-border/60 px-2.5 py-2">
           <div className="truncate text-[13px] font-medium">
@@ -921,7 +927,8 @@ function UserMenu({
           <LogOut className="size-4 text-muted-foreground" strokeWidth={2} aria-hidden="true" />
           Sign out
         </button>
-      </div>
-    </details>
+      </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
   );
 }

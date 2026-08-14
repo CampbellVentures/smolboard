@@ -27,7 +27,7 @@ export function FormsIllustration() {
         <div className={`${chip} flex h-7 items-center px-2.5 text-[10px] font-medium text-zinc-500`}>
           Session format
           <span
-            className="sb-anim ml-auto rounded bg-violet-100 px-1.5 py-0.5 text-[9px] font-semibold text-violet-700"
+            className="t-text-swap sb-anim ml-auto rounded bg-violet-100 px-1.5 py-0.5 text-[9px] font-semibold text-violet-700"
             style={{ animationName: "sb-select-swap" }}
           >
             Workshop
@@ -38,7 +38,8 @@ export function FormsIllustration() {
         </div>
         {/* The point of the card: this row only exists for Workshop. */}
         <div
-          className="sb-anim rounded-md border border-dashed border-violet-300 bg-violet-50/60 px-2.5 py-2"
+          className="t-panel-slide sb-anim rounded-md border border-dashed border-violet-300 bg-violet-50/60 px-2.5 py-2"
+          data-open="true"
           style={{ animationName: "sb-field-in" }}
         >
           <div className="text-[9.5px] font-semibold text-violet-700">Workshop prerequisites</div>
@@ -82,7 +83,7 @@ export function AgendaIllustration() {
             </div>
           </div>
           <div
-            className="sb-anim absolute -bottom-1 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-amber-100 px-2 py-0.5 text-[9px] font-semibold text-amber-700 shadow-sm"
+            className="t-toast is-open sb-anim absolute -bottom-1 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-amber-100 px-2 py-0.5 text-[9px] font-semibold text-amber-700 shadow-sm"
             style={{ animationName: "sb-conflict" }}
           >
             Priya is double-booked
@@ -139,7 +140,7 @@ export function PortalIllustration() {
       <div className="flex flex-col gap-2">
         {tasks.map((task, i) => (
           <div key={task} className={`${chip} flex items-center gap-2 px-2.5 py-2`}>
-            <span className="relative flex size-4 shrink-0 items-center justify-center rounded-full bg-emerald-100">
+            <span className="t-check relative flex size-4 shrink-0 items-center justify-center rounded-full bg-emerald-100" aria-checked="true" aria-hidden="true">
               <svg
                 viewBox="0 0 24 24"
                 className="sb-anim size-2.5 stroke-emerald-600"
@@ -220,7 +221,8 @@ export function EmbedsIllustration() {
           </span>
         </div>
         <div
-          className="sb-anim rounded-md bg-white p-2 shadow-[0_0_0_1px_rgba(0,0,0,0.06)]"
+          className="t-panel-slide sb-anim rounded-md bg-white p-2 shadow-[0_0_0_1px_rgba(0,0,0,0.06)]"
+          data-open="true"
           style={{ animationName: "sb-widget-in" }}
         >
           <div className="flex items-center gap-2">
