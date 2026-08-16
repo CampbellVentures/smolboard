@@ -1301,33 +1301,48 @@ function ReviewOperations({
       toast.error(error instanceof Error ? error.message : "Couldn't load review progress.");
     }
   }
+  // Every toolbar action surfaces its failure. These used to throw into the
+  // void: with no active reviewers, "Assign reviewers" looked like a dead
+  // button while the server's explanation went to the console.
   async function assign() {
-    const result = await callFn<{ created: number }>("bulkAssignReviews", {
-      eventId,
-      roundId: round.id,
-      category,
-      assignmentsPerSubmission: 1,
-    });
-    setNote(`${result.created} assigned`);
+    try {
+      const result = await callFn<{ created: number }>("bulkAssignReviews", {
+        eventId,
+        roundId: round.id,
+        category,
+        assignmentsPerSubmission: 1,
+      });
+      setNote(`${result.created} assigned`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Couldn't assign reviewers.");
+    }
   }
   async function remind() {
-    const result = await callFn<{ queued: number }>("sendReviewReminders", {
-      eventId,
-      roundId: round.id,
-    });
-    setNote(`${result.queued} reminders queued`);
+    try {
+      const result = await callFn<{ queued: number }>("sendReviewReminders", {
+        eventId,
+        roundId: round.id,
+      });
+      setNote(`${result.queued} reminders queued`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Couldn't queue reminders.");
+    }
   }
   async function download() {
-    const result = await callFn<{ filename: string; csv: string }>("exportReviewCsv", {
-      eventId,
-      roundId: round.id,
-    });
-    const url = URL.createObjectURL(new Blob([result.csv], { type: "text/csv;charset=utf-8" }));
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = result.filename;
-    anchor.click();
-    URL.revokeObjectURL(url);
+    try {
+      const result = await callFn<{ filename: string; csv: string }>("exportReviewCsv", {
+        eventId,
+        roundId: round.id,
+      });
+      const url = URL.createObjectURL(new Blob([result.csv], { type: "text/csv;charset=utf-8" }));
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = result.filename;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Couldn't export the CSV.");
+    }
   }
   return (
     <div className="flex flex-wrap items-center gap-1">

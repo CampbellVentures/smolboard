@@ -395,7 +395,9 @@ function ScheduleSection({
             ))}
             {blocks.length === 0 && (
               <p className="py-12 text-center text-sm text-zinc-400 dark:text-zinc-500">
-                Nothing scheduled for this day yet.
+                {search.trim() || trackFilter
+                  ? "No talks match on this day. Try another day or clear the filter."
+                  : "Nothing scheduled for this day yet."}
               </p>
             )}
           </div>

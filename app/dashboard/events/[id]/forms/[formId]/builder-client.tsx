@@ -19,7 +19,6 @@ import {
   keyFromLabel,
   parseFields,
   parseRouting,
-  slugify,
   type Answers,
   type FieldType,
   type FormField,
@@ -218,7 +217,10 @@ export function FormBuilder({
         eventId: event.id,
         formId: form.id,
         name: name.trim() || form.name,
-        slug: slugify(name.trim() || form.name),
+        // The slug is the form's public URL and may already be shared or
+        // printed. Renaming the form must not move it — the slug is set once
+        // at creation (forms-client) and never rewritten here.
+        slug: form.slug,
         description: description.trim() || undefined,
         confirmationMessage: confirmation.trim() || undefined,
         status,
@@ -296,9 +298,9 @@ export function FormBuilder({
           <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <span
               className="min-w-0 truncate text-xs text-zinc-400"
-              title={`/${orgSlug ?? "…"}/${event.slug}/cfp/${slugify(name) || form.slug}`}
+              title={`/${orgSlug ?? "…"}/${event.slug}/cfp/${form.slug}`}
             >
-              Public URL: /{orgSlug ?? "…"}/{event.slug}/cfp/{slugify(name) || form.slug}
+              Public URL: /{orgSlug ?? "…"}/{event.slug}/cfp/{form.slug}
             </span>
             <div className="flex items-center gap-3" aria-live="polite">
               {saveError ? (
@@ -441,7 +443,7 @@ export function FormBuilder({
               <span className="size-2.5 rounded-full bg-zinc-300" />
             </span>
             <span className="min-w-0 flex-1 truncate rounded-md bg-white px-3 py-1 text-[11px] tabular-nums text-zinc-500 ring-1 ring-zinc-200">
-              smolboard.app/{orgSlug ?? "…"}/{event.slug}/cfp/{slugify(name) || form.slug}
+              smolboard.app/{orgSlug ?? "…"}/{event.slug}/cfp/{form.slug}
             </span>
             <button
               type="button"
@@ -462,6 +464,7 @@ export function FormBuilder({
                 fields={fields}
                 answers={previewAnswers}
                 onChange={setPreviewAnswers}
+                idPrefix="builder-preview"
               />
             )}
           </div>

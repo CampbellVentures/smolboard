@@ -36,7 +36,12 @@ export default mutation({
       : roundPool.length > 0
         ? [...new Set(roundPool)].sort()
         : await activeReviewerUserIds(ctx, event.orgId as string);
-    if (requested.length === 0) throw ctx.error("INVALID_ARGS", "Select at least one active reviewer.");
+    if (requested.length === 0) {
+      throw ctx.error(
+        "INVALID_ARGS",
+        "This workspace has no active reviewers. Add one from the Team page, then assign.",
+      );
+    }
     const active = await ctx.db.unsafe.query("ReviewerMembership", {
       orgId: event.orgId,
       status: "active",
