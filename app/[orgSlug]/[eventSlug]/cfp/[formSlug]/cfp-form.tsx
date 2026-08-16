@@ -64,6 +64,9 @@ export function CfpForm({
   const [answers, setAnswers] = useState<Answers>({});
   const [errors, setErrors] = useState<ValidationError[]>([]);
   const [topError, setTopError] = useState<string | null>(null);
+  // Positive status ("email verified, draft saved") — not an error, so it
+  // must not render in the error red.
+  const [topNotice, setTopNotice] = useState<string | null>(null);
   const [needsLogin, setNeedsLogin] = useState(false);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
@@ -168,11 +171,15 @@ export function CfpForm({
     setBusy(true);
     setTopError(null);
     try {
-      await verifyMagicLink(email.trim().toLowerCase(), code.trim());
+      // persistSession refreshes the stored client token; without it the sync
+      // engine and fn calls keep the pre-verification identity and every
+      // authenticated call fails until local storage is cleared.
+      const session = await verifyMagicLink(email.trim().toLowerCase(), code.trim());
+      persistSession(session);
       setAuthenticated(true);
       await persistDraft(false);
       setAuthStage("idle");
-      setTopError("Email verified. Your draft is saved; invite any co-presenters, then finalize when ready.");
+      setTopNotice("Email verified. Your draft is saved; invite any co-presenters, then finalize when ready.");
     } catch (error) {
       setTopError(error instanceof Error ? error.message : "Could not verify and finalize the submission.");
     } finally {
@@ -300,9 +307,12 @@ export function CfpForm({
       </label>
 
       {fields.length > 0 && (
-        <FormRenderer fields={fields} answers={answers} onChange={setAnswers} errors={errors} />
+        <FormRenderer fields={fields} answers={answers} onChange={setAnswers} errors={errors} idPrefix="cfp-field" />
       )}
 
+      {topNotice && !topError && (
+        <p className="text-sm text-emerald-700">{topNotice}</p>
+      )}
       {topError && (
         <div className="flex flex-wrap items-center gap-3">
           <p className="text-sm text-red-600">{topError}</p>

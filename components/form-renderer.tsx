@@ -35,14 +35,21 @@ export function FormRenderer({
   onChange,
   errors = [],
   disabled = false,
+  idPrefix: stablePrefix,
 }: {
   fields: FormField[];
   answers: Answers;
   onChange: (next: Answers) => void;
   errors?: ValidationError[];
   disabled?: boolean;
+  // Pass a stable prefix when the form is server-rendered: useId is
+  // position-based, and the SSR tree includes a framework Suspense wrapper
+  // the client render lacks, so the generated ids differ and every field
+  // logs a hydration attribute mismatch.
+  idPrefix?: string;
 }) {
-  const idPrefix = useId();
+  const generatedPrefix = useId();
+  const idPrefix = stablePrefix ?? generatedPrefix;
   const errFor = (key: string) => errors.find((e) => e.field === key)?.message;
 
   function set(key: string, value: Answers[string]) {

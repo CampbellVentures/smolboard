@@ -1,13 +1,28 @@
 import React, { use } from "react";
-import { Link, type Metadata, type PageProps } from "@pylonsync/react";
+import { Link, type GenerateMetadata, type PageProps } from "@pylonsync/react";
 import { ArrowRight } from "lucide-react";
 import { PublicEventShell } from "@/components/public-shell";
 import { publicEventInfo, resolvePublicEvent } from "@/lib/public-site";
 import type { EventRow, OrgRow, SubmissionFormRow } from "@/lib/types";
 import { cfpWindowState, formatCfpInstant } from "@/lib/cfp-window";
 
-export const metadata: Metadata = {
-  title: "Call for speakers",
+export const generateMetadata: GenerateMetadata<{
+  orgSlug: string;
+  eventSlug: string;
+}> = async ({ params, serverData }) => {
+  const [orgs, events] = await Promise.all([
+    serverData.list<OrgRow>("Org"),
+    serverData.list<EventRow>("Event"),
+  ]);
+  const resolved = resolvePublicEvent(orgs, events, params.orgSlug, params.eventSlug);
+  if (!resolved) return { title: "Call for speakers" };
+  const { event } = resolved;
+  const description = `Open calls for speakers for ${event.name}. Submit a talk, lightning talk, or workshop.`;
+  return {
+    title: `Call for speakers · ${event.name}`,
+    description,
+    openGraph: { title: `Call for speakers · ${event.name}`, description },
+  };
 };
 
 // CFP index: /<org-slug>/<event-slug>/cfp. Anonymous reads work because the

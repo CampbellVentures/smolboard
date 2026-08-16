@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { callFn, db } from "@pylonsync/react";
 import { fmtDate, fmtDateTime } from "@/lib/format";
-import { sendMagicLink, verifyMagicLink, useAuth } from "@pylonsync/client";
+import { sendMagicLink, verifyMagicLink, persistSession, useAuth } from "@pylonsync/client";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -93,7 +93,9 @@ export function PortalLogin() {
     setBusy(true);
     setError(null);
     try {
-      await verifyMagicLink(email.trim().toLowerCase(), code.trim());
+      // Refresh the stored client token, or the sync engine keeps the old
+      // (guest) identity after the reload and the portal renders empty.
+      persistSession(await verifyMagicLink(email.trim().toLowerCase(), code.trim()));
       window.location.reload();
     } catch {
       setError("That code didn't work. It may have expired, so request a new one.");
