@@ -201,7 +201,11 @@ export function SpeakersTable({
     try {
       await callFn("resetSpeakerClaim", { eventId: event.id, profileId: editor.id });
       setEditor((current) => (current ? { ...current, claimed: false } : current));
-      toast.success("Portal access reset. Their email can be corrected now.");
+      // Careful with the promise here: an email correction still refuses when
+      // the account ever proved inbox control (password, claim history —
+      // including claims in other workspaces). Only a never-signed-in shell
+      // can be moved.
+      toast.success("Portal access reset. They can no longer sign in to this profile.");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not reset portal access.");
     } finally {
@@ -450,7 +454,8 @@ function SpeakerEditor({
                           >
                             Reset their portal access
                           </button>{" "}
-                          to change it.
+                          to revoke their sign-in. To move this profile to a
+                          different address, add that address as a new speaker.
                         </>
                       ) : (
                         "This is how the speaker signs in. Correcting it moves their profile, notes, and portal access."
