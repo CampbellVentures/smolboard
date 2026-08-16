@@ -274,6 +274,10 @@ const SpeakerProfile = entity(
     customJson: field.json().optional(),
     invitedAt: field.datetime().optional(),
     claimedAt: field.datetime().optional(),
+    // Set when an organizer revokes the claim (resetSpeakerClaim). While
+    // present, claimSpeakerProfile refuses the same account's automatic
+    // re-claim; correctSpeakerEmail clears it once the address is fixed.
+    claimResetAt: field.datetime().optional(),
     updatedAt: field.datetime().optional(),
     // { website?, twitter?, linkedin?, github? }
     linksJson: field.json().optional(),

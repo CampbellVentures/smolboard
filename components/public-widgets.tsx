@@ -490,7 +490,7 @@ export function SpeakerGalleryWidget({ feed, tz }: { feed: SpeakersFeed | null; 
 
       {presence.mounted && shownSpeaker ? (
         <div
-          className="fixed inset-0 z-50 flex items-start justify-center bg-black/25 p-4 pt-[10vh]"
+          className={`t-scrim ${presence.motionClassName} fixed inset-0 z-50 flex items-start justify-center p-4 pt-[10vh]`}
           role="dialog"
           aria-modal="true"
           aria-label={shownSpeaker.name}

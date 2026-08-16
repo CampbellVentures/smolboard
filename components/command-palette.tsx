@@ -157,7 +157,7 @@ export function CommandPalette({
 
   return (
     <div
-      className="fixed inset-0 z-[60] bg-black/25 p-4 pt-[12vh]"
+      className={`t-scrim ${presence.motionClassName} fixed inset-0 z-[60] p-4 pt-[12vh]`}
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) setOpen(false);
       }}

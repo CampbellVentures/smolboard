@@ -16,27 +16,45 @@ import type { ReviewerQueueItem } from "@/lib/types";
 export function ReviewerQueue({ orgId }: { orgId: string }) {
   const [items, setItems] = useState<ReviewerQueueItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ code?: string; message: string } | null>(null);
   async function load() {
     try {
       const result = await callFn<{ items: ReviewerQueueItem[] }>("getReviewerQueue", { orgId });
       setItems(result.items);
       setError(null);
-    } catch {
-      setError("Reviewer access is not active for this workspace.");
+    } catch (caught) {
+      const code = (caught as { code?: string }).code;
+      const message = caught instanceof Error ? caught.message : "The review queue did not load.";
+      setError({ code, message });
     } finally {
       setLoading(false);
     }
   }
   useEffect(() => { void load(); }, [orgId]);
   if (loading) return <p className="text-sm text-muted-foreground">Loading assigned reviews…</p>;
-  if (error) {
+  // Only a real access denial gets the "not a reviewer" explanation. A
+  // network failure or server error used to land here too and told a real
+  // reviewer their access was revoked.
+  if (error && error.code === "FORBIDDEN") {
     return (
       <DashboardEmptyState
         icon={Inbox}
         title="Reviewer access is not active"
         description="Your account is not a reviewer in this workspace. A workspace owner can turn it on from the Team page."
       />
+    );
+  }
+  if (error) {
+    return (
+      <DashboardEmptyState
+        icon={Inbox}
+        title="The review queue did not load"
+        description={error.message}
+      >
+        <Button type="button" variant="outline" onClick={() => { setLoading(true); void load(); }}>
+          Try again
+        </Button>
+      </DashboardEmptyState>
     );
   }
   if (items.length === 0) {

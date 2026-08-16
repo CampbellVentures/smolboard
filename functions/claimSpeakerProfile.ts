@@ -19,6 +19,12 @@ export default mutation({
     if (!event || event.orgId !== profile.orgId || !user) {
       throw ctx.error("NOT_FOUND", "Speaker profile not found.");
     }
+    // An organizer revoked this claim. Without this gate the portal's
+    // automatic claim call flips the profile straight back to "claimed" on
+    // the speaker's next visit and the reset silently reverts.
+    if (profile.claimResetAt) {
+      throw ctx.error("FORBIDDEN", "An organizer reset this profile's portal access. Ask them to re-invite you.");
+    }
     if (!user.emailVerified) {
       throw ctx.error("FORBIDDEN", "Verify this email with a magic code before claiming the profile.");
     }

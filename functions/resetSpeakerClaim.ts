@@ -38,14 +38,23 @@ export default mutation<
     }
     // An organizer who is also a speaker keeps their own account: unclaiming
     // there would strip a real workspace member of their portal for no reason.
-    const memberships = await ctx.db.unsafe.query("OrgMember", { userId: profile!.userId as string });
-    if (memberships.some((row) => (row.userId as string) === (profile!.userId as string))) {
+    // Scoped to THIS workspace — a speaker who happens to own an unrelated
+    // workspace elsewhere is still resettable here.
+    const memberships = await ctx.db.unsafe.query("OrgMember", {
+      orgId: event.orgId as string,
+      userId: profile!.userId as string,
+    });
+    if (memberships.length > 0) {
       throw ctx.error("CONFLICT", "This speaker is a workspace member. Remove them from the team instead.");
     }
 
     await ctx.db.unsafe.update("SpeakerProfile", args.profileId, {
       claimStatus: "unclaimed",
       claimedAt: null,
+      // Blocks the portal's automatic re-claim: without this stamp the same
+      // account claims the profile back on its next /portal visit and the
+      // reset silently reverts. correctSpeakerEmail clears it.
+      claimResetAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
     await logActivity(ctx, {

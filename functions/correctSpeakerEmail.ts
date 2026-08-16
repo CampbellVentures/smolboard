@@ -36,29 +36,46 @@ export default mutation({
     const user = await ctx.db.unsafe.get("User", userId);
     if (!user) throw ctx.error("NOT_FOUND", "Speaker account not found.");
     const previous = normalizeSpeakerEmail(user.email as string);
-    // A submission freezes its participants at submit time, and the review
-    // sheet renders that snapshot under "Participants" as if it were current
-    // contact detail. Left alone it keeps showing the address we just moved
-    // away from. Syncing runs even when the email is already correct, so the
-    // repair is idempotent and fixes drift from earlier renames.
-    const snapshots = await syncParticipantSnapshots(
-      ctx,
-      event.orgId as string,
-      userId,
-      email,
-      profile!.name as string,
-    );
-    if (previous === email) return { changed: false, email, snapshots };
+    const owned = await ctx.db.unsafe.query("SpeakerProfile", { userId });
 
-    const owned = (await ctx.db.unsafe.query("SpeakerProfile", { userId })).filter(
-      (row) => (row.userId as string) === userId,
-    );
+    if (previous === email) {
+      // Idempotent repair path: nothing moves, so it is safe for claimed
+      // accounts. A submission freezes its participants at submit time, and
+      // the review sheet renders that snapshot under "Participants" — this
+      // fixes drift from earlier renames. It also clears a pending claim
+      // reset, which is the organizer's undo for a reset made by mistake.
+      const snapshots = await syncParticipantSnapshots(
+        ctx,
+        event.orgId as string,
+        userId,
+        email,
+        profile!.name as string,
+      );
+      await clearClaimResets(ctx, owned);
+      return { changed: false, email, snapshots };
+    }
+
     const memberships = await ctx.db.unsafe.query("OrgMember", { userId });
     const lock = speakerEmailLock(
       owned.map((row) => ({ claimStatus: row.claimStatus as string | undefined })),
-      memberships.some((row) => (row.userId as string) === userId),
+      memberships.length > 0,
     );
     if (lock.locked) throw ctx.error("CONFLICT", lock.reason!);
+    // A claim reset unlocks the profile above, but the account behind it may
+    // still belong to a real person. A password, a live claim, or a revoked
+    // claim (claimResetAt survives as the record that someone once proved
+    // inbox control) all mean sessions may exist on this account. Renaming it
+    // would hand those sessions the new address — when the rightful owner
+    // later requests a magic code, they sign in to the wrong person's
+    // account. Organizer-created shells have none of these (emailVerified is
+    // stamped at import as the organizer vouching, so it is NOT the signal),
+    // and the plain typo repair stays open for them.
+    if (user.passwordHash || owned.some((row) => row.claimedAt || row.claimResetAt)) {
+      throw ctx.error(
+        "CONFLICT",
+        "Someone has signed in to this speaker account. Correcting the address would move their access; invite the right email as a new speaker instead.",
+      );
+    }
 
     // The new address must be free, or the correction would merge two people.
     const users = await ctx.db.unsafe.list("User");
@@ -76,10 +93,24 @@ export default mutation({
       throw ctx.error("CONFLICT", "A speaker with this email already exists for the event.");
     }
 
+    // All guards passed — only now touch the participant snapshots, so a
+    // rejected correction cannot leave the review sheet renamed to an address
+    // the function refused.
+    const snapshots = await syncParticipantSnapshots(
+      ctx,
+      event.orgId as string,
+      userId,
+      email,
+      profile!.name as string,
+    );
     const now = new Date().toISOString();
     await ctx.db.unsafe.update("User", userId, { email });
     for (const row of owned) {
-      await ctx.db.unsafe.update("SpeakerProfile", row.id as string, { email, updatedAt: now });
+      await ctx.db.unsafe.update("SpeakerProfile", row.id as string, {
+        email,
+        claimResetAt: null,
+        updatedAt: now,
+      });
     }
     // Notes are filed against the address rather than the user, so they would
     // be orphaned by the rename.
@@ -92,6 +123,21 @@ export default mutation({
     return { changed: true, email, profiles: owned.length, notes: notes.length, snapshots };
   },
 });
+
+// The organizer's correction is the recovery act for a claim reset; once it
+// lands, the (new) address may claim again.
+async function clearClaimResets(
+  ctx: { db: { unsafe: { update: (e: string, id: string, patch: Record<string, unknown>) => Promise<unknown> } } },
+  owned: Record<string, unknown>[],
+): Promise<void> {
+  for (const row of owned) {
+    if (!row.claimResetAt) continue;
+    await ctx.db.unsafe.update("SpeakerProfile", row.id as string, {
+      claimResetAt: null,
+      updatedAt: new Date().toISOString(),
+    });
+  }
+}
 
 // Rewrite this person's entry in every submission's frozen participant list.
 // Keyed on userId, so it repairs the row no matter which address it froze.
