@@ -2,7 +2,9 @@
 
 import React, { useEffect, useState } from "react";
 import { callFn } from "@pylonsync/react";
+import { Inbox } from "lucide-react";
 
+import { DashboardEmptyState } from "@/components/dashboard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StarRating } from "@/components/star-rating";
@@ -28,8 +30,24 @@ export function ReviewerQueue({ orgId }: { orgId: string }) {
   }
   useEffect(() => { void load(); }, [orgId]);
   if (loading) return <p className="text-sm text-muted-foreground">Loading assigned reviews…</p>;
-  if (error) return <p className="text-sm text-destructive">{error}</p>;
-  if (items.length === 0) return <p className="text-sm text-muted-foreground">No reviews are assigned to you.</p>;
+  if (error) {
+    return (
+      <DashboardEmptyState
+        icon={Inbox}
+        title="Reviewer access is not active"
+        description="Your account is not a reviewer in this workspace. A workspace owner can turn it on from the Team page."
+      />
+    );
+  }
+  if (items.length === 0) {
+    return (
+      <DashboardEmptyState
+        icon={Inbox}
+        title="No reviews assigned"
+        description="When an organizer assigns you submissions to score, they show up here."
+      />
+    );
+  }
   return (
     <div className="space-y-4" data-reviewer-queue>
       {items.map((item) => <ReviewCard key={item.assignmentId} item={item} onSaved={load} />)}

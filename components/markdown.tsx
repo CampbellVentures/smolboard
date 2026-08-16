@@ -214,10 +214,10 @@ export function Markdown({
 
   // A parser failure must never blank the message: fall back to the raw text.
   if (!tokens) {
-    return <div className={cn("whitespace-pre-wrap", className)}>{children}</div>;
+    return <div className={cn("whitespace-pre-wrap [overflow-wrap:anywhere]", className)}>{children}</div>;
   }
   return (
-    <div className={cn("flex flex-col gap-2 leading-6", className)}>
+    <div className={cn("flex flex-col gap-2 leading-6 [overflow-wrap:anywhere]", className)}>
       {renderBlocks(tokens, "md")}
     </div>
   );
