@@ -5,6 +5,7 @@ import { createOrg, listOrgs } from "@pylonsync/client";
 import { db } from "@pylonsync/react";
 import { Button } from "@/components/ui/button";
 import { reconcileStaleToken } from "@/components/session-reconcile";
+import { revokeCookieSession } from "@/lib/sign-out";
 
 // Org-less safety net. New signups get "My Workspace" auto-created in the signup
 // flow, so this only renders in edge cases: that creation failed, or a user left
@@ -53,6 +54,7 @@ export function ProvisionWorkspace({ toPortal = false }: { toPortal?: boolean })
 
   async function signOut() {
     await db.sync.signOut();
+    await revokeCookieSession();
     window.location.assign("/login");
   }
 

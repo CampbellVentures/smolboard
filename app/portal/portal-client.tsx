@@ -17,6 +17,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { BrandMark } from "@/components/brand";
+import { SessionReconcile } from "@/components/session-reconcile";
+import { revokeCookieSession } from "@/lib/sign-out";
 import { Badge } from "@/components/ui/badge";
 import { ResponsiveFormOverlay } from "@/components/responsive-overlay";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
@@ -311,11 +313,17 @@ export function PortalHome({
 
   async function onSignOut() {
     await signOut();
+    await revokeCookieSession();
     window.location.reload();
   }
 
   return (
     <div className="min-h-screen bg-zinc-50">
+      {/* Same guard the dashboard shell mounts: when a stale Bearer token
+          shadows a fresher cookie identity, drop the token and reload —
+          otherwise live sync runs as the previous account and every
+          user-scoped list renders empty. */}
+      <SessionReconcile />
       <header className="border-b border-zinc-200 bg-white">
         <div className="mx-auto flex h-14 max-w-3xl items-center justify-between px-6">
           <h1 className="flex items-center gap-2 text-[15px] font-semibold tracking-tight text-zinc-900">

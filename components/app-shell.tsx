@@ -50,6 +50,7 @@ import { cn } from "@/lib/utils";
 import { initialsOf } from "@/components/person-avatar";
 import { PersonAvatar } from "./person-avatar";
 import { SessionReconcile } from "./session-reconcile";
+import { revokeCookieSession } from "@/lib/sign-out";
 import { SyncHeartbeat } from "./sync-heartbeat";
 import { SyncDebug } from "./sync-debug";
 import { ActivityBell } from "./activity-bell";
@@ -860,6 +861,7 @@ function UserMenu({
   const avatarUrl = (session as { avatarUrl?: string | null } | null)?.avatarUrl ?? null;
   async function onSignOut() {
     await signOut();
+    await revokeCookieSession();
     window.location.assign("/");
   }
   const up = direction === "up";
