@@ -13,7 +13,7 @@ import {
   type PendingInvite,
 } from "@pylonsync/client";
 import { callFn, useRouter } from "@pylonsync/react";
-import { Building2, Mail, TriangleAlert, UserPlus } from "lucide-react";
+import { Building2, Mail, TriangleAlert, UserPlus, Users } from "lucide-react";
 import {
   DashboardEmptyState,
   DashboardPage,
@@ -193,14 +193,17 @@ function MembersList({
 
   return (
     <DashboardWidePage>
-      <DashboardPanel
-        title="Invite teammates"
-        icon={UserPlus}
-        tone="violet"
-        description="Add organizers and reviewers to this workspace."
-        action={members ? <Count n={members.length} /> : null}
-      >
-        {canManage && (
+      {/* Invite form and roster are separate panels. Sharing one made the
+          member list a headless run of rows under the form, while invitations
+          below it had a title — two lists in the same row style, one labeled,
+          which reads as a single confusing list. */}
+      {canManage && (
+        <DashboardPanel
+          title="Invite teammates"
+          icon={UserPlus}
+          tone="violet"
+          description="Add organizers and reviewers to this workspace."
+        >
           <form onSubmit={invite} className="flex max-w-xl flex-col gap-2 sm:flex-row sm:items-center">
             <Input
               type="email"
@@ -224,10 +227,18 @@ function MembersList({
               {inviting ? "…" : "Invite"}
             </Button>
           </form>
-        )}
-        {note && <p className="mt-2 text-xs text-zinc-500">{note}</p>}
+          {note && <p className="mt-2 text-xs text-zinc-500">{note}</p>}
+        </DashboardPanel>
+      )}
 
-        <ul className="mt-3 divide-y divide-zinc-100">
+      <DashboardPanel
+        title="Members"
+        icon={Users}
+        tone="sky"
+        description="Everyone with access to this workspace."
+        action={members ? <Count n={members.length} /> : null}
+      >
+        <ul className="divide-y divide-zinc-100">
           {members === null
             ? Array.from({ length: 3 }).map((_, i) => (
                 <li key={i} className="flex items-center gap-3 py-2.5">

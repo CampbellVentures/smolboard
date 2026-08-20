@@ -16,6 +16,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { DashboardIconChip, DashboardStatusBadge } from "@/components/dashboard";
+import { parseBranding } from "@/lib/branding";
 import type { EventRow } from "@/lib/types";
 
 interface EventDetailProps {
@@ -49,6 +50,26 @@ function nextStep(event: EventRow, submissionCount: number): string {
   return "Event workspace is ready";
 }
 
+// The event's hero, the way the public site shows it: a banner across the top
+// of the card. Branding is wide art — a 360x80 wordmark squeezed into a 44px
+// square mark renders as an 8px sliver — so it needs a wide slot or none.
+// Events without a hero keep the plain card and its calendar chip.
+function EventBanner({ event }: { event: EventRow }): React.ReactElement | null {
+  const { heroUrl } = parseBranding(event.brandingJson);
+  if (!heroUrl) return null;
+  return (
+    <div className="h-24 w-full overflow-hidden bg-zinc-100">
+      <img
+        src={heroUrl}
+        alt=""
+        aria-hidden="true"
+        loading="lazy"
+        className="size-full object-cover"
+      />
+    </div>
+  );
+}
+
 function EventDetail({
   icon: Icon,
   label,
@@ -78,8 +99,9 @@ export function EventCard({
       href={`/dashboard/events/${event.id}/overview`}
       className="group block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
     >
-      <Card className="overflow-hidden transition-[box-shadow] duration-150 ease-out group-hover:shadow-md">
-        <CardHeader className="flex-row items-start justify-between gap-4 pb-5">
+      <Card className="overflow-hidden pt-0 transition-[box-shadow] duration-150 ease-out group-hover:shadow-md">
+        <EventBanner event={event} />
+        <CardHeader className="flex-row items-start justify-between gap-4 pb-5 pt-6">
           <div className="flex min-w-0 items-center gap-3">
             <DashboardIconChip icon={CalendarDays} tone="violet" size="lg" />
             <div className="min-w-0">
