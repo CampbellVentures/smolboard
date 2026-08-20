@@ -54,18 +54,35 @@ function nextStep(event: EventRow, submissionCount: number): string {
 // of the card. Branding is wide art — a 360x80 wordmark squeezed into a 44px
 // square mark renders as an 8px sliver — so it needs a wide slot or none.
 // Events without a hero keep the plain card and its calendar chip.
-function EventBanner({ event }: { event: EventRow }): React.ReactElement | null {
-  const { heroUrl } = parseBranding(event.brandingJson);
-  if (!heroUrl) return null;
+function EventBanner({ event }: { event: EventRow }): React.ReactElement {
+  const { heroUrl, accent } = parseBranding(event.brandingJson);
+  if (heroUrl) {
+    return (
+      <div className="h-36 w-full overflow-hidden bg-zinc-100">
+        <img
+          src={heroUrl}
+          alt=""
+          aria-hidden="true"
+          loading="lazy"
+          className="size-full object-cover"
+        />
+      </div>
+    );
+  }
+  // Unbranded events keep the slot rather than skipping it, so every card in
+  // the grid is the same shape. An accent, if the organizer picked one, tints
+  // the placeholder — it reads as "no art yet", not as a broken image.
   return (
-    <div className="h-28 w-full overflow-hidden bg-zinc-100">
-      <img
-        src={heroUrl}
-        alt=""
-        aria-hidden="true"
-        loading="lazy"
-        className="size-full object-cover"
-      />
+    <div
+      aria-hidden="true"
+      className="flex h-36 w-full items-center justify-center bg-zinc-50"
+      style={
+        accent
+          ? { backgroundImage: `linear-gradient(135deg, ${accent}24, ${accent}0a)` }
+          : undefined
+      }
+    >
+      <CalendarDays className="size-7 text-zinc-300" />
     </div>
   );
 }
@@ -97,9 +114,12 @@ export function EventCard({
   return (
     <Link
       href={`/dashboard/events/${event.id}/overview`}
-      className="group block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      className="group block h-full rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
     >
-      <Card className="overflow-hidden pt-0 transition-[box-shadow] duration-150 ease-out group-hover:shadow-md">
+      {/* Full height + footer pushed down so cards sharing a grid row line up:
+          an event with a poster is taller than one without, and ragged
+          bottoms in a two-up grid read as broken. */}
+      <Card className="flex h-full flex-col overflow-hidden pt-0 transition-[box-shadow] duration-150 ease-out group-hover:shadow-md">
         <EventBanner event={event} />
         <CardHeader className="flex-row items-start justify-between gap-4 pb-5 pt-6">
           <div className="flex min-w-0 items-center gap-3">
@@ -132,7 +152,7 @@ export function EventCard({
             value={<span className="tabular-nums">{submissionCount}</span>}
           />
         </CardContent>
-        <CardFooter className="justify-between gap-4 border-t border-border/70 pt-4">
+        <CardFooter className="mt-auto justify-between gap-4 border-t border-border/70 pt-4">
           <span className="truncate text-xs text-muted-foreground">
             {nextStep(event, submissionCount)}
           </span>
