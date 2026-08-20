@@ -4,7 +4,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import { callFn, db, Link } from "@pylonsync/react";
 import { toast } from "sonner";
 import { PersonAvatar } from "@/components/person-avatar";
-import { fmtDate } from "@/lib/format";
 import { BookUser, ExternalLink, Trash2 } from "lucide-react";
 import {
   DashboardEmptyState,
@@ -14,6 +13,7 @@ import {
   DashboardToolbar,
   DashboardWidePage,
 } from "@/components/dashboard";
+import { TimeAgo } from "@/components/time-ago";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -551,7 +551,7 @@ export function SpeakerDirectory({
                   </div>
                 </TableCell>
                 <TableCell className="whitespace-nowrap text-sm tabular-nums text-muted-foreground">
-                  {fmtDate(person.lastActivity)}
+                  <TimeAgo iso={person.lastActivity} dateStyle="long" />
                 </TableCell>
               </TableRow>
             ))}

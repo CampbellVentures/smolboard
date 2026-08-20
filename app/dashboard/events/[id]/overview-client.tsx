@@ -30,6 +30,7 @@ import {
   DashboardStatusBadge,
   type DashboardChipTone,
 } from "@/components/dashboard";
+import { TimeAgo } from "@/components/time-ago";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
@@ -468,8 +469,12 @@ export function EventOverview({
                   <DashboardIconChip icon={Inbox} tone="zinc" />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">{submission.title}</p>
-                    <p className="mt-0.5 truncate text-xs capitalize text-muted-foreground">
-                      {submission.category?.trim() || "Uncategorized"}
+                    <p className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+                      <span className="truncate capitalize">
+                        {submission.category?.trim() || "Uncategorized"}
+                      </span>
+                      <span aria-hidden="true">·</span>
+                      <TimeAgo iso={submission.submittedAt} className="shrink-0 tabular-nums" />
                     </p>
                   </div>
                   <DashboardStatusBadge status={submission.status} />
@@ -559,12 +564,7 @@ export function EventOverview({
                       {row.profileComplete} of {row.profileTotal}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {row.lastActivity
-                        ? new Date(row.lastActivity).toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                          })
-                        : "No activity"}
+                      {row.lastActivity ? <TimeAgo iso={row.lastActivity} /> : "No activity"}
                     </TableCell>
                     <TableCell>
                       <DashboardStatusBadge status={row.state === "complete" ? "completed" : row.state}>

@@ -10,6 +10,7 @@ import {
   DashboardToolbar,
   DashboardWidePage,
 } from "@/components/dashboard";
+import { TimeAgo } from "@/components/time-ago";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -80,7 +81,7 @@ const DEFAULT_CRITERIA = [
   { key: "speaker", label: "Speaker", max: 5 },
 ];
 
-type SortKey = "title" | "category" | "round" | "score" | "status";
+type SortKey = "title" | "category" | "round" | "score" | "status" | "submitted";
 interface SortState {
   key: SortKey;
   dir: "asc" | "desc";
@@ -228,6 +229,8 @@ export function AbstractsView({
           return dir * ((a.currentRound ?? 0) - (b.currentRound ?? 0));
         case "status":
           return dir * a.status.localeCompare(b.status);
+        case "submitted":
+          return dir * ((a.submittedAt ?? "") < (b.submittedAt ?? "") ? -1 : 1);
         default:
           // Unscored sorts last in both directions: an empty cell is not a
           // low score, and burying real scores under blanks helps no one.
@@ -449,6 +452,9 @@ export function AbstractsView({
                 <SortableHead sortKey="score" sort={sort} onSort={setSort}>
                   Score
                 </SortableHead>
+                <SortableHead sortKey="submitted" sort={sort} onSort={setSort}>
+                  Submitted
+                </SortableHead>
                 <SortableHead sortKey="status" sort={sort} onSort={setSort}>
                   Status
                 </SortableHead>
@@ -520,6 +526,9 @@ export function AbstractsView({
                           {s.triageScore.toFixed(1)}
                         </span>
                       ) : null}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap text-xs tabular-nums text-muted-foreground">
+                      <TimeAgo iso={s.submittedAt} />
                     </TableCell>
                     <TableCell>
                       <StatusPill status={s.status} />
