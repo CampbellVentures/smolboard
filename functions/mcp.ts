@@ -1,5 +1,5 @@
 import { action, v } from "@pylonsync/functions";
-import { AGENT_TOOLS, toolByName } from "../lib/agent-tools";
+import { AGENT_TOOLS, confirmationGate, toolByName } from "../lib/agent-tools";
 
 // MCP server (SPEC → Differentiators #2): the SAME tool belt as the in-app
 // copilot, exposed over the Model Context Protocol so organizers can run
@@ -93,6 +93,13 @@ export default action<
           } else {
             const def = toolByName(name);
             if (!def) return rpcError(id, -32602, `Unknown tool: ${name}`);
+            const refusal = confirmationGate(name, toolArgs as Record<string, unknown>);
+            if (refusal) {
+              return rpcResult(id, {
+                content: [{ type: "text", text: refusal }],
+                isError: true,
+              });
+            }
             result =
               def.kind === "query"
                 ? await ctx.runQuery(def.fn, toolArgs)

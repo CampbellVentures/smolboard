@@ -1,5 +1,11 @@
 import { action, v, type LlmContentBlock, type LlmMessage } from "@pylonsync/functions";
-import { AGENT_TOOLS, COPILOT_SYSTEM_PROMPT, toolByName, toolDefsForLlm } from "../lib/agent-tools";
+import {
+  AGENT_TOOLS,
+  COPILOT_SYSTEM_PROMPT,
+  confirmationGate,
+  toolByName,
+  toolDefsForLlm,
+} from "../lib/agent-tools";
 
 // The event copilot (SPEC → Differentiators #1): one agent loop over the
 // shared tool belt. Runs AS the calling organizer — every tool is a registered
@@ -84,8 +90,12 @@ export default action<
         void ctx.rooms.broadcast(room, "tool", { name: use.name, phase: "start", input: use.input });
         let result: unknown;
         let isError = false;
+        const refusal = def ? confirmationGate(use.name, use.input as Record<string, unknown>) : null;
         if (!def) {
           result = { error: `Unknown tool ${use.name}` };
+          isError = true;
+        } else if (refusal) {
+          result = { error: refusal };
           isError = true;
         } else {
           // Tools that operate on the event get eventId injected — the model

@@ -70,6 +70,11 @@ export function materializeSubmissionData(input: {
   submission: { id: string; title: string; abstract?: string; speakerUserId: string; answersJson?: unknown; participantSnapshotJson?: unknown };
   configRaw: unknown;
   validTrackIds: ReadonlySet<string>;
+  // A Session's track is optional; its kind is not. When the caller can live
+  // without a track (scheduling: a talk in a room at a time is useful with or
+  // without a track label) an unmapped track is reported but does not block.
+  // The agenda handoff leaves this off and stays strict.
+  allowUnresolvedTrack?: boolean;
 }): { data?: MaterializedSessionData; unresolved: HandoffIssue[] } {
   // Forms saved since the handoff feature always carry a config (the builder
   // writes one on every save). A missing config means the form predates the
@@ -110,7 +115,10 @@ export function materializeSubmissionData(input: {
     else if (mapped.length > 1) unresolved.push({ dimension: "track", fieldKey: config.trackFieldKey, reason: "Track values resolve to multiple tracks." });
     else if (mapped.some((value) => !input.validTrackIds.has(value))) unresolved.push({ dimension: "track", fieldKey: config.trackFieldKey, reason: "Mapped track no longer belongs to this event." });
   }
-  if (unresolved.length > 0) return { unresolved };
+  const blocking = input.allowUnresolvedTrack
+    ? unresolved.filter((issue) => issue.dimension !== "track")
+    : unresolved;
+  if (blocking.length > 0) return { unresolved };
   const snapshot = parseParticipantSnapshot(input.submission.participantSnapshotJson);
   const speakers = snapshot.length > 0
     ? [...new Set(snapshot.map((participant) => participant.userId))]

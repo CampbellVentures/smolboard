@@ -5,6 +5,7 @@ export async function canonicalSessionForSubmission(
   ctx: MutationCtx<"required">,
   event: Record<string, unknown>,
   submissionId: string,
+  options: { allowUnresolvedTrack?: boolean } = {},
 ) {
   const submission = await ctx.db.unsafe.get("Submission", submissionId);
   if (!submission || submission.eventId !== event.id || submission.orgId !== event.orgId) {
@@ -30,6 +31,7 @@ export async function canonicalSessionForSubmission(
     },
     configRaw: form.handoffMappingsJson,
     validTrackIds: new Set(tracks.map((track) => track.id as string)),
+    allowUnresolvedTrack: options.allowUnresolvedTrack,
   });
   return { submission, result };
 }

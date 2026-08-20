@@ -20,6 +20,35 @@ export interface AgentToolDef {
 
 const str = (description: string) => ({ type: "string", description });
 
+const confirmArg = {
+  type: "boolean",
+  description:
+    "Must be true. Set it only after the organizer has asked for THIS action in their own words. Never set it to clear an error or to unblock another tool.",
+};
+
+// Tools whose effect leaves the app: a real email to a real person, or a
+// status change that triggers one. The model may not take these on its own
+// initiative, and the prompt rule alone did not hold — the copilot accepted a
+// submission (emailing the speaker) while trying to satisfy schedule_session's
+// accepted-only requirement. The gate makes the boundary mechanical: without
+// an explicit confirm the call never reaches the function.
+export const CONFIRM_REQUIRED = new Set([
+  "set_submission_status",
+  "email_speakers",
+  "nudge_speakers",
+  "send_schedule_invites",
+]);
+
+/** Refusal message when an outward-facing tool is called unconfirmed, else null. */
+export function confirmationGate(
+  name: string,
+  input: Record<string, unknown> | undefined,
+): string | null {
+  if (!CONFIRM_REQUIRED.has(name)) return null;
+  if (input?.confirm === true) return null;
+  return `${name} contacts real people and was called without confirm: true. Do not retry automatically. Tell the organizer exactly what this will do and who it reaches, and call it again only if they ask for it.`;
+}
+
 export const AGENT_TOOLS: AgentToolDef[] = [
   {
     name: "list_submissions",
@@ -60,8 +89,9 @@ export const AGENT_TOOLS: AgentToolDef[] = [
         submissionId: str("Submission id"),
         status: str('"accepted" | "rejected" | "waitlisted" | "in_review"'),
         notify: { type: "boolean", description: "Send the templated email (default true)" },
+        confirm: confirmArg,
       },
-      required: ["submissionId", "status"],
+      required: ["submissionId", "status", "confirm"],
     },
     fn: "setSubmissionStatus",
     kind: "mutation",
@@ -156,8 +186,9 @@ export const AGENT_TOOLS: AgentToolDef[] = [
         },
         subject: str("Email subject"),
         body: str("Plain-text body; merge tags allowed"),
+        confirm: confirmArg,
       },
-      required: ["speakerUserIds", "subject", "body"],
+      required: ["speakerUserIds", "subject", "body", "confirm"],
     },
     fn: "agentEmailSpeakers",
     kind: "mutation",
@@ -175,8 +206,9 @@ export const AGENT_TOOLS: AgentToolDef[] = [
           items: { type: "string" },
           description: "Speaker user ids — get them from pending_tasks first",
         },
+        confirm: confirmArg,
       },
-      required: ["speakerUserIds"],
+      required: ["speakerUserIds", "confirm"],
     },
     fn: "nudgeSpeakers",
     kind: "mutation",
@@ -188,8 +220,8 @@ export const AGENT_TOOLS: AgentToolDef[] = [
       "Email calendar invites (.ics) to a scheduled session's speakers. Re-sending after a move updates their calendars.",
     input_schema: {
       type: "object",
-      properties: { sessionId: str("Session id") },
-      required: ["sessionId"],
+      properties: { sessionId: str("Session id"), confirm: confirmArg },
+      required: ["sessionId", "confirm"],
     },
     fn: "sendScheduleInvites",
     kind: "mutation",
@@ -213,7 +245,8 @@ export const COPILOT_SYSTEM_PROMPT = `You are the smolboard event copilot — th
 
 Rules:
 - Ground every answer in tool results; never invent submissions, scores, or names.
-- Destructive or outward-facing actions (set_submission_status, nudge_speakers, email_speakers, send_schedule_invites) email real people. Only call them when the organizer's message clearly asks for it; otherwise present what you WOULD do and ask.
+- Destructive or outward-facing actions (set_submission_status, nudge_speakers, email_speakers, send_schedule_invites) email real people. They require confirm: true, and you may set it only when the organizer's current message asks for that action in their own words. Otherwise describe what you would do, name who it reaches, and stop.
+- Never take an outward-facing action to clear an error from another tool. schedule_session refuses submissions that are not accepted; that is a decision for the organizer, so report it and ask — do not accept the submission yourself to get past it.
 - schedule_session refuses conflicting placements and returns the conflicts — when that happens, explain the collision and propose the nearest free slot.
 - Be concise. Organizers are busy; lead with the answer, use short lists, no filler.
 - Refer to submissions, sessions, and speakers by title and name. Never print raw ids (submissionId, sessionId, userId) — they mean nothing to the organizer; pass them to tools silently.

@@ -46,6 +46,9 @@ export default mutation({
     let speakerUserIds: string[] = [];
     let existingSessionId: string | undefined;
     let canonicalData: MaterializedSessionData | undefined;
+    // Reported alongside a successful placement so the organizer knows the
+    // session landed without a track rather than discovering it on the agenda.
+    let trackWarning: unknown;
     if (args.sessionId) {
       const ses = await ctx.db.unsafe.get("Session", args.sessionId);
       if (!ses || ses.eventId !== args.eventId || ses.orgId !== event.orgId) {
@@ -55,8 +58,17 @@ export default mutation({
       speakerUserIds = Array.isArray(ses.speakerUserIdsJson) ? (ses.speakerUserIdsJson as string[]) : [];
       existingSessionId = args.sessionId;
     } else if (args.submissionId) {
-      const { submission: sub, result } = await canonicalSessionForSubmission(ctx, event, args.submissionId);
-      if (!result.data) return { scheduled: false, unresolved: result.unresolved, error: "Resolve CFP format/track mappings before scheduling." };
+      // An unmapped TRACK is a labelling gap, not a reason a talk can't have a
+      // room and a time — scheduling proceeds untracked and says so. An
+      // unmapped FORMAT still blocks: it decides the session's kind.
+      const { submission: sub, result } = await canonicalSessionForSubmission(
+        ctx,
+        event,
+        args.submissionId,
+        { allowUnresolvedTrack: true },
+      );
+      if (!result.data) return { scheduled: false, unresolved: result.unresolved, error: "Resolve the CFP format mapping before scheduling." };
+      trackWarning = result.unresolved.length > 0 ? result.unresolved : undefined;
       canonicalData = result.data;
       const prior = (
         await ctx.db.unsafe.query("Session", {
@@ -114,7 +126,7 @@ export default mutation({
         startTime: start.toISOString(),
         endTime: end.toISOString(),
       });
-      return { scheduled: true, sessionId: existingSessionId, title, room: room.name, start: start.toISOString(), end: end.toISOString() };
+      return { scheduled: true, sessionId: existingSessionId, title, room: room.name, start: start.toISOString(), end: end.toISOString(), unresolved: trackWarning };
     }
     const id = await ctx.db.unsafe.insert("Session", {
       orgId: event.orgId as string,
@@ -147,6 +159,6 @@ export default mutation({
       approvedAt: new Date().toISOString(),
       approvedByUserId: ctx.auth.userId,
     });
-    return { scheduled: true, sessionId: id, title, room: room.name, start: start.toISOString(), end: end.toISOString() };
+    return { scheduled: true, sessionId: id, title, room: room.name, start: start.toISOString(), end: end.toISOString(), unresolved: trackWarning };
   },
 });
