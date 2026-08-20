@@ -58,7 +58,7 @@ function EventBanner({ event }: { event: EventRow }): React.ReactElement | null 
   const { heroUrl } = parseBranding(event.brandingJson);
   if (!heroUrl) return null;
   return (
-    <div className="h-24 w-full overflow-hidden bg-zinc-100">
+    <div className="h-28 w-full overflow-hidden bg-zinc-100">
       <img
         src={heroUrl}
         alt=""

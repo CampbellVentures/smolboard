@@ -213,7 +213,10 @@ export function EventsList({
           </Button>
         </DashboardEmptyState>
       ) : (
-        <ul className="grid gap-4">
+        // Two up from lg: an event card carries a poster, and a poster wants a
+        // card-shaped slot. Stretched to full width the art upscaled until the
+        // wordmark was enormous, and five full-bleed rows scrolled forever.
+        <ul className="grid gap-4 lg:grid-cols-2">
           {events.map((ev) => (
             <li key={ev.id}>
               <EventCard
