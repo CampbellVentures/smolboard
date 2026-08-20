@@ -1,5 +1,5 @@
 import { action, v } from "@pylonsync/functions";
-import { AGENT_TOOLS, confirmationGate, toolByName } from "../lib/agent-tools";
+import { AGENT_TOOLS, confirmationGate, toolByName, withEventIdArg } from "../lib/agent-tools";
 
 // MCP server (SPEC → Differentiators #2): the SAME tool belt as the in-app
 // copilot, exposed over the Model Context Protocol so organizers can run
@@ -28,12 +28,9 @@ interface McpTool {
 }
 
 function mcpTools(): McpTool[] {
-  const withEventId = (schema: Record<string, unknown>): Record<string, unknown> => {
-    const props = { ...((schema.properties as Record<string, unknown>) ?? {}) };
-    props.eventId = { type: "string", description: "Event id (from list_events)" };
-    const required = [...new Set([...((schema.required as string[]) ?? []), "eventId"])];
-    return { ...schema, properties: props, required };
-  };
+  // Shared with the workspace copilot so both unpinned agents advertise the
+  // same eventId contract.
+  const withEventId = withEventIdArg;
   return [
     {
       name: "list_events",

@@ -229,6 +229,59 @@ export const AGENT_TOOLS: AgentToolDef[] = [
   },
 ];
 
+// Event-scoped tools normally get eventId injected by the caller. When the
+// agent is NOT pinned to one event (the MCP server, the workspace copilot) the
+// model has to choose, so eventId becomes a visible required argument.
+export function withEventIdArg(schema: Record<string, unknown>): Record<string, unknown> {
+  const props = { ...((schema.properties as Record<string, unknown>) ?? {}) };
+  props.eventId = { type: "string", description: "Event id (from list_events)" };
+  const required = [...new Set([...((schema.required as string[]) ?? []), "eventId"])];
+  return { ...schema, properties: props, required };
+}
+
+export const LIST_EVENTS_TOOL: AgentToolDef = {
+  name: "list_events",
+  description:
+    "Every event in this workspace with its eventId, slug, CFP status, and start date. Call this first — the other tools need an eventId.",
+  input_schema: { type: "object", properties: {} },
+  fn: "agentListEvents",
+  kind: "query",
+  mutates: false,
+};
+
+/**
+ * The workspace copilot's belt: list_events plus every READ tool, each taking
+ * an explicit eventId. Deliberately no mutations — this agent answers "what is
+ * going on across my events", and nothing it can do reaches a speaker.
+ */
+export function workspaceToolDefsForLlm() {
+  return [LIST_EVENTS_TOOL, ...AGENT_TOOLS.filter((tool) => tool.kind === "query")].map(
+    (tool) => ({
+      name: tool.name,
+      description: tool.description,
+      input_schema:
+        tool.name === "list_events" ? tool.input_schema : withEventIdArg(tool.input_schema),
+    }),
+  );
+}
+
+export function workspaceToolByName(name: string): AgentToolDef | undefined {
+  if (name === LIST_EVENTS_TOOL.name) return LIST_EVENTS_TOOL;
+  const def = AGENT_TOOLS.find((tool) => tool.name === name);
+  return def && def.kind === "query" ? def : undefined;
+}
+
+export const WORKSPACE_SYSTEM_PROMPT = `You are the smolboard workspace copilot. The organizer is looking at their whole workspace, not one event, so you answer questions that span events: where submissions are piling up, which review rounds are stalled, who still owes a deliverable, which CFPs are open.
+
+Rules:
+- Call list_events first. Every other tool needs an eventId you got from it.
+- To answer a workspace-wide question, read the events that matter and combine the results — do not stop at the first one.
+- You have READ tools only. You cannot change a status, send an email, or schedule anything from here. If the organizer asks for one of those, tell them which event to open and what to click; never claim you did it.
+- Ground every answer in tool results; never invent counts, names, or dates.
+- Refer to events by name. Never print an eventId or any other raw id — they mean nothing to the organizer. Use them silently as tool arguments.
+- A summary is about volume and state, not an inventory: for each event that matters, say how many submissions there are, how many still need review, and whether the CFP is open. Read the events before you summarize them.
+- Be concise. Lead with the answer, name events explicitly, and prefer short lists over prose.`;
+
 export function toolDefsForLlm() {
   return AGENT_TOOLS.map(({ name, description, input_schema }) => ({
     name,

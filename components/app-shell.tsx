@@ -57,6 +57,7 @@ import { ActivityBell } from "./activity-bell";
 import { CommandPalette, type PaletteDestination } from "./command-palette";
 import { lastEventStorageKey } from "@/lib/dashboard-routing";
 import { CopilotChat, useCopilotThreads } from "@/components/copilot-chat";
+import { Markdown } from "@/components/markdown";
 import { useEnsureOrgSlug } from "@/components/use-org-slug";
 import { Analytics } from "@/components/analytics";
 
@@ -575,6 +576,7 @@ export function AppShell({
       {/* ---------- Pane 2: copilot ---------- */}
       <CopilotPane
         open={copilotOpen}
+        workspaceId={workspaceId}
         event={event}
         threadId={copilotThreadId}
         onSelectThread={selectCopilotThread}
@@ -708,12 +710,14 @@ export function AppShell({
 // the streaming implementation can replace the preview without moving chrome.
 function CopilotPane({
   open,
+  workspaceId,
   event,
   threadId,
   onSelectThread,
   onClose,
 }: {
   open: boolean;
+  workspaceId: string;
   event?: { id: string; name: string };
   threadId: string | null;
   onSelectThread: (id: string | null) => void;
@@ -722,7 +726,7 @@ function CopilotPane({
   const [draft, setDraft] = useState("");
   if (!open) return null;
   const eventName = event?.name;
-  const prompts = ["Summarize this workspace", "What needs attention?", "Help me plan an event"];
+  const prompts = ["Summarize this workspace", "What needs attention?", "Which CFPs are still open?"];
 
   return (
     <aside className="hidden w-80 shrink-0 flex-col border-l border-border/60 bg-background shadow-[0_16px_48px_-16px_rgba(0,0,0,0.22)] md:fixed md:inset-y-0 md:right-0 md:z-40 md:flex xl:sticky xl:inset-y-auto xl:top-0 xl:z-auto xl:h-dvh xl:border-l-0 xl:border-r xl:shadow-none">
@@ -767,75 +771,169 @@ function CopilotPane({
           onSelectThread={onSelectThread}
         />
       ) : (
-        <WorkspaceCopilotTeaser draft={draft} setDraft={setDraft} prompts={prompts} eventName={eventName} />
+        <WorkspaceCopilot orgId={workspaceId} draft={draft} setDraft={setDraft} prompts={prompts} />
       )}
     </aside>
   );
 }
 
-function WorkspaceCopilotTeaser({
+// The workspace copilot: read-only, stateless, spans events. The event
+// copilot (CopilotChat) is pinned to one event and persists threads; this pane
+// answers "what is going on across my events" and cannot change anything, so
+// it needs no thread row and no confirmation flow.
+//
+// It used to be a teaser — suggestion chips that filled a composer whose send
+// button was permanently disabled, on the first screen after sign-in.
+function WorkspaceCopilot({
+  orgId,
   draft,
   setDraft,
   prompts,
-  eventName,
 }: {
+  orgId: string;
   draft: string;
   setDraft: (v: string) => void;
   prompts: string[];
-  eventName?: string;
 }) {
+  const [turns, setTurns] = useState<
+    { question: string; answer?: string; tools: string[]; failed?: boolean }[]
+  >([]);
+  const [busy, setBusy] = useState(false);
+  const scrollRef = React.useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
+  }, [turns, busy]);
+
+  async function ask() {
+    const question = draft.trim();
+    if (!question || busy) return;
+    setDraft("");
+    setBusy(true);
+    setTurns((current) => [...current, { question, tools: [] }]);
+    try {
+      const result = await callFn<{ text: string; toolCalls: { name: string }[] }>(
+        "workspaceAsk",
+        { orgId, message: question },
+      );
+      setTurns((current) =>
+        current.map((turn, index) =>
+          index === current.length - 1
+            ? { ...turn, answer: result.text, tools: result.toolCalls.map((call) => call.name) }
+            : turn,
+        ),
+      );
+    } catch (error) {
+      setTurns((current) =>
+        current.map((turn, index) =>
+          index === current.length - 1
+            ? {
+                ...turn,
+                failed: true,
+                answer:
+                  error instanceof Error ? error.message : "That question could not be answered.",
+              }
+            : turn,
+        ),
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <>
-
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-5">
-        <div className="flex items-start gap-3">
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
-            <Bot className="size-4" aria-hidden="true" />
-          </span>
-          <div className="min-w-0 pt-1">
-            <p className="text-pretty text-sm leading-6 text-foreground">
-              I can help run {eventName ?? "your workspace"} from here. Ask me to review
-              submissions, schedule sessions, or follow up with speakers.
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Open an event to put me to work. My tools are event-scoped.
-            </p>
+      <div ref={scrollRef} className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-5">
+        {turns.length === 0 ? (
+          <>
+            <div className="flex items-start gap-3">
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                <Bot className="size-4" aria-hidden="true" />
+              </span>
+              <div className="min-w-0 pt-1">
+                <p className="text-pretty text-sm leading-6 text-foreground">
+                  I can read across every event in this workspace — submissions, review
+                  progress, deliverables, open CFPs. Ask me what needs attention.
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Read-only here. Open an event to make changes.
+                </p>
+              </div>
+            </div>
+            <div className="mt-auto flex flex-col gap-2 pt-8">
+              <div className="px-1 text-[11px] font-medium text-muted-foreground">Try asking</div>
+              {prompts.map((prompt) => (
+                <button
+                  key={prompt}
+                  type="button"
+                  onClick={() => setDraft(prompt)}
+                  className="min-h-10 rounded-xl bg-muted/50 px-3 py-2 text-left text-xs text-foreground transition-[background-color,scale] duration-150 ease-out hover:bg-muted active:scale-[0.98] motion-reduce:transform-none"
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
+          </>
+        ) : (
+          <div className="space-y-4">
+            {turns.map((turn, index) => (
+              <div key={index} className="space-y-2">
+                <p className="ml-auto w-fit max-w-[85%] rounded-2xl bg-primary px-3 py-2 text-[13px] text-primary-foreground">
+                  {turn.question}
+                </p>
+                {turn.tools.length > 0 ? (
+                  <div className="flex flex-wrap gap-1">
+                    {turn.tools.map((tool, toolIndex) => (
+                      <span
+                        key={`${tool}-${toolIndex}`}
+                        className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground"
+                      >
+                        {tool}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+                {turn.answer ? (
+                  <Markdown
+                    className={cn(
+                      "text-[13px]",
+                      turn.failed ? "text-destructive" : "text-foreground",
+                    )}
+                  >
+                    {turn.answer}
+                  </Markdown>
+                ) : (
+                  <p className="text-[13px] text-muted-foreground">Reading your events…</p>
+                )}
+              </div>
+            ))}
           </div>
-        </div>
-        <div className="mt-auto flex flex-col gap-2 pt-8">
-          <div className="px-1 text-[11px] font-medium text-muted-foreground">
-            Try asking
-          </div>
-          {prompts.map((prompt) => (
-            <button
-              key={prompt}
-              type="button"
-              onClick={() => setDraft(prompt)}
-              className="min-h-10 rounded-xl bg-muted/50 px-3 py-2 text-left text-xs text-foreground transition-[background-color,scale] duration-150 ease-out hover:bg-muted active:scale-[0.98] motion-reduce:transform-none"
-            >
-              {prompt}
-            </button>
-          ))}
-        </div>
+        )}
       </div>
       <div className="border-t border-border/60 p-3">
         <div className="rounded-2xl bg-muted/45 p-2 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_1px_2px_-1px_rgba(0,0,0,0.06),0_2px_4px_rgba(0,0,0,0.04)] transition-[box-shadow] duration-150 focus-within:shadow-[0_0_0_2px_var(--ring)]">
           <Textarea
             value={draft}
             onChange={(event_) => setDraft(event_.target.value)}
+            onKeyDown={(event_) => {
+              if (event_.key === "Enter" && !event_.shiftKey) {
+                event_.preventDefault();
+                void ask();
+              }
+            }}
             aria-label="Message copilot"
-            placeholder="Ask about your event…"
+            placeholder="Ask about your workspace…"
             className="min-h-14 resize-none border-0 bg-transparent px-2 py-1.5 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
           />
           <div className="mt-1 flex items-center justify-between gap-2 px-1">
-            <span className="text-[10px] text-muted-foreground">smolboard tools</span>
+            <span className="text-[10px] text-muted-foreground">read-only tools</span>
             <Button
               type="button"
               size="icon"
               className="size-8 rounded-full"
-              disabled
+              disabled={busy || !draft.trim()}
+              onClick={() => void ask()}
               aria-label="Send message"
-              title="Open an event to chat with the copilot"
             >
               <Send data-icon="inline-start" />
             </Button>
