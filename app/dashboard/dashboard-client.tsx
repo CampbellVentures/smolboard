@@ -192,7 +192,7 @@ function MembersList({
   }
 
   return (
-    <DashboardWidePage>
+    <DashboardPage>
       {/* Invite form and roster are separate panels. Sharing one made the
           member list a headless run of rows under the form, while invitations
           below it had a title — two lists in the same row style, one labeled,
@@ -202,6 +202,7 @@ function MembersList({
           title="Invite teammates"
           icon={UserPlus}
           tone="violet"
+          variant="subtle"
           description="Add organizers and reviewers to this workspace."
         >
           <form onSubmit={invite} className="flex max-w-xl flex-col gap-2 sm:flex-row sm:items-center">
@@ -235,6 +236,7 @@ function MembersList({
         title="Members"
         icon={Users}
         tone="sky"
+        variant="subtle"
         description="Everyone with access to this workspace."
         action={members ? <Count n={members.length} /> : null}
       >
@@ -300,6 +302,7 @@ function MembersList({
           title="Pending invitations"
           icon={Mail}
           tone="amber"
+          variant="subtle"
           action={<span className="text-xs tabular-nums text-muted-foreground">{invites.length} pending</span>}
         >
           <ul className="divide-y divide-zinc-100">
@@ -328,7 +331,7 @@ function MembersList({
           </ul>
         </DashboardPanel>
       )}
-    </DashboardWidePage>
+    </DashboardPage>
   );
 }
 
