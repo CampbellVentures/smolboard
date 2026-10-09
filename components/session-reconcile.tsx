@@ -36,7 +36,7 @@ export async function reconcileStaleToken(): Promise<boolean> {
       ),
     ]);
     if (viaCookie?.user_id && viaBearer?.user_id !== viaCookie.user_id) {
-      window.localStorage.removeItem(storageKey("token"));
+      clearStoredToken();
       window.location.reload();
       return true;
     }
@@ -44,6 +44,17 @@ export async function reconcileStaleToken(): Promise<boolean> {
     // Network hiccup — nothing to reconcile this load.
   }
   return false;
+}
+
+// Pylon 0.22 namespaces the token as `pylon:<app>:token`, and on every boot it
+// copies the pre-namespace `pylon_token` into that slot when the slot is empty.
+// Clearing only the namespaced key lets the stale legacy token come straight
+// back after the reload, so the reconcile reloads forever. Clear both.
+function clearStoredToken() {
+  for (const slot of ["token", "userId"]) {
+    window.localStorage.removeItem(storageKey(slot));
+    window.localStorage.removeItem(`pylon_${slot}`);
+  }
 }
 
 export function SessionReconcile() {
